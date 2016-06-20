@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<bookstore>
+
+<group name="root">
+<item name="connect" boot="connect" help="connect something"></item>
+<item name="server" boot="server" help="to do "></item>
+<item name="close" boot="close" help="close connect"></item>
+<item name="inf" boot="inf" help="Config Hostname"></item>
+<item name="quit_system" boot="" alias="quit" help="Exit from current command view"></item>
+</group>
+
+
+
+<group name="connect">
+<item name="ip"  boot="con_ip" alias="ip" help="x.x.x.x" type="pass"></item>
+</group>
+
+<group name="con_ip">
+<item name="port"  boot="" alias="port" help="number" type="pass"></item>
+</group>
+
+<group name="inf">
+<item name="set_hostname"  boot="" alias="name" help="Set hostname" type="pass"></item>
+</group>
+
+
+<group name="server">
+<item name="run"  help="run server"></item>
+<item name="stop"   help="stop server"></item>
+</group>
+
+<group name="close">
+<item name="" boot="" alias="[1-10]" help="ethernet port interface" type="pass"></item>
+</group>
+
+
+
+
+</bookstore>
