@@ -19,7 +19,9 @@ SRCS-y += src/main.c \
 		
 		
 
-SRCS-y += shell/cmd/cmd_server.c 
+SRCS-y += shell/cmd/cmd_root.c \
+	shell/cmd/cmd_server.c \
+	shell/cmd/cmd_fpga.c
 # \
 		# shell/cmd/cmd_tr485.c 
 		

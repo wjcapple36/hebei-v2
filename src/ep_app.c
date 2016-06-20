@@ -518,7 +518,10 @@ void *ThreadShell(void *arg)
 	int ret = 1;
 
 	ret = -1;
+	// sh_whereboot(boot_epollserver_root);
+	// sh_whereboot(boot_fpga_root);
 	sh_whereboot(boot_root);
+	
 
 	struct sh_detach_depth depth;
 	char *cmd[12];

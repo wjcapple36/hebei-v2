@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<bookstore>
+
+<group name="fpga_root">
+<item name="alarm" boot="alarm" help="connect something"></item>
+<item name="test" boot="" help="to do "></item>
+<item name="request" boot="" help="close connect"></item>
+<item name="fpga_get" boot="fpga_get" alias="get" help="Config Hostname"></item>
+<item name="quit_system" boot="" alias="quit" help="Exit from current command view"></item>
+</group>
+
+
+
+<group name="alarm">
+<item name="disappear"  boot="" alias="disappear" help="todo"></item>
+<item name="appear"  boot="" alias="appear" help="todo"></item>
+</group>
+
+<group name="fpga_get">
+<item name="channal"  boot="" alias="ch" help="all channal"></item>
+<item name="slot"  boot="" alias="slot" help="get slot"></item>
+<item name="net"  boot="" alias="net" help="get net"></item>
+</group>
+
+
+
+
+
+</bookstore>
