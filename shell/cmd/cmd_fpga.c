@@ -100,6 +100,9 @@ static int do_fpga_get(void *ptr, int argc, char **argv)
 static int do_quit_system(void *ptr, int argc, char **argv)
 {
 	printf("%s\n", __FUNCTION__);
+	sh_editpath("");
+	sh_up_prompt_level();
+
 	return 0;
 }
 
