@@ -163,14 +163,20 @@ extern "C" {
 
 
 ///< 缺省填充源地址，目的地址
+#define NODE_MANAGE 0x1e
+#define CLIENT_MANAGE 0x2e
+#define SERVER_MANAGE 0x3e
+#define DEV_OTDR 0x0e
+#define DEV_OCVM 0x100000E
+#define DEV_SMS 0x2000000e
 
 #ifdef _MANAGE
 	#define TMS_DEFAULT_LOCAL_ADDR GLINK_MANAGE_ADDR
 	#define TMS_DEFAULT_RMOTE_ADDR GLINK_CU_ADDR
 #else
 	#if 1 
-		#define TMS_DEFAULT_LOCAL_ADDR GLINK_4412_ADDR
-		#define TMS_DEFAULT_RMOTE_ADDR GLINK_CU_ADDR
+		#define TMS_DEFAULT_LOCAL_ADDR DEV_OTDR
+		#define TMS_DEFAULT_RMOTE_ADDR NODE_MANAGE
 	#endif
 	#if 0
 		// TMSxxV1.2 废除 GLINK_4412_ADDR
@@ -199,136 +205,187 @@ extern "C" {
 
 ////////////////////////////////////////////////////////////////////////////////
 // 命令类型:网管与MCU之间的通信
-#define ID_GET_DEVTYPE			0x60000000	///<工控板查询设备板卡类型信息
-#define ID_RET_DEVTYPE			0x60000001	///<返回设备类型信息
-#define ID_CU_NOTE_NET			0x60000002///<工控板与CU通信的网段选择切换通知
-#define ID_CU_NOTE_MANAGE_CONNECT		0x60000003///<CU通知工控板网管的连接状态
+#define ID_UNUSE (0)
 
-#define ID_GET_OPM_OLP_RAYPOWER		0x60000004///<工控板查询某槽位上OPM或OLP模块总的光功率告警
-#define ID_CMD_OSW_SWITCH			0x60000005///<工控板通知OSW模块切换到某路
-#define ID_CMD_OLP_REQ_OTDR			0x60000006///<OLP模块向工控机请求OTDR测试
-#define ID_CMD_OLP_START_OTDR		0x60000007///<工控板通知OLP模块OTDR测试开始
-#define ID_CMD_OLP_FINISH_OTDR		0x60000008///<工控板通知OLP模块OTDR测试完成
-#define ID_GET_ALARM_TEST			0x60000009 ///<MCU对OTDR告警测试
-#define ID_RET_ALARM_TEST			0x60000010 ///<OTDR返回告警测试曲线
-#define ID_GET_DEV_STATE_FROM_TU 	0x60000011 ///<TU工控板向TU板卡查询其所在机框的板卡插拔状态
-#define ID_RET_DEV_STATE_FROM_TU	0x60000012 ///<TU板卡返回其所在机框的板卡插拔状态
-#define ID_GET_POWER_STATE_FROM_TU 	0x60000013 ///<工控板向TU板卡查询其所在机框的电源组成信息
-#define ID_RET_POWER_STATE_FROM_TU 	0x60000014 ///<TU板卡返回其所在机框的电源组成信息
-#define ID_MCU_GET_DEV_ALARM	 	0x60000015 ///<工控板查询某槽位上总的硬件告警
-#define ID_DEV_RET_MCU_ALARM	 	0x60000016 ///<各业务单板向MCU返回总的硬件告警
-#define ID_OLP_REQUEST_OTDR		0x60000017 ///<OLP板卡向MCU请求OTDR测试
+#define ID_GET_DEVTYPE			ID_UNUSE///< 0x60000000	///<工控板查询设备板卡类型信息
+#define ID_RET_DEVTYPE			ID_UNUSE///< 0x60000001	///<返回设备类型信息
+#define ID_CU_NOTE_NET			ID_UNUSE///< 0x60000002///<工控板与CU通信的网段选择切换通知
+#define ID_CU_NOTE_MANAGE_CONNECT		ID_UNUSE///< 0x60000003///<CU通知工控板网管的连接状态
+
+#define ID_GET_OPM_OLP_RAYPOWER		ID_UNUSE///< 0x60000004///<工控板查询某槽位上OPM或OLP模块总的光功率告警
+#define ID_CMD_OSW_SWITCH			ID_UNUSE///< 0x60000005///<工控板通知OSW模块切换到某路
+#define ID_CMD_OLP_REQ_OTDR			ID_UNUSE///< 0x60000006///<OLP模块向工控机请求OTDR测试
+#define ID_CMD_OLP_START_OTDR		ID_UNUSE///< 0x60000007///<工控板通知OLP模块OTDR测试开始
+#define ID_CMD_OLP_FINISH_OTDR		ID_UNUSE///< 0x60000008///<工控板通知OLP模块OTDR测试完成
+#define ID_GET_ALARM_TEST			ID_UNUSE///< 0x60000009 ///<MCU对OTDR告警测试
+#define ID_RET_ALARM_TEST			ID_UNUSE///< 0x60000010 ///<OTDR返回告警测试曲线
+#define ID_GET_DEV_STATE_FROM_TU 	ID_UNUSE///< 0x60000011 ///<TU工控板向TU板卡查询其所在机框的板卡插拔状态
+#define ID_RET_DEV_STATE_FROM_TU	ID_UNUSE///< 0x60000012 ///<TU板卡返回其所在机框的板卡插拔状态
+#define ID_GET_POWER_STATE_FROM_TU 	ID_UNUSE///< 0x60000013 ///<工控板向TU板卡查询其所在机框的电源组成信息
+#define ID_RET_POWER_STATE_FROM_TU 	ID_UNUSE///< 0x60000014 ///<TU板卡返回其所在机框的电源组成信息
+#define ID_MCU_GET_DEV_ALARM	 	ID_UNUSE///< 0x60000015 ///<工控板查询某槽位上总的硬件告警
+#define ID_DEV_RET_MCU_ALARM	 	ID_UNUSE///< 0x60000016 ///<各业务单板向MCU返回总的硬件告警
+#define ID_OLP_REQUEST_OTDR		ID_UNUSE///< 0x60000017 ///<OLP板卡向MCU请求OTDR测试
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // 命令类型:网管与MCU之间的通信
 ///<网管查询MCU的设备序列号
-#define ID_CHANGE_ADDR			0x80000000	///<网管修改RTU的IP地址(RTU做TCP服务器，端口号6000)
-#define ID_GET_SN				0x80000001	///<网管激活RTU
-#define ID_RET_SN				0x80000002	///<MCU返回设备序列号
-#define ID_CFG_SMS				0x80000003	///<网管发送告警短信发送权限到RTU
-#define ID_CFG_SMS_CLEAR		0x80000004	///<网管发送清除告警短信发送权限到MCU
 
-#define ID_GET_COMPOSITION		0x80000005	///<网管查询板卡组成信息
-#define ID_RET_COMPOSITION		0x80000006	///<MCU返回板卡组成信息s
+#define ID_CHANGE_ADDR			ID_UNUSE///< 0x80000000	///<网管修改RTU的IP地址(RTU做TCP服务器，端口号6000)
+#define ID_GET_SN				ID_UNUSE///< 0x80000001	///<网管激活RTU
+#define ID_RET_SN				ID_UNUSE///< 0x80000002	///<MCU返回设备序列号
+#define ID_CFG_SMS				ID_UNUSE///< 0x80000003	///<网管发送告警短信发送权限到RTU
+#define ID_CFG_SMS_CLEAR		ID_UNUSE///< 0x80000004	///<网管发送清除告警短信发送权限到MCU
 
-#define ID_CFG_MCU_OSW_PORT			0x80000007	///<网管发送OSW模块各光端口关联光缆信息到MCU
-#define ID_CFG_MCU_OSW_PORT_CLEAR		0x80000008	///<网管发送清除OSW模块各光端口关联光缆信息到MCU
-#define ID_CFG_MCU_OLP_PORT	0x80000009	///<网管发送OLP模块各光端口关联光缆信息到MCU
-#define ID_CFG_MCU_OLP_PORT_CLEAR	0x80000010	///<网管发送清除OLP模块各光端口关联光缆信息到MCU
+#define ID_GET_COMPOSITION		ID_UNUSE///< 0x80000005	///<网管查询板卡组成信息
+#define ID_RET_COMPOSITION		ID_UNUSE///< 0x80000006	///<MCU返回板卡组成信息s
+
+#define ID_CFG_MCU_OSW_PORT			ID_UNUSE///< 0x80000007	///<网管发送OSW模块各光端口关联光缆信息到MCU
+#define ID_CFG_MCU_OSW_PORT_CLEAR		ID_UNUSE///< 0x80000008	///<网管发送清除OSW模块各光端口关联光缆信息到MCU
+#define ID_CFG_MCU_OLP_PORT	ID_UNUSE///< 0x80000009	///<网管发送OLP模块各光端口关联光缆信息到MCU
+#define ID_CFG_MCU_OLP_PORT_CLEAR	ID_UNUSE///< 0x80000010	///<网管发送清除OLP模块各光端口关联光缆信息到MCU
 
 
-#define ID_CFG_MCU_U_OPM_OSW	0x80000011	///<网管发送OPM光端口与OSW光端口联动关系到MCU
-#define ID_CFG_MCU_U_OPM_OSW_CLEAR	0x80000012	///<网管发送清除OPM光端口与OSW光端口联动关系到MCU
-#define ID_CFG_MCU_U_OLP_OSW	0x80000013	///<网管发送OLP模块光端口与OSW模块光端口联动关系到MCU
-#define ID_CFG_MCU_U_OLP_OSW_CLEAR	0x80000014	///<网管发送清除OLP模块光端口与OSW模块光端口联动关系到MCU
+#define ID_CFG_MCU_U_OPM_OSW	ID_UNUSE///< 0x80000011	///<网管发送OPM光端口与OSW光端口联动关系到MCU
+#define ID_CFG_MCU_U_OPM_OSW_CLEAR	ID_UNUSE///< 0x80000012	///<网管发送清除OPM光端口与OSW光端口联动关系到MCU
+#define ID_CFG_MCU_U_OLP_OSW	ID_UNUSE///< 0x80000013	///<网管发送OLP模块光端口与OSW模块光端口联动关系到MCU
+#define ID_CFG_MCU_U_OLP_OSW_CLEAR	ID_UNUSE///< 0x80000014	///<网管发送清除OLP模块光端口与OSW模块光端口联动关系到MCU
 
 
 
 //////////////////////
 
-#define ID_CFG_OPM_REF_LEVEL	0x80000015	///<网管发送OPM模块各光端口关联光缆的参考光功率及告警门限
-#define ID_GET_OPM_OP			0x80000016	///<网管查询OPM模块各光端口当前功率
-#define ID_RET_OPM_OP			0x80000017	///<MCU返回OPM模块各光端口当前功率
+#define ID_CFG_OPM_REF_LEVEL	ID_UNUSE///< 0x80000015	///<网管发送OPM模块各光端口关联光缆的参考光功率及告警门限
+#define ID_GET_OPM_OP			ID_UNUSE///< 0x80000016	///<网管查询OPM模块各光端口当前功率
+#define ID_RET_OPM_OP			ID_UNUSE///< 0x80000017	///<MCU返回OPM模块各光端口当前功率
 
-#define ID_CFG_OLP_REF_LEVEL	0x80000018	///<网管发送OLP模块各光端口关联光缆的光功率及告警门限到MCU
-#define ID_GET_OLP_OP			0x80000019	///<网管查询OLP模块各光端口当前功率
-#define ID_RET_OLP_OP			0x80000020	///<MCU返回OLP模块各光端口当前功率
+#define ID_CFG_OLP_REF_LEVEL	ID_UNUSE///< 0x80000018	///<网管发送OLP模块各光端口关联光缆的光功率及告警门限到MCU
+#define ID_GET_OLP_OP			ID_UNUSE///< 0x80000019	///<网管查询OLP模块各光端口当前功率
+#define ID_RET_OLP_OP			ID_UNUSE///< 0x80000020	///<MCU返回OLP模块各光端口当前功率
 
-#define ID_CFG_OTDR_REF				0x80000021	///<网管发送各监测光路的OTDR参考曲线数据到MCU
+#define ID_CFG_OTDR_REF				ID_UNUSE///< 0x80000021	///<网管发送各监测光路的OTDR参考曲线数据到MCU
 
-#define ID_CFG_MCU_OSW_CYCLE	0x80000022	///<网管发送OSW各光端口需要周期测试的光缆以及周期间隔到MCU
-#define ID_CFG_OSW_CYCLE ID_CFG_MCU_OSW_CYCLE 
+#define ID_CFG_MCU_OSW_CYCLE	ID_UNUSE///< 0x80000022	///<网管发送OSW各光端口需要周期测试的光缆以及周期间隔到MCU
+#define ID_CFG_OSW_CYCLE ID_UNUSE///< ID_CFG_MCU_OSW_CYCLE 
 
-#define ID_GET_OTDR_TEST		0x80000023	///<网管对OTDR点名测试
-#define ID_RET_OTDR_TEST		0x80000024	///<MCU返回OTDR测量曲线
+#define ID_GET_OTDR_TEST		ID_UNUSE///< 0x80000023	///<网管对OTDR点名测试
+#define ID_RET_OTDR_TEST		ID_UNUSE///< 0x80000024	///<MCU返回OTDR测量曲线
 
-#define ID_CFG_OLP_MODE			0x80000025	///<网管对OLP模块的工作模式和返回时间设定
-#define ID_CMD_OLP_SWITCH		0x80000026	///<网管对OLP模块的指令倒换命令
-#define ID_REPORT_OLP_ACTION 	0x80000027 ///<MCU上报OLP人工切换或自动切换的动作信息
+#define ID_CFG_OLP_MODE			ID_UNUSE///< 0x80000025	///<网管对OLP模块的工作模式和返回时间设定
+#define ID_CMD_OLP_SWITCH		ID_UNUSE///< 0x80000026	///<网管对OLP模块的指令倒换命令
+#define ID_REPORT_OLP_ACTION 	ID_UNUSE///< 0x80000027 ///<MCU上报OLP人工切换或自动切换的动作信息
 
-#define ID_ALARM_OPM			0x80000028	///<MCU上报某槽位总的光功率告警
-#define ID_ALARM_OPM_CHANGE		0x80000029	///<MCU上报某槽位变化的光功率告警
-#define ID_ALARM_LINE			0x80000030	///<MCU返回线路告警
-#define ID_ALARM_HW				0x80000031	///<MCU返回硬件告警
-#define ID_RET_OTDR_CYC			0x80000032	///<MCU返回OTDR周期性测试曲线
+#define ID_ALARM_OPM			ID_UNUSE///< 0x80000028	///<MCU上报某槽位总的光功率告警
+#define ID_ALARM_OPM_CHANGE		ID_UNUSE///< 0x80000029	///<MCU上报某槽位变化的光功率告警
+#define ID_ALARM_LINE			ID_UNUSE///< 0x80000030	///<MCU返回线路告警
+#define ID_ALARM_HW				ID_UNUSE///< 0x80000031	///<MCU返回硬件告警
+#define ID_RET_OTDR_CYC			ID_UNUSE///< 0x80000032	///<MCU返回OTDR周期性测试曲线
 
-#define ID_CMD_SMS_TEXT			0x80000033	///<网管发送短信内容到MCU
-#define ID_CMD_SMS_ERROR		0x80000034	///<MCU返回短信操作返回码
-#define ID_GET_VERSION			0x80000035	///<网管查询板卡版本号
-#define ID_RET_VERSION			0x80000036	///<MCU返回板卡版本号
-#define ID_ADJUST_TIME				0x80000037	///<网管给MCU校时
-#define ID_CMD_ACK				0x80000038	///<MCU返回应答错误码
+#define ID_CMD_SMS_TEXT			ID_UNUSE///< 0x80000033	///<网管发送短信内容到MCU
+#define ID_CMD_SMS_ERROR		ID_UNUSE///< 0x80000034	///<MCU返回短信操作返回码
+#define ID_GET_VERSION			ID_UNUSE///< 0x80000035	///<网管查询板卡版本号
+#define ID_RET_VERSION			ID_UNUSE///< 0x80000036	///<MCU返回板卡版本号
+#define ID_ADJUST_TIME				ID_UNUSE///< 0x80000037	///<网管给MCU校时
+#define ID_CMD_ACK				ID_UNUSE///< 0x80000038	///<MCU返回应答错误码
 #define	ID_GET_OTDR_TEST_CYC    0x80000039 ///<网管对OTDR周期性测试
-#define ID_RET_OTDR_TEST_CYC    0x80000040 ///<MCU返回OTDR周期性测量曲线
+#define ID_RET_OTDR_TEST_CYC    ID_UNUSE///< 0x80000040 ///<MCU返回OTDR周期性测量曲线
 
-#define ID_GET_OTDR_PARAM		0x80000050 ///<网管查询OTDR板卡参数信息
-#define ID_RET_OTDR_PARAM		0x80000051 ///<MCU返回OTDR板卡参数信息
-#define ID_GET_DEV_PRODUCE		0x80000052 ///<网管查询板卡硬件生产信息
-#define ID_RET_DEV_PRODUCE		0x80000053 ///<MCU返回板卡硬件生产信息
-#define ID_INSERT_TBROUTE		0x80000054 ///<网管发送添加“模块级联表”内容到MCU
-#define ID_DELALL_TBROUTE		0x80000055 ///<网管发送清除“全部”“模块级联表”到MCU
-#define ID_INSERT_TBUNIT		0x80000056 ///<网管发送添加“光端口联动触发表”到MCU 
-#define ID_DEL_TBUNIT			0x80000057 ///<网管“逐条”删除“光端口联动触发表”到MCU 
-#define ID_DELALL_TBUNIT		0x80000058 ///<网管清除“全部”“光端口联动触发表”到MCU 
-#define ID_INSERT_TBCYCTEST		0x80000059 ///<网管发送添加“周期性测试表”到MCU 
-#define ID_DEL_TBCYCTEST		0x80000060 ///<网管发送“逐条”删除“周期性测试表”关系到MCU
-#define ID_DELALL_TBCYCTEST		0x80000061 ///<网管发送清除“全部”“周期性测试表”关系到MCU
-#define ID_DEL_TBOTDRREFDATA	0x80000062 ///<网管发送“逐条”清除各监测光路的OTDR参考曲线数据到MCU
-#define ID_DELALL_TBOTDRREFDATA	0x80000063 ///<网管发送清除“全部”各监测光路的OTDR参考曲线数据到MCU
-#define ID_0x80000064	0x80000064 ///<没有这个命令
-#define ID_GET_COMPOSITION_RT	0x80000065 ///<网管查询实时板卡组成信息
-#define ID_RET_COMPOSITION_RT	0x80000066 ///<MCU返回实时板卡组成信息
-#define ID_ACK_COMPOSITION		0x80000067 ///<网管确认板卡组成信息
-#define ID_RET_ALARM_HW_CHANGE		0x80000068 ///< MCU返回变化的硬件告警
-#define ID_GET_OP_GATE		0x80000069 ///< 网管查询OPM或OLP模块各光端口的参考光功率及告警门限
-#define ID_RET_OP_GATE		0x80000070 ///< MCU返回OPM或OLP模块各光端口的参考光功率及告警门限
-#define ID_GET_MCU_TIME		0x80000071 ///< 网管查询MCU当前运行时间
-#define ID_RET_MCU_TIME		0x80000072 ///< MCU返回当前运行时间
-#define ID_ALARM_SOUND_ON_OFF		0x80000073 ///< 网管开启或关闭MCU告警声音 
-#define ID_GET_ALARM_SOUND_STATE		0x80000074 ///< 网管查询MCU告警声音关闭状态 
-#define ID_RET_ALARM_SOUND_STATE		0x80000075 ///< 返回MCU告警声音关闭状态
+#define ID_GET_OTDR_PARAM		ID_UNUSE///< 0x80000050 ///<网管查询OTDR板卡参数信息
+#define ID_RET_OTDR_PARAM		ID_UNUSE///< 0x80000051 ///<MCU返回OTDR板卡参数信息
+#define ID_GET_DEV_PRODUCE		ID_UNUSE///< 0x80000052 ///<网管查询板卡硬件生产信息
+#define ID_RET_DEV_PRODUCE		ID_UNUSE///< 0x80000053 ///<MCU返回板卡硬件生产信息
+#define ID_INSERT_TBROUTE		ID_UNUSE///< 0x80000054 ///<网管发送添加“模块级联表”内容到MCU
+#define ID_DELALL_TBROUTE		ID_UNUSE///< 0x80000055 ///<网管发送清除“全部”“模块级联表”到MCU
+#define ID_INSERT_TBUNIT		ID_UNUSE///< 0x80000056 ///<网管发送添加“光端口联动触发表”到MCU 
+#define ID_DEL_TBUNIT			ID_UNUSE///< 0x80000057 ///<网管“逐条”删除“光端口联动触发表”到MCU 
+#define ID_DELALL_TBUNIT		ID_UNUSE///< 0x80000058 ///<网管清除“全部”“光端口联动触发表”到MCU 
+#define ID_INSERT_TBCYCTEST		ID_UNUSE///< 0x80000059 ///<网管发送添加“周期性测试表”到MCU 
+#define ID_DEL_TBCYCTEST		ID_UNUSE///< 0x80000060 ///<网管发送“逐条”删除“周期性测试表”关系到MCU
+#define ID_DELALL_TBCYCTEST		ID_UNUSE///< 0x80000061 ///<网管发送清除“全部”“周期性测试表”关系到MCU
+#define ID_DEL_TBOTDRREFDATA	ID_UNUSE///< 0x80000062 ///<网管发送“逐条”清除各监测光路的OTDR参考曲线数据到MCU
+#define ID_DELALL_TBOTDRREFDATA	ID_UNUSE///< 0x80000063 ///<网管发送清除“全部”各监测光路的OTDR参考曲线数据到MCU
+#define ID_0x80000064	ID_UNUSE///< 0x80000064 ///<没有这个命令
+#define ID_GET_COMPOSITION_RT	ID_UNUSE///< 0x80000065 ///<网管查询实时板卡组成信息
+#define ID_RET_COMPOSITION_RT	ID_UNUSE///< 0x80000066 ///<MCU返回实时板卡组成信息
+#define ID_ACK_COMPOSITION		ID_UNUSE///< 0x80000067 ///<网管确认板卡组成信息
+#define ID_RET_ALARM_HW_CHANGE		ID_UNUSE///< 0x80000068 ///< MCU返回变化的硬件告警
+#define ID_GET_OP_GATE		ID_UNUSE///< 0x80000069 ///< 网管查询OPM或OLP模块各光端口的参考光功率及告警门限
+#define ID_RET_OP_GATE		ID_UNUSE///< 0x80000070 ///< MCU返回OPM或OLP模块各光端口的参考光功率及告警门限
+#define ID_GET_MCU_TIME		ID_UNUSE///< 0x80000071 ///< 网管查询MCU当前运行时间
+#define ID_RET_MCU_TIME		ID_UNUSE///< 0x80000072 ///< MCU返回当前运行时间
+#define ID_ALARM_SOUND_ON_OFF		ID_UNUSE///< 0x80000073 ///< 网管开启或关闭MCU告警声音 
+#define ID_GET_ALARM_SOUND_STATE		ID_UNUSE///< 0x80000074 ///< 网管查询MCU告警声音关闭状态 
+#define ID_RET_ALARM_SOUND_STATE		ID_UNUSE///< 0x80000075 ///< 返回MCU告警声音关闭状态
 
-#define ID_GET_TOTAL_OP_ALARM	0x80000076 ///< 查询总的光功告警
-#define ID_RET_TOTAL_OP_ALARM	0x80000077 ///< 主控返回总的光功告警
-#define ID_GET_TOTAL_HW_ALARM	0x80000078 ///< 查询总的硬件告警
-#define ID_GET_OLP_ACTION_LOG	0x80000079 ///< 网管查询OLP切换记录
-#define ID_RET_OLP_ACTION_LOG	0x80000080 ///< 返回OLP切换记录
+#define ID_GET_TOTAL_OP_ALARM	ID_UNUSE///< 0x80000076 ///< 查询总的光功告警
+#define ID_RET_TOTAL_OP_ALARM	ID_UNUSE///< 0x80000077 ///< 主控返回总的光功告警
+#define ID_GET_TOTAL_HW_ALARM	ID_UNUSE///< 0x80000078 ///< 查询总的硬件告警
+#define ID_GET_OLP_ACTION_LOG	ID_UNUSE///< 0x80000079 ///< 网管查询OLP切换记录
+#define ID_RET_OLP_ACTION_LOG	ID_UNUSE///< 0x80000080 ///< 返回OLP切换记录
 
-#define ID_GET_ALARM_POWER	0x80000081 ///< 网管查询告警短信权限
-#define ID_RET_ALARM_POWER	0x80000082 ///< MCU返回告警短信权限
-#define ID_GET_MCU_OSW_PORT	0x80000083 ///< 网管查询OSW、OTDR或OLP模块各光端口关联光路信息
-#define ID_RET_MCU_OSW_PORT	0x80000084 ///< MCU 返回OSW、OTDR或OLP模块各光端口关联光路信息
-#define ID_GET_OTDR_REF	0x80000085 ///< 网管查询参考曲线
-#define ID_RET_OTDR_REF	0x80000086 ///< MCU返回参考曲线
-#define ID_GET_TBROUTE	0x80000087 ///< 网管查询模块级联表
-#define ID_RET_TBROUTE	0x80000088 ///< MCU返回模块级联表
-#define ID_GET_TBUNIT	0x80000089 ///< 网管查询“光端口联动触发表”
-#define ID_RET_TBUNIT	0x80000090 ///< MCU返回“光端口联动触发表”
-#define ID_GET_TBCYCTEST	0x80000091 ///< 网管查询周期性测量
-#define ID_RET_TBCYCTEST	0x80000092 ///< MCU返回周期性测量
-#define ID_GET_OLP_LINE 0x80000093 ///< 网管查询OLP当前所在线路
-#define ID_RET_OLP_LINE 0x80000094 ///< MCU返回OLP当前所在线路
-#define ID_GET_OLP_INFO 0x80000095 ///< 网管查询OLP模块的工作模式、返回时间和切换门限
-#define ID_RET_OLP_INFO 0x80000096 ///< MCU返回模块的工作模式、返回时间和切换门限
+#define ID_GET_ALARM_POWER	ID_UNUSE///< 0x80000081 ///< 网管查询告警短信权限
+#define ID_RET_ALARM_POWER	ID_UNUSE///< 0x80000082 ///< MCU返回告警短信权限
+#define ID_GET_MCU_OSW_PORT	ID_UNUSE///< 0x80000083 ///< 网管查询OSW、OTDR或OLP模块各光端口关联光路信息
+#define ID_RET_MCU_OSW_PORT	ID_UNUSE///< 0x80000084 ///< MCU 返回OSW、OTDR或OLP模块各光端口关联光路信息
+#define ID_GET_OTDR_REF	ID_UNUSE///< 0x80000085 ///< 网管查询参考曲线
+#define ID_RET_OTDR_REF	ID_UNUSE///< 0x80000086 ///< MCU返回参考曲线
+#define ID_GET_TBROUTE	ID_UNUSE///< 0x80000087 ///< 网管查询模块级联表
+#define ID_RET_TBROUTE	ID_UNUSE///< 0x80000088 ///< MCU返回模块级联表
+#define ID_GET_TBUNIT	ID_UNUSE///< 0x80000089 ///< 网管查询“光端口联动触发表”
+#define ID_RET_TBUNIT	ID_UNUSE///< 0x80000090 ///< MCU返回“光端口联动触发表”
+#define ID_GET_TBCYCTEST	ID_UNUSE///< 0x80000091 ///< 网管查询周期性测量
+#define ID_RET_TBCYCTEST	ID_UNUSE///< 0x80000092 ///< MCU返回周期性测量
+#define ID_GET_OLP_LINE ID_UNUSE///< 0x80000093 ///< 网管查询OLP当前所在线路
+#define ID_RET_OLP_LINE ID_UNUSE///< 0x80000094 ///< MCU返回OLP当前所在线路
+#define ID_GET_OLP_INFO ID_UNUSE///< 0x80000095 ///< 网管查询OLP模块的工作模式、返回时间和切换门限
+#define ID_RET_OLP_INFO ID_UNUSE///< 0x80000096 ///< MCU返回模块的工作模式、返回时间和切换门限
+
+
+// hebei 2
+#define		ID_CHECKOUTRESULT	0x20000000	///	返回参数校验结果
+
+
+
+#define		ID_SETOTDRFPGAINFO	0x70000000	///	设置OTDR FPGA信息
+#define		ID_SETOCVMPARA	0x70000001	///	设置OCVM测试参数
+
+
+
+#define		ID_SETSMSINFO	0x60000000	///	设置短信模块信息
+#define		ID_SMSINFO	0x60000001	///	返回短信模块信息
+#define		ID_SENDSMSINFO	0x60000002	///	发送短信
+#define		ID_SENDSMSINFORETCODE	0x60000003	///	返回短信操作返回码
+
+
+
+#define		ID_GETBASICINFO 	0x80000000	///	查询节点基本信息格式
+#define		ID_GETNODETIME	0x80000001	///	查询节点时间
+#define		ID_RETNODETIME	0x80000002	///	返回节点时间
+#define		ID_NAMEANDADDRESS	0x80000003	///	配置节点名称和地址
+#define		ID_FIBERSECTIONCFG	0x80000004	///	发送光纤段参数配置格式
+#define		ID_CONFIGPIPESTATE	0x80000005	///	配置OTDR通道使用状态
+#define		ID_GETCYCLETESTCUV	0x80000006	///	查询周期测量结果
+#define		ID_GETSTATISDATA	0x80000007	///	查询统计数据格式
+#define		ID_STATISDATA	0x80000008	///	返回统计数据格式
+#define		ID_CRCCHECKOUT	0x80000009	///	参数校验
+#define		ID_CHECKOUTRESULT	0x80000010	///	返回参数校验结果
+#define		ID_OTDRBASICINFO	0x80000011	///	返回OTDR的节点信息
+#define		ID_CONFIGNODETIME	0x80000012	///	配置节点时间
+#define		ID_CURALARM	0x80000013	///	返回当前告警信息格式
+#define		ID_GETOTDRDATA_14	0x80000014	///	给定参数（点名测量）
+#define		ID_GETOTDRDATA_15	0x80000015	///	0
+#define		ID_RETOTDRDATA_16	0x80000016	///	返回测量曲线
+#define		ID_RETOTDRDATA_17	0x80000017	///	0
+#define		ID_RETOTDRDATA_18	0x80000018	///	0
+#define		ID_RETOTDRDATA_19	0x80000019	///	0
+#define		ID_GETSTANDARDCURV	0x80000020	///	获取标准曲线格式
+#define		ID_ERROR	0x80000021	///	监测模块传回的错误代码的信息格式
+
+
+// end hebei 2
+
+
 
 struct pro_list
 {
@@ -1280,10 +1337,10 @@ struct tms_ack
 {
 	int32_t errcode;
 	int32_t cmdid;
-	int32_t reserve1;
-	int32_t reserve2;
-	int32_t reserve3;
-	int32_t reserve4;
+	// int32_t reserve1;
+	// int32_t reserve2;
+	// int32_t reserve3;
+	// int32_t reserve4;
 };
 // //ID_CMD_TICK				32	
 // struct tms_
@@ -1343,6 +1400,7 @@ struct tms_context
 #ifdef CONFIG_TEST_NET_STRONG
 	uint32_t net_pack_id;
 #endif
+	pthread_mutex_t mutex;
 };
 
 struct tms_dev_produce
@@ -1510,6 +1568,7 @@ struct tmsxx_app
 	struct bipbuffer lbb;		 ///<临时环形缓存，仅用于接收大于bb长度的帧
 	struct tms_context context;  ///<tms包描述符
 
+
 };
 
 struct tms_callback
@@ -1563,6 +1622,24 @@ struct tms_callback
 	int32_t (*pf_OnGetSerialNumber)(struct tms_context *pcontext);
 	int32_t (*pf_OnInsertTbRoute)(struct tms_context *pcontext,int count ,struct tms_route *plist);
 
+
+	// hebei2
+	int32_t (*pf_OnGetBasicInfo)(struct tms_context *pcontext);
+	int32_t (*pf_OnGetNodeTime)(struct tms_context *pcontext);
+	int32_t (*pf_OnRetNodeTime)(struct tms_context *pcontext);
+	int32_t (*pf_OnNameAndAddress)(struct tms_context *pcontext);
+	int32_t (*pf_OnFiberSectionCfg)(struct tms_context *pcontext);
+	int32_t (*pf_OnConfigPipeState)(struct tms_context *pcontext);
+	int32_t (*pf_OnGetCycleTestCuv)(struct tms_context *pcontext);
+	int32_t (*pf_OnGetStatisData)(struct tms_context *pcontext);
+	int32_t (*pf_OnStatisData)(struct tms_context *pcontext);
+	int32_t (*pf_OnCRCCheckout)(struct tms_context *pcontext);
+
+	int32_t (*pf_OnCheckoutResult)(struct tms_context *pcontext);
+	int32_t (*pf_OnOTDRBasicInfo)(struct tms_context *pcontext);
+	int32_t (*pf_OnConfigNodeTime)(struct tms_context *pcontext);
+	int32_t (*pf_OnCurAlarm)(struct tms_context *pcontext);
+	int32_t (*pf_OnGetOTDRdata_14)(struct tms_context *pcontext);
 };
 
 

@@ -22,6 +22,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include <pthread.h>
 // /* exact-width signed integer types */
 // typedef   signed          char int8_t;
 // typedef   signed short     int int16_t;
@@ -121,6 +122,7 @@ void glink_Build(
 		uint32_t datalen);
 int32_t glink_Send(
 		int fd,  
+		pthread_mutex_t *mutex,
 		struct glink_base  *pbase_hdr,
 		uint8_t *pdata,
 		uint32_t len);

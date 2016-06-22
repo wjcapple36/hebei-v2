@@ -53,7 +53,9 @@ int InitSocketStruct(struct tmsxx_app **pss, int fd)
 	// ((struct tmsxx_app*)pnode->ptr)->context.fd = pnode->sockfd;
 	(**pss).context.fd = fd;
 	(**pss).context.ptcb = &tcb;
-
+	// add 2016.6
+	pthread_mutex_init (&(**pss).context.mutex, NULL);
+	// end add
 
 	bipbuffer_Init(&(*pss)->bb);
 	//bipbuffer_AllocateBuffer(&(*pss)->bb,1024*2);
@@ -71,7 +73,9 @@ int FreeSocketStruct(struct tmsxx_app **pss)
 	if(*pss == 0) {
 		return 0;
 	}
-
+	// add 2016.6
+	pthread_mutex_destroy (&(**pss).context.mutex);
+	// end add
 	bipbuffer_FreeBuffer(&(*pss)->bb);
 	free(*pss);
 
@@ -315,9 +319,11 @@ _Again:
 		bipbuffer_DecommitBlock(&pss->bb, retFramelen);
 
 		// tms_Analyse(pnode->sockfd, (int8_t*)pdata, retFramelen);
+#ifdef CONFIG_PROC_HEBEI2
 		tms_Analyse(    &(((struct tmsxx_app *)(pnode->ptr))->context),
 		                (int8_t *)pdata,
 		                retFramelen);
+#endif
 
 		pss->morebyte = 40;
 		if (pss->enable_lbb == 0) {
@@ -515,11 +521,10 @@ void *ThreadConnectCU(void *arg);
 extern struct cmd_prompt boot_root[];
 void *ThreadShell(void *arg)
 {
+#ifdef CONFIG_USE_MINISHELL_EX
 	int ret = 1;
 
 	ret = -1;
-	// sh_whereboot(boot_epollserver_root);
-	// sh_whereboot(boot_fpga_root);
 	sh_whereboot(boot_root);
 	
 
@@ -551,6 +556,7 @@ void *ThreadShell(void *arg)
 
 
 	exit(0);
+#endif
 }
 
 
@@ -582,7 +588,9 @@ int ThreadRunServerAndShell(struct ep_t *pep)
 	// tmsdb_CheckDb();		// 创建数据库
 
 	// tms_Init();
+#ifdef CONFIG_APP_HEBEI2
 	tms_Callback(&tcb);
+#endif
 	// tms_UseEpollServer(pep);
 	ep_Interface(pep, 2);           // 初始化ep接口
 	ep_Callback(pep);               // 设在epollserver在本工程的回掉函数

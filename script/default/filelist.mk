@@ -2,42 +2,19 @@
 # list all souce file while be compiled
 # file select or not please edit script/config.mk
 
-# SRCS-y += shell/minishell_core.c 
 
 SRCS-y += src/main.c \
-	src/ep_app.c \
-	src/tms_app.c 
+	src/ep_app.c 
+SRCS-$(CONFIG_APP_HEBEI2) += src/tms_app.c 	
+
+ifeq ("$(CONFIG_USE_MINISHELL_EX)", "y")
+	SRCS-$(CONFIG_CMD_BOOT) += shell/cmd/cmd_root.c
+	SRCS-$(CONFIG_CMD_SERVER) += shell/cmd/cmd_server.c 
+	SRCS-$(CONFIG_CMD_FPGA) += shell/cmd/cmd_fpga.c
+endif
+
+SRCS-y += protocol/glink.c
+SRCS-$(CONFIG_PROC_HEBEI2) += protocol/tmsxx.c 
+
+
 	
-# osnet/bipbuffer.c 
-# osnet/epollserver.c 
-# osnet/ossocket.c 
-		
-		# cmd_server.c
-		
-		# src/tmsxxdb.c 
-		
-		
-		
-
-SRCS-y += shell/cmd/cmd_root.c \
-	shell/cmd/cmd_server.c \
-	shell/cmd/cmd_fpga.c
-# \
-		# shell/cmd/cmd_tr485.c 
-		
-
-SRCS-y += protocol/glink.c \
-		protocol/tmsxx.c 
-		# \
-		# shell/cmd/cmd_tmsxx.c 
-		 # \
-		# protocol/md5.cpp
-# SRCS-y +=protocol/tr485.c \
-# 		protocol/tr485_hw.c 
-
-# 最小系统代码
-# SRCS-y +=  \
-# 		osnet/bipbuffer.c \
-# 		osnet/TMSepollserver.c \
-# 		osnet/ossocket.c \
-		# src/ep_app.c

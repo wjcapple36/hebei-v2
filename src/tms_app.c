@@ -12,11 +12,121 @@
 extern "C" {
 #endif
 
+int32_t OnGetBasicInfo(struct tms_context *pcontext)
+{
+	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	return 0;
+}
 
+int32_t OnGetNodeTime(struct tms_context *pcontext)
+{
+	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	time_t t;
+	struct tm* local; //本地时间
+
+	t = time(NULL);
+	local = localtime(&t); //转为本地时间  
+
+	printf("%d-%d-%d %d:%d:%d\n",
+		local->tm_hour, local->tm_mday, local->tm_wday,
+		local->tm_hour, local->tm_min, local->tm_sec);
+
+	
+	char buf[20];
+	strftime(buf, 20, "%Y-%m-%d %H:%M:%S", local); 
+
+#ifdef CONFIG_PROC_HEBEI2
+	tms_RetNodeTime(pcontext, NULL, buf);
+#endif
+	return 0;
+}
+int32_t OnRetNodeTime(struct tms_context *pcontext)
+{
+	printf("%s():%d\n",__FUNCTION__, __LINE__);
+
+	return 0;
+}
+int32_t OnNameAndAddress(struct tms_context *pcontext)
+{
+	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	return 0;
+}
+int32_t OnFiberSectionCfg(struct tms_context *pcontext)
+{
+	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	return 0;
+}
+int32_t OnConfigPipeState(struct tms_context *pcontext)
+{
+	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	return 0;
+}
+int32_t OnGetCycleTestCuv(struct tms_context *pcontext)
+{
+	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	return 0;
+}
+int32_t OnGetStatisData(struct tms_context *pcontext)
+{
+	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	return 0;
+}
+int32_t OnStatisData(struct tms_context *pcontext)
+{
+	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	return 0;
+}
+int32_t OnCRCCheckout(struct tms_context *pcontext)
+{
+	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	return 0;
+}
+int32_t OnCheckoutResult(struct tms_context *pcontext)
+{
+	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	return 0;
+}
+int32_t OnOTDRBasicInfo(struct tms_context *pcontext)
+{
+	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	return 0;
+}
+int32_t OnConfigNodeTime(struct tms_context *pcontext)
+{
+	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	// TODO set time
+	return 0;
+}
+int32_t OnCurAlarm(struct tms_context *pcontext)
+{
+	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	return 0;
+}
+int32_t OnGetOTDRdata_14(struct tms_context *pcontext)
+{
+	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	return 0;
+}
 void tms_Callback(struct tms_callback *ptcb)
 {
 	bzero(ptcb, sizeof(struct tms_callback));
+	ptcb->pf_OnGetBasicInfo		= OnGetBasicInfo;
+	ptcb->pf_OnGetNodeTime		= OnGetNodeTime;
+	ptcb->pf_OnRetNodeTime		= OnRetNodeTime;
+	ptcb->pf_OnNameAndAddress	= OnNameAndAddress;
+	ptcb->pf_OnFiberSectionCfg	= OnFiberSectionCfg;
+	ptcb->pf_OnConfigPipeState	= OnConfigPipeState;
+	ptcb->pf_OnGetCycleTestCuv	= OnGetCycleTestCuv;
+	ptcb->pf_OnGetStatisData	= OnGetStatisData;
+	ptcb->pf_OnStatisData		= OnStatisData;
+	ptcb->pf_OnCRCCheckout		= OnCRCCheckout;
 
+
+	ptcb->pf_OnCheckoutResult	= OnCheckoutResult;
+	ptcb->pf_OnOTDRBasicInfo	= OnOTDRBasicInfo;
+	ptcb->pf_OnConfigNodeTime	= OnConfigNodeTime;
+	ptcb->pf_OnCurAlarm		= OnCurAlarm;
+	ptcb->pf_OnGetOTDRdata_14	= OnGetOTDRdata_14;
 	// ptcb->pf_OnCopy2Use             = unuse_copy2use;
 	// ptcb->pf_OnGetDeviceComposition = tms_OnGetDeviceComposition;
 	// ptcb->pf_OnRetDeviceComposition = tms_OnRetDeviceComposition;
