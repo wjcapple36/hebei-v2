@@ -25,7 +25,11 @@ extern "C" {
 
 #include "stdlib.h"
 
-
+#ifdef HEBEI2_DBG
+#define hh2_dbg(format, args...) printf("\e[36m" format "\e[0m", ##args)
+#else
+#define hh2_dbg(format, args...)
+#endif
 
 #if defined(TMS_DEBUG)
 	#define dbg_tms( format, args...) printf(format, ##args) 
@@ -366,8 +370,8 @@ extern "C" {
 #define		ID_FIBERSECTIONCFG	0x80000004	///	发送光纤段参数配置格式
 #define		ID_CONFIGPIPESTATE	0x80000005	///	配置OTDR通道使用状态
 #define		ID_GETCYCLETESTCUV	0x80000006	///	查询周期测量结果
-#define		ID_GETSTATISDATA	0x80000007	///	查询统计数据格式
-#define		ID_STATISDATA	0x80000008	///	返回统计数据格式
+#define		ID_GETSTATUSDATA	0x80000007	///	查询统计数据格式
+#define		ID_STATUSDATA	0x80000008	///	返回统计数据格式
 #define		ID_CRCCHECKOUT	0x80000009	///	参数校验
 #define		ID_CHECKOUTRESULT	0x80000010	///	返回参数校验结果
 #define		ID_OTDRBASICINFO	0x80000011	///	返回OTDR的节点信息
@@ -385,7 +389,34 @@ extern "C" {
 
 // end hebei 2
 
+// hebei2
+struct tms_cfgpip_status
+{
+	uint32_t status;
+};
 
+struct tms_getcyctestcuv
+{
+	uint32_t pipe;
+};
+
+struct tms_getstatus_data
+{
+	uint32_t pipe;
+};
+
+struct tms_getstatus_data_hdr
+{
+	uint32_t count;
+};
+struct tms_getstatus_data_val
+{
+	uint32_t pipe;
+	uint32_t section_num;
+	char time[20];
+	float section_atten;
+};
+// end hebei2
 
 struct pro_list
 {
@@ -1629,10 +1660,10 @@ struct tms_callback
 	int32_t (*pf_OnRetNodeTime)(struct tms_context *pcontext);
 	int32_t (*pf_OnNameAndAddress)(struct tms_context *pcontext);
 	int32_t (*pf_OnFiberSectionCfg)(struct tms_context *pcontext);
-	int32_t (*pf_OnConfigPipeState)(struct tms_context *pcontext);
-	int32_t (*pf_OnGetCycleTestCuv)(struct tms_context *pcontext);
-	int32_t (*pf_OnGetStatisData)(struct tms_context *pcontext);
-	int32_t (*pf_OnStatisData)(struct tms_context *pcontext);
+	int32_t (*pf_OnConfigPipeState)(struct tms_context *pcontext, struct tms_cfgpip_status *pval);
+	int32_t (*pf_OnGetCycleTestCuv)(struct tms_context *pcontext,struct tms_getcyctestcuv *pval);
+	int32_t (*pf_OnGetStatusData)(struct tms_context *pcontext,struct tms_getstatus_data *pval);
+	int32_t (*pf_OnStatusData)(struct tms_context *pcontext);
 	int32_t (*pf_OnCRCCheckout)(struct tms_context *pcontext);
 
 	int32_t (*pf_OnCheckoutResult)(struct tms_context *pcontext);

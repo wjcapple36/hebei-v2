@@ -56,22 +56,36 @@ int32_t OnFiberSectionCfg(struct tms_context *pcontext)
 	printf("%s():%d\n",__FUNCTION__, __LINE__);
 	return 0;
 }
-int32_t OnConfigPipeState(struct tms_context *pcontext)
+int32_t OnConfigPipeState(struct tms_context *pcontext, struct tms_cfgpip_status *pval)
 {
 	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	uint32_t status = pval->status;
+	char ch8[8];
+
+	for (int i = 0; i < 8;i++) {
+		ch8[i] = status & (0x01 << i);
+		if (ch8[i]) {
+			printf("\tch%2d on\n", i + 1);
+		}
+	}
+	// todo 该设备在本机框第几槽位，对应第几通道，写入配置文件
+	hh2_dbg("Warning CU 需要多次转发此消息\n");
+	
 	return 0;
 }
-int32_t OnGetCycleTestCuv(struct tms_context *pcontext)
+int32_t OnGetCycleTestCuv(struct tms_context *pcontext,struct tms_getcyctestcuv *pval)
 {
 	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	printf("\tget pipe %d\n", pval->pipe);
 	return 0;
 }
-int32_t OnGetStatisData(struct tms_context *pcontext)
+int32_t OnGetStatusData(struct tms_context *pcontext, struct tms_getstatus_data *pval)
 {
 	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	printf("\tget pipe status %d\n", pval->pipe);
 	return 0;
 }
-int32_t OnStatisData(struct tms_context *pcontext)
+int32_t OnStatusData(struct tms_context *pcontext)
 {
 	printf("%s():%d\n",__FUNCTION__, __LINE__);
 	return 0;
@@ -117,8 +131,8 @@ void tms_Callback(struct tms_callback *ptcb)
 	ptcb->pf_OnFiberSectionCfg	= OnFiberSectionCfg;
 	ptcb->pf_OnConfigPipeState	= OnConfigPipeState;
 	ptcb->pf_OnGetCycleTestCuv	= OnGetCycleTestCuv;
-	ptcb->pf_OnGetStatisData	= OnGetStatisData;
-	ptcb->pf_OnStatisData		= OnStatisData;
+	ptcb->pf_OnGetStatusData	= OnGetStatusData;
+	ptcb->pf_OnStatusData		= OnStatusData;
 	ptcb->pf_OnCRCCheckout		= OnCRCCheckout;
 
 

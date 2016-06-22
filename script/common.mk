@@ -9,7 +9,7 @@ ifeq ("$(ARCH)", "")
 endif
 
 ifeq ("$(ARCH)", "arm920t")
-	CROSS_COMPILE	=/opt/EmbedSky/crosstools_3.4.5_softfloat/gcc-3.4.5-glibc-2.3.6/arm-linux/bin/arm-linux-
+	CROSS_COMPILE	=/opt/EmbedSky/4.3.3/bin/arm-linux-
 endif
 
 ifeq ("$(ARCH)", "armv7")

@@ -26,6 +26,8 @@ TODO：详细描述
 extern "C" {
 #endif
 
+
+
 #ifdef USE_INLINE
 inline int unuse_echo(const char *__restrict __format, ...)
 {
@@ -587,7 +589,7 @@ static int32_t tms_AnalyseCommand(struct tms_context *pcontext, int8_t *pdata, i
  * @remarks
  * @see
  */
- 
+
 int32_t tms_MCUtoDevice(
     int     fd,
     struct glink_addr *paddr,
@@ -6913,7 +6915,7 @@ static struct pro_list g_cmdname_0x8000xxxx[] = {
 	{"ID_FIBERSECTIONCFG"},
 	{"ID_CONFIGPIPESTATE"},
 	{"ID_GETCYCLETESTCUV"},
-	{"ID_GETSTATISDATA"},
+	{"ID_GETSTATUSDATA"},
 	{"ID_STATISDATA"},
 	{"ID_CRCCHECKOUT"},
 	{"--"},
@@ -7719,9 +7721,14 @@ static int32_t tms_AnalyseGetBasicInfo(struct tms_context *pcontext, int8_t *pda
 	ack.cmdid = ID_GETBASICINFO;
 	tms_AckEx(pcontext->fd, NULL, &ack);
 #endif
+	hh2_dbg("Warning 应该返回什么内容，协议里没详细说明\n");
 	if (pcontext->ptcb->pf_OnGetBasicInfo) {
 		pcontext->ptcb->pf_OnGetBasicInfo(pcontext);
 	}
+
+	// struct tms_context con;
+	// int ret = tms_SelectContextByFD(6,&con);
+	// printf("ret = %d %d\n", ret, con.fd);
 	return 0;
 }
 
@@ -7736,6 +7743,7 @@ static int32_t tms_AnalyseGetNodeTime(struct tms_context *pcontext, int8_t *pdat
 	ack.cmdid = ID_RETNODETIME;
 	tms_AckEx(pcontext->fd, NULL, &ack);
 #endif
+	hh2_dbg("Warning CU 需要多次转发此消息\n");
 	if (pcontext->ptcb->pf_OnGetNodeTime) {
 		pcontext->ptcb->pf_OnGetNodeTime(pcontext);
 	}
@@ -7773,6 +7781,7 @@ static int32_t tms_AnalyseRetNodeTime(struct tms_context *pcontext, int8_t *pdat
 //	0x80000003	ID_NAMEANDADDRESS
 static int32_t tms_AnalyseNameAndAddress(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
+	hh2_dbg("Warning CU 需要处理此消息\n");
 	return 0;
 }
 
@@ -7793,8 +7802,13 @@ static int32_t tms_AnalyseConfigPipeState(struct tms_context *pcontext, int8_t *
 	ack.cmdid = ID_CONFIGPIPESTATE;
 	tms_AckEx(pcontext->fd, NULL, &ack);
 #endif
+	struct tms_cfgpip_status *pval;
+	pval = (struct tms_cfgpip_status *)(pdata + GLINK_OFFSET_DATA);
+	//
+	pval->status = htonl(pval->status);
+
 	if (pcontext->ptcb->pf_OnConfigPipeState) {
-		pcontext->ptcb->pf_OnConfigPipeState(pcontext);
+		pcontext->ptcb->pf_OnConfigPipeState(pcontext, pval);
 	}
 	return 0;
 }
@@ -7803,19 +7817,73 @@ static int32_t tms_AnalyseConfigPipeState(struct tms_context *pcontext, int8_t *
 //	0x80000006	ID_GETCYCLETESTCUV
 static int32_t tms_AnalyseGetCycleTestCuv(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
+	struct tms_getcyctestcuv *pval;
+	pval = (struct tms_getcyctestcuv *)(pdata + GLINK_OFFSET_DATA);
+	
+	pval->pipe = htonl(pval->pipe);
+	if (pcontext->ptcb->pf_OnGetCycleTestCuv) {
+		pcontext->ptcb->pf_OnGetCycleTestCuv(pcontext, pval);
+	}
 	return 0;
 }
 
 
-//	0x80000007	ID_GETSTATISDATA
-static int32_t tms_AnalyseGetStatisData(struct tms_context *pcontext, int8_t *pdata, int32_t len)
+//	0x80000007	ID_GETSTATUSDATA
+static int32_t tms_AnalyseGetStatusData(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
+	struct tms_getstatus_data *pval;
+	pval = (struct tms_getstatus_data *)(pdata + GLINK_OFFSET_DATA);
+	
+	pval->pipe = htonl(pval->pipe);
+	if (pcontext->ptcb->pf_OnGetStatusData) {
+		pcontext->ptcb->pf_OnGetStatusData(pcontext, pval);
+	}
 	return 0;
 }
 
 
-//	0x80000008	ID_STATISDATA
-static int32_t tms_AnalyseStatisData(struct tms_context *pcontext, int8_t *pdata, int32_t len)
+//	0x80000008	ID_STATUSDATA
+int32_t tms_RetStatusData(struct tms_context *pcontext, 
+	struct glink_addr *paddr,
+	struct tms_getstatus_data_hdr *hdr,
+	struct tms_getstatus_data_val *val,
+	int32_t ilen)
+{
+	struct tms_getstatus_data_hdr data_hdr;
+	struct tms_getstatus_data_val data_val[8], *ptdata;
+	int len;
+
+	if (ilen >= 8) {
+		ilen = 8;
+	}
+	memcpy(&data_hdr, hdr, sizeof(struct tms_getstatus_data_hdr));
+	memcpy(data_val, val, sizeof(struct tms_getstatus_data_val) * ilen);
+	
+	len = sizeof(struct tms_getstatus_data_hdr) +
+		sizeof(struct tms_getstatus_data_val) * ilen;
+
+	data_hdr.count = htonl(data_hdr.count);
+
+	ptdata = &data_val[0];
+	for (int i = 0; i < ilen; i++) {
+		ptdata->pipe = htonl(ptdata->pipe);
+		ptdata->section_num = htonl(ptdata->section_num);
+		ptdata->section_atten = htonl(ptdata->section_atten);
+		ptdata++;
+	}
+
+	struct glink_base  base_hdr;
+	tms_FillGlinkFrame(&base_hdr, paddr);
+	glink_Build(&base_hdr, ID_STATUSDATA, len);
+
+	pthread_mutex_lock(&pcontext->mutex);
+	glink_SendHead(pcontext->fd, &base_hdr);
+	glink_SendSerial(pcontext->fd, (uint8_t *)&data_hdr,   sizeof(struct tms_getstatus_data_hdr));
+	glink_SendSerial(pcontext->fd, (uint8_t *)data_val, sizeof(struct tms_getstatus_data_val) * ilen);
+	glink_SendTail(pcontext->fd);
+	pthread_mutex_lock(&pcontext->mutex);
+}
+static int32_t tms_AnalyseStatusData(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
 	return 0;
 }
@@ -7832,8 +7900,26 @@ static int32_t tms_AnalyseCRCCheckout(struct tms_context *pcontext, int8_t *pdat
 }
 
 
-
 //	0x80000010	ID_CHECKOUTRESULT
+int32_t tms_CheckoutResult(struct tms_context *pcontext, 
+	struct glink_addr *paddr,
+	uint32_t *idata)
+{
+	uint32_t pdata = idata;
+	pdata = htonl(pdata);
+
+	struct glink_base  base_hdr;
+	tms_FillGlinkFrame(&base_hdr, paddr);
+	glink_Build(&base_hdr, ID_STATUSDATA, sizeof(int32_t));
+
+
+	pthread_mutex_lock(&pcontext->mutex);
+	glink_SendHead(pcontext->fd, &base_hdr);
+	glink_SendSerial(pcontext->fd, (uint8_t *)&pdata,   sizeof(uint32_t));
+	glink_SendTail(pcontext->fd);
+	pthread_mutex_lock(&pcontext->mutex);
+}
+
 static int32_t tms_AnalyseOTDRBasicInfo(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
 	if (pcontext->ptcb->pf_OnOTDRBasicInfo) {
@@ -7998,8 +8084,8 @@ struct tms_analyse_array sg_analyse_0x8000xxxx[] = {
 	{	tms_AnalyseFiberSectionCfg	, 0}, //	0x80000004	ID_FIBERSECTIONCFG
 	{	tms_AnalyseConfigPipeState	, 0}, //	0x80000005	ID_CONFIGPIPESTATE
 	{	tms_AnalyseGetCycleTestCuv	, 0}, //	0x80000006	ID_GETCYCLETESTCUV
-	{	tms_AnalyseGetStatisData	, 0}, //	0x80000007	ID_GETSTATISDATA
-	{	tms_AnalyseStatisData	, 0}, //	0x80000008	ID_STATISDATA
+	{	tms_AnalyseGetStatusData	, 0}, //	0x80000007	ID_GETSTATUSDATA
+	{	tms_AnalyseStatusData	, 0}, //	0x80000008	ID_STATISDATA
 	{	tms_AnalyseCRCCheckout	, 0}, //	0x80000009	ID_CRCCHECKOUT
 	{	tms_AnalyseUnuse	, 8}, //	0x8000000A	--
 	{	tms_AnalyseUnuse	, 8}, //	0x8000000B	--
@@ -8820,6 +8906,77 @@ void tms_SetDoWhat(int cmdh, int count, int *arr)
 // {
 
 // }
+
+int g_manger = 0, g_node_manger = 0;
+
+#include <epollserver.h>
+#include <assert.h>
+extern struct ep_t ep;
+struct _ep_find_val
+{
+	int fd;
+	struct tms_context *context;
+};
+int _ep_find(struct ep_con_t *ppconNode, void *ptr)
+{
+	struct tmsxx_app *papp = (struct tmsxx_app *)ppconNode->ptr;
+	struct tms_context *pcontext = (struct tms_context *)&papp->context;
+
+	struct _ep_find_val *pval = (struct _ep_find_val *)ptr;
+
+	printf("fd %d\n", pcontext->fd);
+	
+// 
+	if(pcontext->fd == pval->fd) {
+		pval->fd = pcontext->fd;
+		memcpy(pval->context, pcontext, sizeof(struct tms_context));
+		return -1;
+	}
+	return 0;
+}
+int32_t  tms_SelectContextByFD(int fd, struct tms_context *context)
+{
+	struct _ep_find_val val;
+
+	assert(context != NULL);
+
+	val.fd = fd;
+	val.context = context;
+	ep_Ergodic(&ep, _ep_find, &val);
+	if (context->fd == val.fd) {
+		return 1;
+	}
+	return 0;
+}
+
+int32_t tms_SelectMangerContext(struct tms_context *context)
+{
+	struct tms_context con;
+	int ret;
+
+	ret = tms_SelectContextByFD(g_manger, &con);
+
+	if (ret) {
+		memcpy(context, &con, sizeof(struct tms_context));
+		return 1;
+	}
+	return 0;
+}
+
+int32_t tms_SelectNodeMangerContext(struct tms_context *context)
+{
+	struct tms_context con;
+	int ret;
+
+	ret = tms_SelectContextByFD(g_node_manger, &con);
+
+	if (ret) {
+		memcpy(context, &con, sizeof(struct tms_context));
+		return 1;
+	}
+	return 0;
+}
+
 #ifdef __cplusplus
 }
 #endif
