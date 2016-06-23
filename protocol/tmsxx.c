@@ -2431,7 +2431,211 @@ static void tms_OTDRConv_tms_get_otdrdata(
 	}
 }
 
+static void tms_OTDRConv_tms_fibersection_hdr(
+    struct tms_fibersection_hdr *pout,
+    struct tms_fibersection_hdr *pin)
+{
+	pin->count = htonl(pout->count);
+}
+static void tms_OTDRConv_tms_fibersection_val(
+    struct tms_fibersection_val *pout,
+    struct tms_fibersection_val *pin,
+    struct tms_fibersection_hdr *phdr)
+{
+	struct tms_fibersection_val *p32s, *p32d;
+	register int loop;
+
+	loop = phdr->count;
+	// loop = loop * sizeof (struct tms_hebei2_event_val) >> 2;	// 计算有多少个4Byte数据
+	// printf("loop %d\n", loop);
+	p32d = (int32_t *)pout;
+	p32s = (int32_t *)pin;
+	for (register int i = 0; i < loop; i++) {
+		p32d->pipe_num	 = htonl(p32s->pipe_num);
+		p32d->fiber_num	 = htonl(p32s->fiber_num);
+		p32d->start_coor = htonl(p32s->start_coor);
+		p32d->end_coor	 = htonl(p32s->end_coor);
+
+		p32d->fibe_atten_init = htonf(p32s->fibe_atten_init);
+		p32d->level1 	      = htonf(p32s->level1);
+		p32d->level2 	      = htonf(p32s->level2);
+		p32d->listen_level    = htonf(p32s->listen_level);
+		p32d++;
+		p32s++;
+	}
+
+
+}
+
+static void tms_OTDRConv_tms_otdr_param(
+    struct tms_otdr_param *pout,
+    struct tms_otdr_param *pin)
+{
+	tms_Conv_Nx4Byte((uint32_t *)&pout->range, (uint32_t *)&pin->range, sizeof(struct tms_otdr_param) - 20);
+}
+
+static void tms_OTDRConv_tms_test_result(
+    struct tms_test_result *pout,
+    struct tms_test_result *pin)
+{
+	tms_Conv_Nx4Byte((uint32_t *)&pout->range, (uint32_t *)&pin->range, sizeof(float) * 3);
+}
+
+static void tms_OTDRConv_tms_hebei2_data_hdr(
+    struct tms_hebei2_data_hdr *pout,
+    struct tms_hebei2_data_hdr *pin)
+{
+	memcpy(pout->dpid, pin->dpid, 12);
+
+	pout->count = htonl(pin->count);
+}
+
+static void tms_OTDRConv_tms_hebei2_data_val(
+    struct tms_hebei2_data_val *pout,
+    struct tms_hebei2_data_val *pin,
+    struct tms_hebei2_data_hdr *pdata_hdr)
+{
+	register uint16_t *p16s, *p16d;
+	register int loop;
+
+	// Part B.2
+	// loop = pdata_hdr->count >> 1;
+	loop = pdata_hdr->count ;
+	p16d = (uint16_t *)pout;
+	p16s = (uint16_t *)pin;
+	for (register int i = 0; i < loop; i++) {
+		*p16d = htons(*p16s);
+		p16d++;
+		p16s++;
+	}
+	// printf("llooop = %d\n", loop);
+}
+
+
+static void tms_OTDRConv_tms_hebei2_event_hdr(
+    struct tms_hebei2_event_hdr *pout,
+    struct tms_hebei2_event_hdr *pin)
+{
+	// pin->count = pin->count & 0x3ff;				// 限定loop在0~1024以内
+
+	memcpy(pout->eventid, pin->eventid, 12);
+	pout->count = htonl(pin->count);
+}
+
+static void tms_OTDRConv_tms_hebei2_event_val(
+    struct tms_hebei2_event_val *pout,
+    struct tms_hebei2_event_val *pin,
+    struct tms_hebei2_event_hdr *pevent_hdr)
+{
+	register int32_t *p32s, *p32d;
+	register int loop;
+
+
+
+	loop = pevent_hdr->count;
+	loop = loop * sizeof (struct tms_hebei2_event_val) >> 2;	// 计算有多少个4Byte数据
+	// printf("loop %d\n", loop);
+	p32d = (int32_t *)pout;
+	p32s = (int32_t *)pin;
+	for (register int i = 0; i < loop; i++) {
+		*p32d = htonl(*p32s);
+		p32d++;
+		p32s++;
+	}
+}
+
+
+
 #ifdef HEBEI2_DBG
+void tms_Print_tms_fibersection_hdr(struct tms_fibersection_hdr *pval)
+{
+	hb2_dbg("fiber_id %s  count %d\n", pval->fiber_id, pval->count);
+}
+void tms_Print_tms_fibersection_val(struct tms_fibersection_val *pval)
+{
+	hb2_dbg(
+	    "\tpipe_num %d fiber_num %d\n"
+	    "\tfiber_route %s fiber_name %s\n"
+	    "\tstart_coor %d start_inf %s end_coor %d end_inf %s\n"
+	    "\tfibe_atten_init %f\n"
+	    "\tlevel1 %f level2 %f level3 %f\n",
+	    pval->pipe_num,
+	    pval->fiber_num,
+	    pval->fiber_route,
+	    pval->fiber_name,
+	    pval->start_coor,
+	    pval->start_inf,
+	    pval->end_coor,
+	    pval->end_inf,
+	    pval->fibe_atten_init,
+	    pval->level1,
+	    pval->level2,
+	    pval->listen_level);
+}
+void tms_Print_tms_otdr_param(struct tms_otdr_param *pval)
+{
+	hb2_dbg(
+	    "otdr_id %s\n"
+	    "\trange %d\n"
+	    "\twl %d pw %d time %d\n"
+	    "\tgi %f end %f reflect %f\n",
+	    pval->otdr_id,
+	    pval->range,
+	    pval->wl,
+	    pval->pw,
+	    pval->time,
+	    pval->gi,
+	    pval->end_threshold,
+	    pval->none_reflect_threshold);
+}
+void tms_Print_tms_test_result(struct tms_test_result *pval)
+{
+	hb2_dbg(
+	    "result %s\n"
+	    "\trange %f loss %f atten %f time %s\n",
+	    pval->result,
+	    pval->range,
+	    pval->loss,
+	    pval->atten,
+	    pval->time);
+
+}
+
+
+void tms_Print_tms_hebei2_event(struct tms_hebei2_event_hdr *pevent_hdr, struct tms_hebei2_event_val *pevent_val)
+{
+	// register uint32_t *pevent_hdr;
+
+	// printf("len = %d-----\n", strlen((char*)pevent_hdr->eventid));
+	// PrintfMemory((uint8_t*)pevent_hdr->eventid, 16);
+	fecho("EventID: %s\n------------------------------------------------------------------------\n",
+	      pevent_hdr->eventid);
+
+	// printf("EventID: %s\n",pevent_hdr->eventid);
+	// printf("\n------------------------------------------------------------------------\n");
+	fecho("%s\t%s\t%8.12s\t%8.12s\t%8.12s\t%8.12s\n",
+	      "dist", "type", "att", "lost", "ref", "link");
+	fecho("------------------------------------------------------------------------\n");
+	// p32d = (uint32_t*)pevent_val;
+
+	struct tms_retotdr_event_val  *ptevent_val;
+	ptevent_val = pevent_val;
+	for (register int i = 0; i < pevent_hdr->count; i++) {
+		fecho("%d\t%d\t%8.2f\t%8.2f\t%8.2f\t%8.2f\n",
+		      ptevent_val->distance,
+		      ptevent_val->event_type,
+		      ptevent_val->att,
+		      ptevent_val->loss,
+		      ptevent_val->reflect,
+		      ptevent_val->link_loss);
+
+		ptevent_val++;
+	}
+	fecho("------------------------------------------------------------------------\n");
+	fecho("                                                       Event count %3d\n", pevent_hdr->count);
+	// printf("                                  Event count %d ID %s\n", pevent_hdr->count, pevent_hdr->eventid);
+}
+
 void tms_Print_tms_get_otdrdata(struct tms_get_otdrdata *ptest_param)
 {
 	hb2_dbg("OTDR Param: ");
@@ -7874,6 +8078,88 @@ static int32_t tms_AnalyseNameAndAddress(struct tms_context *pcontext, int8_t *p
 //	0x80000004	ID_FIBERSECTIONCFG
 static int32_t tms_AnalyseFiberSectionCfg(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
+#ifdef HEBEI2_DBG
+	tms_DbgAckSuccess(pcontext, pdata, len);
+	hb2_dbg("待测试\n");
+#endif
+
+
+	struct tms_fibersection_hdr *fiber_hdr;
+	struct tms_fibersection_val *fiber_val;
+	struct tms_otdr_param       *otdr_param;
+	struct tms_test_result      *test_result;
+	struct tms_hebei2_data_hdr  *otdr_hdr;
+	struct tms_hebei2_data_val  *otdr_val;
+	struct tms_hebei2_event_hdr *event_hdr;
+	struct tms_hebei2_event_val *event_val;
+
+	fiber_hdr = (struct tms_fibersection_hdr *)(pdata + GLINK_OFFSET_DATA);
+	if ( !CHECK_PTR(
+	         fiber_hdr,
+	         struct tms_fibersection_hdr,
+	         struct tms_fibersection_val,
+	         htonl(fiber_hdr->count),
+	         pdata + len)) {
+		printf("Err: %s():%d\n", __FUNCTION__, __LINE__);
+		return -1;
+	}
+	fiber_val    = (struct tms_fibersection_val *)(((char *)fiber_hdr) + sizeof(struct tms_fibersection_hdr));
+	otdr_param  = (struct tms_otdr_param *)(((char *)fiber_val) + sizeof(struct tms_fibersection_val) * htonl(fiber_hdr->count));
+	test_result = (struct tms_test_result *)(((char *)otdr_param) + sizeof(struct tms_otdr_param));
+
+	otdr_hdr     = (struct tms_hebei2_data_hdr *)(((char *)test_result) + sizeof(struct tms_test_result));
+	otdr_val     = (struct tms_hebei2_data_val *)(((char *)otdr_hdr) + sizeof(struct tms_hebei2_data_hdr));
+	event_hdr   = (struct tms_hebei2_event_hdr *)(((char *)otdr_val) + sizeof(struct tms_hebei2_data_val) * htonl(otdr_hdr->count));
+	if ( !CHECK_PTR(
+	         event_hdr,
+	         struct tms_hebei2_event_hdr,
+	         struct tms_hebei2_event_val,
+	         htonl(event_hdr->count),
+	         pdata + len)) {
+		printf("Err: %s():%d\n", __FUNCTION__, __LINE__);
+		return -1;
+	}
+	event_val = (struct tms_hebei2_event_val *)(((char *)event_hdr) + sizeof(struct tms_hebei2_event_hdr));
+
+
+	tms_OTDRConv_tms_fibersection_hdr(fiber_hdr, fiber_hdr);
+	// printf("hdr count %d\n", fiber_hdr->count);
+
+	tms_OTDRConv_tms_fibersection_val(fiber_val, fiber_val, fiber_hdr);
+	// printf("pipe_num %d fiber_name %d route %s name %s %f %f\n", fiber_val->pipe_num,
+	       // fiber_val->fiber_num,
+	       // fiber_val->fiber_route,
+	       // fiber_val->fiber_name,
+	       // fiber_val->level1,
+	       // fiber_val->level2);
+
+	tms_OTDRConv_tms_otdr_param(otdr_param, otdr_param);
+	// printf("otdr_id %s range %d %f wl %d\n", (otdr_param->otdr_id), (otdr_param->range),
+	       // otdr_param->gi,
+	       // otdr_param->wl);
+
+	tms_OTDRConv_tms_test_result(test_result, test_result);
+	// printf("result %s range %f loss %f atten %f\n",
+	       // test_result->result,
+	       // test_result->range,
+	       // test_result->loss,
+	       // test_result->atten);
+
+	tms_OTDRConv_tms_hebei2_data_hdr(otdr_hdr, otdr_hdr);
+	// printf("otdr data count %d\n", otdr_hdr->count);
+	tms_OTDRConv_tms_hebei2_data_val(otdr_val, otdr_val, otdr_hdr);
+	tms_OTDRConv_tms_hebei2_event_hdr(event_hdr, event_hdr);
+	// printf("id %s count %d\n", event_hdr->eventid, event_hdr->count);
+	tms_OTDRConv_tms_hebei2_event_val(event_val, event_val, event_hdr);
+
+
+#ifdef HEBEI2_DBG
+	tms_Print_tms_fibersection_hdr(fiber_hdr);
+	tms_Print_tms_fibersection_val(fiber_val);
+	tms_Print_tms_otdr_param(otdr_param);
+	tms_Print_tms_test_result(test_result);
+	tms_Print_tms_hebei2_event(event_hdr, event_val);
+#endif
 	return 0;
 }
 

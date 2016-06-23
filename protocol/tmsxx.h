@@ -396,6 +396,92 @@ extern "C" {
 // end hebei 2
 
 // hebei2
+// 0x80000004
+
+struct tms_fibersection_hdr
+{
+	char fiber_id[20];
+	uint32_t count;
+};
+struct tms_fibersection_val
+{
+	uint32_t pipe_num;
+	uint32_t fiber_num;
+	char     fiber_route[64];
+	char     fiber_name[64];
+
+	uint32_t start_coor;
+	char     start_inf[64];
+	uint32_t end_coor;
+	char     end_inf[64];
+
+	float    fibe_atten_init;
+	float    level1;
+	float    level2;
+	float    listen_level;
+};
+
+struct tms_otdr_param
+{
+	char otdr_id[20];
+	uint32_t range;
+	uint32_t wl;
+	uint32_t pw;
+	uint32_t time;
+	float	gi;
+	float	end_threshold;
+	float	none_reflect_threshold;
+};
+struct tms_test_result
+{
+	char result[20];
+	float range;
+	float loss;
+	float atten;
+	char time[20];
+};
+struct tms_hebei2_data_hdr
+{
+	int8_t  dpid[12];					///< 测试数据单元名称
+	int32_t count;					///< 数据点个数
+};
+
+// OTDR返回信息B部分
+struct tms_hebei2_data_val
+{
+	uint16_t data;
+};
+
+struct tms_hebei2_event_hdr
+{
+	int8_t eventid[12];
+	int32_t count;
+};
+
+struct tms_hebei2_event_val
+{
+	int32_t distance;		///< 该事件点距离
+	int32_t event_type;		///< 该事件点类型
+	float   att;			///< 该事件点两事件点与前事件点之间光纤衰减系数
+	float   loss;			///< 该事件点连接损耗
+	float   reflect;		///< 该事件点反射损耗
+	float   link_loss;		///< 该事件点累计损耗
+};
+
+struct tms_fibersectioncfg
+{
+	struct tms_fibersection_hdr *fiber_hdr;
+	struct tms_fibersection_val *fiber_val;
+	struct tms_otdr_param       *otdr_param;
+	struct tms_test_result      *test_result;
+	struct tms_hebei2_data_hdr  *otdr_hdr;
+	struct tms_hebei2_data_val  *otdr_val;
+	struct tms_hebei2_event_hdr *event_hdr;
+	struct tms_hebei2_event_val *event_val;
+};
+// end 0x80000004
+
+// 0x80000005
 struct tms_cfgpip_status
 {
 	uint32_t status;
@@ -1179,7 +1265,7 @@ struct tms_retotdr_event_hdr
 	int8_t eventid[12];
 	int32_t count;
 };
-// OTDR返回信息C部分
+// // OTDR返回信息C部分
 struct tms_retotdr_event_val
 {
 	int32_t distance;		///< 该事件点距离
@@ -1706,7 +1792,7 @@ struct tms_callback
 	int32_t (*pf_OnGetNodeTime)(struct tms_context *pcontext);
 	int32_t (*pf_OnRetNodeTime)(struct tms_context *pcontext);
 	int32_t (*pf_OnNameAndAddress)(struct tms_context *pcontext);
-	int32_t (*pf_OnFiberSectionCfg)(struct tms_context *pcontext);
+	int32_t (*pf_OnFiberSectionCfg)(struct tms_context *pcontext, struct tms_fibersectioncfg *pval);
 	int32_t (*pf_OnConfigPipeState)(struct tms_context *pcontext, struct tms_cfgpip_status *pval);
 	int32_t (*pf_OnGetCycleTestCuv)(struct tms_context *pcontext,struct tms_getcyctestcuv *pval);
 	int32_t (*pf_OnGetStatusData)(struct tms_context *pcontext,struct tms_getstatus_data *pval);
@@ -1720,12 +1806,14 @@ struct tms_callback
 	int32_t (*pf_OnGetOTDRData)(struct tms_context *pcontext);
 	int32_t (*pf_OnGetStandardCurv)(struct tms_context *pcontext, struct tms_getstandardcurv *pval);
 
+	// 20000000
+	int32_t (*pf_OnSetOTDRFPGAInfo)(struct tms_context *pcontext, struct tms_setotdrfpgainfo *pval);
+
 	// 70000000
 	int32_t (*pf_OnSetOCVMPara)(struct tms_context *pcontext, struct tms_setocvmpara *pval);
 	int32_t (*pf_OnSetOCVMFPGAInfo)(struct tms_context *pcontext, struct tms_setocvmpara *pval);
 	
-	// 20000000
-	int32_t (*pf_OnSetOTDRFPGAInfo)(struct tms_context *pcontext, struct tms_setotdrfpgainfo *pval);
+
 };
 
 
