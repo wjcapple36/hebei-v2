@@ -440,7 +440,16 @@ struct tms_getstandardcurv
 {
 	uint32_t pipe;
 };
-
+// 20000000
+struct tms_setotdrfpgainfo
+{
+	uint32_t pipe;
+	uint32_t wl;
+	uint32_t dr;
+	char     wdm[16];
+	uint32_t reserved0;
+};
+// 70000000
 struct tms_setocvmpara
 {
 	float 		cable_len;
@@ -1692,6 +1701,7 @@ struct tms_callback
 
 
 	// hebei2
+	// 80000000
 	int32_t (*pf_OnGetBasicInfo)(struct tms_context *pcontext);
 	int32_t (*pf_OnGetNodeTime)(struct tms_context *pcontext);
 	int32_t (*pf_OnRetNodeTime)(struct tms_context *pcontext);
@@ -1709,9 +1719,13 @@ struct tms_callback
 	int32_t (*pf_OnCurAlarm)(struct tms_context *pcontext);
 	int32_t (*pf_OnGetOTDRData)(struct tms_context *pcontext);
 	int32_t (*pf_OnGetStandardCurv)(struct tms_context *pcontext, struct tms_getstandardcurv *pval);
+
+	// 70000000
 	int32_t (*pf_OnSetOCVMPara)(struct tms_context *pcontext, struct tms_setocvmpara *pval);
 	int32_t (*pf_OnSetOCVMFPGAInfo)(struct tms_context *pcontext, struct tms_setocvmpara *pval);
 	
+	// 20000000
+	int32_t (*pf_OnSetOTDRFPGAInfo)(struct tms_context *pcontext, struct tms_setotdrfpgainfo *pval);
 };
 
 

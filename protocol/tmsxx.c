@@ -7720,8 +7720,19 @@ static int32_t tms_DbgAckSuccess(struct tms_context *pcontext, int8_t *pdata, in
 // 0x20000000	ID_SETOTDRFPGAINFO
 static int32_t tms_AnalyseSetOTDRFPGAInfo(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
-	if (pcontext->ptcb->pf_OnCheckoutResult) {
-		pcontext->ptcb->pf_OnCheckoutResult(pcontext);
+#ifdef HEBEI2_DBG
+	tms_DbgAckSuccess(pcontext, pdata, len);
+#endif
+
+	struct tms_setotdrfpgainfo *pval;
+	pval = (struct tms_setotdrfpgainfo *)(pdata + GLINK_OFFSET_DATA);
+	pval->pipe	= htonl(pval->pipe);
+	pval->wl	= htonl(pval->wl);
+	pval->dr	= htonl(pval->dr);
+	pval->reserved0	= htonl(pval->reserved0);
+
+	if (pcontext->ptcb->pf_OnSetOTDRFPGAInfo) {
+		pcontext->ptcb->pf_OnSetOTDRFPGAInfo(pcontext, pval);
 	}
 	return 0;
 }
