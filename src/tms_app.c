@@ -14,13 +14,13 @@ extern "C" {
 
 int32_t OnGetBasicInfo(struct tms_context *pcontext)
 {
-	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	trace_dbg("%s():%d\n",__FUNCTION__, __LINE__);
 	return 0;
 }
 
 int32_t OnGetNodeTime(struct tms_context *pcontext)
 {
-	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	trace_dbg("%s():%d\n",__FUNCTION__, __LINE__);
 	time_t t;
 	struct tm* local; //本地时间
 
@@ -42,23 +42,23 @@ int32_t OnGetNodeTime(struct tms_context *pcontext)
 }
 int32_t OnRetNodeTime(struct tms_context *pcontext)
 {
-	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	trace_dbg("%s():%d\n",__FUNCTION__, __LINE__);
 
 	return 0;
 }
 int32_t OnNameAndAddress(struct tms_context *pcontext)
 {
-	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	trace_dbg("%s():%d\n",__FUNCTION__, __LINE__);
 	return 0;
 }
 int32_t OnFiberSectionCfg(struct tms_context *pcontext)
 {
-	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	trace_dbg("%s():%d\n",__FUNCTION__, __LINE__);
 	return 0;
 }
 int32_t OnConfigPipeState(struct tms_context *pcontext, struct tms_cfgpip_status *pval)
 {
-	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	trace_dbg("%s():%d\n",__FUNCTION__, __LINE__);
 	uint32_t status = pval->status;
 	char ch8[8];
 
@@ -69,58 +69,89 @@ int32_t OnConfigPipeState(struct tms_context *pcontext, struct tms_cfgpip_status
 		}
 	}
 	// todo 该设备在本机框第几槽位，对应第几通道，写入配置文件
-	hh2_dbg("Warning CU 需要多次转发此消息\n");
+	hb2_dbg("Warning CU 需要多次转发此消息\n");
 	
 	return 0;
 }
 int32_t OnGetCycleTestCuv(struct tms_context *pcontext,struct tms_getcyctestcuv *pval)
 {
-	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	trace_dbg("%s():%d\n",__FUNCTION__, __LINE__);
 	printf("\tget pipe %d\n", pval->pipe);
 	return 0;
 }
 int32_t OnGetStatusData(struct tms_context *pcontext, struct tms_getstatus_data *pval)
 {
-	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	trace_dbg("%s():%d\n",__FUNCTION__, __LINE__);
 	printf("\tget pipe status %d\n", pval->pipe);
 	return 0;
 }
 int32_t OnStatusData(struct tms_context *pcontext)
 {
-	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	trace_dbg("%s():%d\n",__FUNCTION__, __LINE__);
 	return 0;
 }
 int32_t OnCRCCheckout(struct tms_context *pcontext)
 {
-	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	trace_dbg("%s():%d\n",__FUNCTION__, __LINE__);
 	return 0;
 }
 int32_t OnCheckoutResult(struct tms_context *pcontext)
 {
-	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	trace_dbg("%s():%d\n",__FUNCTION__, __LINE__);
 	return 0;
 }
 int32_t OnOTDRBasicInfo(struct tms_context *pcontext)
 {
-	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	trace_dbg("%s():%d\n",__FUNCTION__, __LINE__);
 	return 0;
 }
 int32_t OnConfigNodeTime(struct tms_context *pcontext)
 {
-	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	trace_dbg("%s():%d\n",__FUNCTION__, __LINE__);
 	// TODO set time
 	return 0;
 }
 int32_t OnCurAlarm(struct tms_context *pcontext)
 {
-	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	trace_dbg("%s():%d\n",__FUNCTION__, __LINE__);
 	return 0;
 }
-int32_t OnGetOTDRdata_14(struct tms_context *pcontext)
+int32_t OnGetOTDRData(struct tms_context *pcontext)
 {
-	printf("%s():%d\n",__FUNCTION__, __LINE__);
+	trace_dbg("%s():%d\n",__FUNCTION__, __LINE__);
 	return 0;
 }
+int32_t OnGetStandardCurv(struct tms_context *pcontext, struct tms_getstandardcurv *pval)
+{
+	trace_dbg("%s():%d\n",__FUNCTION__, __LINE__);
+	hb2_dbg("pipe %d\n", pval->pipe);
+	return 0;	
+}
+
+int32_t OnSetOCVMPara(struct tms_context *pcontext, struct tms_setocvmpara *pval)
+{
+	trace_dbg("%s():%d\n",__FUNCTION__, __LINE__);
+	hb2_dbg("cable_len	%f"
+		"host_thr	%d"
+		"slave_thr	%d"
+		"amend		%f\n",
+		pval->cable_len,
+		pval->host_thr,
+		pval->slave_thr,
+		pval->amend);
+	return 0;	
+}
+
+int32_t OnSetOCVMFPGAInfo(struct tms_context *pcontext, struct tms_setocvmfpgainfo *pval)
+{
+	trace_dbg("%s():%d\n",__FUNCTION__, __LINE__);
+	hb2_dbg("max cable len	%f"
+		"wl	%s\n",
+		pval->max_cable_len,
+		pval->wl);
+	return 0;	
+}
+
 void tms_Callback(struct tms_callback *ptcb)
 {
 	bzero(ptcb, sizeof(struct tms_callback));
@@ -140,7 +171,10 @@ void tms_Callback(struct tms_callback *ptcb)
 	ptcb->pf_OnOTDRBasicInfo	= OnOTDRBasicInfo;
 	ptcb->pf_OnConfigNodeTime	= OnConfigNodeTime;
 	ptcb->pf_OnCurAlarm		= OnCurAlarm;
-	ptcb->pf_OnGetOTDRdata_14	= OnGetOTDRdata_14;
+	ptcb->pf_OnGetOTDRData		= OnGetOTDRData;
+	ptcb->pf_OnGetStandardCurv	= OnGetStandardCurv;
+	ptcb->pf_OnSetOCVMPara		= OnSetOCVMPara;
+	ptcb->pf_OnSetOCVMFPGAInfo	= OnSetOCVMFPGAInfo;
 	// ptcb->pf_OnCopy2Use             = unuse_copy2use;
 	// ptcb->pf_OnGetDeviceComposition = tms_OnGetDeviceComposition;
 	// ptcb->pf_OnRetDeviceComposition = tms_OnRetDeviceComposition;

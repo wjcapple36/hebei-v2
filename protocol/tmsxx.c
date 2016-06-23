@@ -2412,6 +2412,51 @@ static void tms_Conv_Nx4Byte(
 		p32s++;
 	}
 }
+
+// hebei2
+static void tms_OTDRConv_tms_get_otdrdata(
+    struct tms_get_otdrdata *pout,
+    struct tms_get_otdrdata *pin)
+{
+	register uint32_t *p32s, *p32d;
+	// register uint16_t *p16s, *p16d;
+	// register int loop;
+
+	p32d = (uint32_t *)pout;
+	p32s = (uint32_t *)pin;
+	for (register uint32_t i = 0; i < sizeof (struct tms_get_otdrdata) / sizeof(int32_t); i++) {
+		*p32d = htonl(*p32s);
+		p32d++;
+		p32s++;
+	}
+}
+
+#ifdef HEBEI2_DBG
+void tms_Print_tms_get_otdrdata(struct tms_get_otdrdata *ptest_param)
+{
+	hb2_dbg("OTDR Param: ");
+	if (ptest_param->rang > 1000) {
+		hb2_dbg("%2.2fKm/", (float)ptest_param->rang / 1000);
+	}
+	else {
+		hb2_dbg("%fM/", (float)ptest_param->rang);
+	}
+
+	if (ptest_param->pw < 1000) {
+		hb2_dbg("%2.2fns/%ds/", (float)(ptest_param->pw), ptest_param->time);
+	}
+	else if (ptest_param->pw < 1000000) {
+		hb2_dbg("%2.2fus/%ds/", (float)ptest_param->pw / 1000, ptest_param->time);
+	}
+	else {
+		hb2_dbg("%2.2fms/%ds/", (float)ptest_param->pw / 1000000, ptest_param->time);
+	}
+
+	hb2_dbg("   %2.2fdB/Km /%2.2fdB/%2.2fdB\n",
+	        ptest_param->gi, ptest_param->end_threshold, ptest_param->none_reflect_threshold);
+}
+#endif
+// end hebei2
 ////////////////////////////////////////////////////////////////////////////////
 #if 0
 /**
@@ -6864,6 +6909,7 @@ int32_t tms_RetOLPInfo(int fd, struct glink_addr *paddr,
 ////////////////////////////////////////////////////////////////////////
 // 数据包分析
 // 命令名列表0x1000xxxx、0x6000xxxx、0x8000xxxx
+#ifdef PRINT_CMD_NAME_DBG
 static struct pro_list g_cmdname_0x1000xxxx[] = {
 	{"ID_TICK"},
 	{"ID_UPDATE"},
@@ -6988,7 +7034,7 @@ _Unknow:
 		break;
 	}
 }
-
+#endif
 // 转发网管的数据到设备
 // static
 int32_t tms_Transmit2Dev(struct tms_context *pcontext, int8_t *pdata, int32_t len)
@@ -7659,9 +7705,20 @@ static int tms_AckDevice(struct tms_context *pcontext, int8_t *pdata, int32_t le
 #endif
 //////////////////////////////////////////////////////////////////////////////////////////
 // hebei2
+#ifdef HEBEI2_DBG
+static int32_t tms_DbgAckSuccess(struct tms_context *pcontext, int8_t *pdata, int32_t len)
+{
+	struct glink_base *pbase_hdr;
+	pbase_hdr = (struct glink_base *)(pdata + sizeof(int32_t));
 
-// 0x20000000	ID_CHECKOUTRESULT
-static int32_t tms_AnalyseCheckoutResult(struct tms_context *pcontext, int8_t *pdata, int32_t len)
+	struct tms_ack ack;
+	ack.errcode = 0;
+	ack.cmdid   = htonl(pbase_hdr->cmdid);
+	tms_AckEx(pcontext->fd, NULL, &ack);
+}
+#endif
+// 0x20000000	ID_SETOTDRFPGAINFO
+static int32_t tms_AnalyseSetOTDRFPGAInfo(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
 	if (pcontext->ptcb->pf_OnCheckoutResult) {
 		pcontext->ptcb->pf_OnCheckoutResult(pcontext);
@@ -7694,14 +7751,36 @@ static int32_t tms_AnalyseSendSMSInfoRetCode(struct tms_context *pcontext, int8_
 
 
 //	0x70000000	ID_SETOTDRFPGAINFO
-static int32_t tms_AnalyseSetOTDRFPGAInfo(struct tms_context *pcontext, int8_t *pdata, int32_t len)
+static int32_t tms_AnalyseSetOCVMPara(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
+#ifdef HEBEI2_DBG
+	tms_DbgAckSuccess(pcontext, pdata, len);
+	hb2_dbg("没有测试，不清楚该命令什么意思\n");
+#endif
+	struct tms_setocvmpara *pval;
+	pval = (struct tms_setocvmpara *)(pdata + GLINK_OFFSET_DATA);
+	tms_Conv_Nx4Byte((uint32_t *)pval, (uint32_t *)pval, sizeof(struct tms_setocvmpara));
+
+	if (pcontext->ptcb->pf_OnSetOCVMPara) {
+		pcontext->ptcb->pf_OnSetOCVMPara(pcontext, pval);
+	}
 	return 0;
 }
 
 //	0x70000001	ID_SETOCVMPARA
-static int32_t tms_AnalyseSetOCVMPara(struct tms_context *pcontext, int8_t *pdata, int32_t len)
+static int32_t tms_AnalyseSetOCVMFPGAInfo(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
+#ifdef HEBEI2_DBG
+	tms_DbgAckSuccess(pcontext, pdata, len);
+	hb2_dbg("没有测试，不清楚该命令什么意思\n");
+#endif
+	struct tms_setocvmfpgainfo *pval;
+	pval = (struct tms_setocvmfpgainfo *)(pdata + GLINK_OFFSET_DATA);
+	tms_Conv_Nx4Byte((uint32_t *)pval, (uint32_t *)pval, sizeof(float));
+
+	if (pcontext->ptcb->pf_OnSetOCVMFPGAInfo) {
+		pcontext->ptcb->pf_OnSetOCVMFPGAInfo(pcontext, pval);
+	}
 	return 0;
 }
 
@@ -7716,12 +7795,10 @@ static int32_t tms_AnalyseSetOCVMPara(struct tms_context *pcontext, int8_t *pdat
 static int32_t tms_AnalyseGetBasicInfo(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
 #ifdef HEBEI2_DBG
-	struct tms_ack ack;
-	ack.errcode = 0;
-	ack.cmdid = ID_GETBASICINFO;
-	tms_AckEx(pcontext->fd, NULL, &ack);
+	tms_DbgAckSuccess(pcontext, pdata, len);
 #endif
-	hh2_dbg("Warning 应该返回什么内容，协议里没详细说明\n");
+
+	hb2_dbg("Warning 应该返回什么内容，协议里没详细说明\n");
 	if (pcontext->ptcb->pf_OnGetBasicInfo) {
 		pcontext->ptcb->pf_OnGetBasicInfo(pcontext);
 	}
@@ -7738,12 +7815,9 @@ static int32_t tms_AnalyseGetBasicInfo(struct tms_context *pcontext, int8_t *pda
 static int32_t tms_AnalyseGetNodeTime(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
 #ifdef HEBEI2_DBG
-	struct tms_ack ack;
-	ack.errcode = 0;
-	ack.cmdid = ID_RETNODETIME;
-	tms_AckEx(pcontext->fd, NULL, &ack);
+	tms_DbgAckSuccess(pcontext, pdata, len);
 #endif
-	hh2_dbg("Warning CU 需要多次转发此消息\n");
+	hb2_dbg("Warning CU 需要多次转发此消息\n");
 	if (pcontext->ptcb->pf_OnGetNodeTime) {
 		pcontext->ptcb->pf_OnGetNodeTime(pcontext);
 	}
@@ -7781,7 +7855,7 @@ static int32_t tms_AnalyseRetNodeTime(struct tms_context *pcontext, int8_t *pdat
 //	0x80000003	ID_NAMEANDADDRESS
 static int32_t tms_AnalyseNameAndAddress(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
-	hh2_dbg("Warning CU 需要处理此消息\n");
+	hb2_dbg("Warning CU 需要处理此消息\n");
 	return 0;
 }
 
@@ -7797,10 +7871,7 @@ static int32_t tms_AnalyseFiberSectionCfg(struct tms_context *pcontext, int8_t *
 static int32_t tms_AnalyseConfigPipeState(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
 #ifdef HEBEI2_DBG
-	struct tms_ack ack;
-	ack.errcode = 0;
-	ack.cmdid = ID_CONFIGPIPESTATE;
-	tms_AckEx(pcontext->fd, NULL, &ack);
+	tms_DbgAckSuccess(pcontext, pdata, len);
 #endif
 	struct tms_cfgpip_status *pval;
 	pval = (struct tms_cfgpip_status *)(pdata + GLINK_OFFSET_DATA);
@@ -7819,7 +7890,7 @@ static int32_t tms_AnalyseGetCycleTestCuv(struct tms_context *pcontext, int8_t *
 {
 	struct tms_getcyctestcuv *pval;
 	pval = (struct tms_getcyctestcuv *)(pdata + GLINK_OFFSET_DATA);
-	
+
 	pval->pipe = htonl(pval->pipe);
 	if (pcontext->ptcb->pf_OnGetCycleTestCuv) {
 		pcontext->ptcb->pf_OnGetCycleTestCuv(pcontext, pval);
@@ -7833,7 +7904,7 @@ static int32_t tms_AnalyseGetStatusData(struct tms_context *pcontext, int8_t *pd
 {
 	struct tms_getstatus_data *pval;
 	pval = (struct tms_getstatus_data *)(pdata + GLINK_OFFSET_DATA);
-	
+
 	pval->pipe = htonl(pval->pipe);
 	if (pcontext->ptcb->pf_OnGetStatusData) {
 		pcontext->ptcb->pf_OnGetStatusData(pcontext, pval);
@@ -7843,11 +7914,11 @@ static int32_t tms_AnalyseGetStatusData(struct tms_context *pcontext, int8_t *pd
 
 
 //	0x80000008	ID_STATUSDATA
-int32_t tms_RetStatusData(struct tms_context *pcontext, 
-	struct glink_addr *paddr,
-	struct tms_getstatus_data_hdr *hdr,
-	struct tms_getstatus_data_val *val,
-	int32_t ilen)
+int32_t tms_RetStatusData(struct tms_context *pcontext,
+                          struct glink_addr *paddr,
+                          struct tms_getstatus_data_hdr *hdr,
+                          struct tms_getstatus_data_val *val,
+                          int32_t ilen)
 {
 	struct tms_getstatus_data_hdr data_hdr;
 	struct tms_getstatus_data_val data_val[8], *ptdata;
@@ -7858,9 +7929,9 @@ int32_t tms_RetStatusData(struct tms_context *pcontext,
 	}
 	memcpy(&data_hdr, hdr, sizeof(struct tms_getstatus_data_hdr));
 	memcpy(data_val, val, sizeof(struct tms_getstatus_data_val) * ilen);
-	
+
 	len = sizeof(struct tms_getstatus_data_hdr) +
-		sizeof(struct tms_getstatus_data_val) * ilen;
+	      sizeof(struct tms_getstatus_data_val) * ilen;
 
 	data_hdr.count = htonl(data_hdr.count);
 
@@ -7901,9 +7972,9 @@ static int32_t tms_AnalyseCRCCheckout(struct tms_context *pcontext, int8_t *pdat
 
 
 //	0x80000010	ID_CHECKOUTRESULT
-int32_t tms_CheckoutResult(struct tms_context *pcontext, 
-	struct glink_addr *paddr,
-	uint32_t *idata)
+int32_t tms_CheckoutResult(struct tms_context *pcontext,
+                           struct glink_addr *paddr,
+                           uint32_t *idata)
 {
 	uint32_t pdata = idata;
 	pdata = htonl(pdata);
@@ -7919,7 +7990,12 @@ int32_t tms_CheckoutResult(struct tms_context *pcontext,
 	glink_SendTail(pcontext->fd);
 	pthread_mutex_lock(&pcontext->mutex);
 }
+static int32_t tms_AnalyseCheckoutResult(struct tms_context *pcontext, int8_t *pdata, int32_t len)
+{
 
+}
+
+//	0x80000011	ID_OTDRBASICINFO
 static int32_t tms_AnalyseOTDRBasicInfo(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
 	if (pcontext->ptcb->pf_OnOTDRBasicInfo) {
@@ -7928,14 +8004,11 @@ static int32_t tms_AnalyseOTDRBasicInfo(struct tms_context *pcontext, int8_t *pd
 
 }
 
-//	0x80000011	ID_OTDRBASICINFO
+//	0x80000012	ID_CONFIGNODETIME
 static int32_t tms_AnalyseConfigNodeTime(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
 #ifdef HEBEI2_DBG
-	struct tms_ack ack;
-	ack.errcode = 0;
-	ack.cmdid = ID_CONFIGNODETIME;
-	tms_AckEx(pcontext->fd, NULL, &ack);
+	tms_DbgAckSuccess(pcontext, pdata, len);
 #endif
 	if (pcontext->ptcb->pf_OnConfigNodeTime) {
 		pcontext->ptcb->pf_OnConfigNodeTime(pcontext);
@@ -7943,7 +8016,7 @@ static int32_t tms_AnalyseConfigNodeTime(struct tms_context *pcontext, int8_t *p
 
 }
 
-//	0x80000012	ID_CONFIGNODETIME
+// 0x80000013 ID_CURALARM
 static int32_t tms_AnalyseCurAlarm(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
 	if (pcontext->ptcb->pf_OnCurAlarm) {
@@ -7952,20 +8025,28 @@ static int32_t tms_AnalyseCurAlarm(struct tms_context *pcontext, int8_t *pdata, 
 
 }
 
-//	0x80000013	ID_CURALARM
-static int32_t tms_AnalyseGetOTDRdata_14(struct tms_context *pcontext, int8_t *pdata, int32_t len)
+// 0x80000014	ID_GETOTDRDATA_14
+static int32_t tms_AnalyseGetOTDRData(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
-	if (pcontext->ptcb->pf_OnGetOTDRdata_14) {
-		pcontext->ptcb->pf_OnGetOTDRdata_14(pcontext);
+#ifdef HEBEI2_DBG
+	tms_DbgAckSuccess(pcontext, pdata, len);
+#endif
+
+	struct tms_get_otdrdata *potdr = (struct tms_get_otdrdata *)(pdata + GLINK_OFFSET_DATA);
+
+	tms_OTDRConv_tms_get_otdrdata(
+	    (struct tms_get_otdrdata *)potdr,
+	    (struct tms_get_otdrdata *)potdr);
+#ifdef HEBEI2_DBG
+	tms_Print_tms_get_otdrdata(potdr);
+#endif
+	if (pcontext->ptcb->pf_OnGetOTDRData) {
+		pcontext->ptcb->pf_OnGetOTDRData(pcontext);
 	}
 
 }
 
-// 0x80000014	ID_GETOTDRDATA_14
-static int32_t tms_AnalyseGetOTDRData(struct tms_context *pcontext, int8_t *pdata, int32_t len)
-{
-	return 0;
-}
+
 // 0x80000019	ID_RETOTDRDATA_19
 static int32_t tms_AnalyseRetOTDRData(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
@@ -7974,6 +8055,16 @@ static int32_t tms_AnalyseRetOTDRData(struct tms_context *pcontext, int8_t *pdat
 // 0x80000020	ID_GETSTANDARDCURV
 static int32_t tms_AnalyseGetStandardCurv(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
+#ifdef HEBEI2_DBG
+	tms_DbgAckSuccess(pcontext, pdata, len);
+#endif
+	struct tms_getstandardcurv *pval;
+	pval = (struct tms_getstandardcurv *)(pdata + GLINK_OFFSET_DATA);
+
+	pval->pipe = htonl(pval->pipe);
+	if (pcontext->ptcb->pf_OnGetCycleTestCuv) {
+		pcontext->ptcb->pf_OnGetStandardCurv(pcontext, pval);
+	}
 	return 0;
 }
 
@@ -8039,7 +8130,7 @@ int32_t tms_AckEx(
 
 // #ifdef CONFIG_TEST_NET_STRONG
 static struct tms_analyse_array sg_analyse_0x2000xxxx[] = {
-	{	tms_AnalyseCheckoutResult	, 0}, //	0x20000000	ID_CHECKOUTRESULT
+	{	tms_AnalyseSetOTDRFPGAInfo	, 0}, //	0x20000000	ID_CHECKOUTRESULT
 	// { 	tms_AnalyseTestPacketEcho, 1},
 	// { 	tms_AnalyseTestPacketAck, 1},
 };
@@ -8072,8 +8163,9 @@ static struct tms_analyse_array sg_analyse_0x6000xxxx[] = {
 
 };
 struct tms_analyse_array sg_analyse_0x7000xxxx[] = {
-	{	tms_AnalyseSetOTDRFPGAInfo	, 0}, //	0x70000000	ID_SETOTDRFPGAINFO
-	{	tms_AnalyseSetOCVMPara	, 0}, //	0x70000001	ID_SETOCVMPARA
+	{	tms_AnalyseSetOCVMPara	, 0}, //	0x70000000	ID_SETOCVMPARA
+	{	tms_AnalyseSetOCVMFPGAInfo	, 0}, //	0x70000001	ID_SETOCVMFPGAINFO
+
 };
 
 struct tms_analyse_array sg_analyse_0x8000xxxx[] = {
@@ -8279,7 +8371,9 @@ int32_t tms_Analyse(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 	// #else
 	if (cmdid != ID_TICK) {
 		fecho("\n[frame]:-----[ %d ] cmdid [%8.8x] fd [%d]", len, cmdid, pcontext->fd);
+#if PRINT_CMD_NAME_DBG
 		tms_PrintCmdName(cmdid);
+#endif
 	}
 	// #endif
 
@@ -8912,8 +9006,7 @@ int g_manger = 0, g_node_manger = 0;
 #include <epollserver.h>
 #include <assert.h>
 extern struct ep_t ep;
-struct _ep_find_val
-{
+struct _ep_find_val {
 	int fd;
 	struct tms_context *context;
 };
@@ -8925,8 +9018,8 @@ int _ep_find(struct ep_con_t *ppconNode, void *ptr)
 	struct _ep_find_val *pval = (struct _ep_find_val *)ptr;
 
 	printf("fd %d\n", pcontext->fd);
-	
-// 
+
+	//
 	if(pcontext->fd == pval->fd) {
 		pval->fd = pcontext->fd;
 		memcpy(pval->context, pcontext, sizeof(struct tms_context));

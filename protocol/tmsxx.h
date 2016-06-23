@@ -26,9 +26,15 @@ extern "C" {
 #include "stdlib.h"
 
 #ifdef HEBEI2_DBG
-#define hh2_dbg(format, args...) printf("\e[36m" format "\e[0m", ##args)
+#define hb2_dbg(format, args...) printf("\e[36m" format "\e[0m", ##args)
 #else
-#define hh2_dbg(format, args...)
+#define hb2_dbg(format, args...)
+#endif
+
+#ifdef TRACE_DBG
+#define trace_dbg(format, args...) printf("\e[33m" format "\e[0m", ##args)
+#else
+#define trace_dbg(format, args...)
 #endif
 
 #if defined(TMS_DEBUG)
@@ -347,7 +353,7 @@ extern "C" {
 
 
 // hebei 2
-#define		ID_CHECKOUTRESULT	0x20000000	///	返回参数校验结果
+#define		ID_SETOTDRFPGAINFO	0x20000000	///	返回参数校验结果
 
 
 
@@ -416,6 +422,38 @@ struct tms_getstatus_data_val
 	char time[20];
 	float section_atten;
 };
+
+struct tms_get_otdrdata
+{
+	uint32_t pipe;
+	uint32_t rang;
+	uint32_t wl;
+	uint32_t pw;
+	uint32_t time;
+	float	gi;
+	float	end_threshold;
+	float	none_reflect_threshold;
+};
+
+
+struct tms_getstandardcurv
+{
+	uint32_t pipe;
+};
+
+struct tms_setocvmpara
+{
+	float 		cable_len;
+	uint32_t 	host_thr;
+	uint32_t 	slave_thr;
+	float 		amend;
+};
+
+struct tms_setocvmfpgainfo
+{
+	float 		max_cable_len;
+	char		wl[64];
+};
 // end hebei2
 
 struct pro_list
@@ -431,7 +469,6 @@ struct test_netpacket
 	int32_t save;
 	uint32_t id;
 	uint32_t thread_id;
-
 };
 #endif
 ////////////////////////////////////////////////////////////////////////////////
@@ -1670,7 +1707,11 @@ struct tms_callback
 	int32_t (*pf_OnOTDRBasicInfo)(struct tms_context *pcontext);
 	int32_t (*pf_OnConfigNodeTime)(struct tms_context *pcontext);
 	int32_t (*pf_OnCurAlarm)(struct tms_context *pcontext);
-	int32_t (*pf_OnGetOTDRdata_14)(struct tms_context *pcontext);
+	int32_t (*pf_OnGetOTDRData)(struct tms_context *pcontext);
+	int32_t (*pf_OnGetStandardCurv)(struct tms_context *pcontext, struct tms_getstandardcurv *pval);
+	int32_t (*pf_OnSetOCVMPara)(struct tms_context *pcontext, struct tms_setocvmpara *pval);
+	int32_t (*pf_OnSetOCVMFPGAInfo)(struct tms_context *pcontext, struct tms_setocvmpara *pval);
+	
 };
 
 
