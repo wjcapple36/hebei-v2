@@ -2,7 +2,7 @@
 
 <bookstore>
 
-<group name="root">
+<group name="epollserver_root">
 <item name="connect" boot="connect" help="connect something"></item>
 <item name="server" boot="server" help="to do "></item>
 <item name="close" boot="close" help="close connect"></item>

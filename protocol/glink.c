@@ -157,8 +157,14 @@ void glink_htonlMore(uint8_t *pdata, uint32_t len)
  * @see	glink_Build
  */
 
+// int32_t glink_Send(
+// 		int fd,  
+// 		struct glink_base  *pbase_hdr,
+// 		uint8_t *pdata,
+// 		uint32_t len)
 int32_t glink_Send(
-		int fd,  
+		int fd,
+		pthread_mutex_t *mutex,  
 		struct glink_base  *pbase_hdr,
 		uint8_t *pdata,
 		uint32_t len)
@@ -169,6 +175,9 @@ int32_t glink_Send(
 	int32_t total = 0;
 	struct glink_frame frame;
 
+	if (mutex != NULL) {
+
+	}
 	// 钩子函数
 	glink_HookPrint();
 
@@ -180,7 +189,7 @@ int32_t glink_Send(
 		total += ret;
 	}
 	else {
-		return -1;
+		goto fail;
 	}
 
 	// 发送glink协议首部
@@ -189,7 +198,7 @@ int32_t glink_Send(
 		total += ret;
 	}
 	else {
-		return -1;
+		goto fail;
 	}
 
 	// 发送应用层数据
@@ -199,7 +208,7 @@ int32_t glink_Send(
 		total += ret;
 	}
 	else {
-		return -1;
+		goto fail;
 	}
 	// 发送帧尾
 	ret = glink_SendSerial(fd, (uint8_t*)&frame.tail, GLINK_END_H);
@@ -207,9 +216,19 @@ int32_t glink_Send(
 		total += ret;
 	}
 	else {
-		return -1;
+		goto fail;
 	}
+
+	if (mutex != NULL) {
+
+	}
+
 	return total;
+fail:;
+	if (mutex != NULL) {
+
+	}
+	return -1;
 }
 
 /**
