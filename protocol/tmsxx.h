@@ -388,8 +388,8 @@ struct tms_otdr_param_val
 	float	none_reflect_threshold;
 };
 
-extern struct tms_fibersection_hdr;
-extern struct tms_fibersection_val;
+// extern struct tms_fibersection_hdr;
+// extern struct tms_fibersection_val;
 
 struct tms_otdrbaseinfo
 {
@@ -590,7 +590,7 @@ struct tms_callback
 
 	// 70000000
 	int32_t (*pf_OnSetOCVMPara)(struct tms_context *pcontext, struct tms_setocvmpara *pval);
-	int32_t (*pf_OnSetOCVMFPGAInfo)(struct tms_context *pcontext, struct tms_setocvmpara *pval);
+	int32_t (*pf_OnSetOCVMFPGAInfo)(struct tms_context *pcontext, struct tms_setocvmfpgainfo *pval);
 	
 
 };
@@ -607,6 +607,8 @@ struct tms_analyse_array
 
 ////////////////////////////////////////////////////////////////////////
 // Section 6 MCU与业务板通信接口
+void tms_Init();
+int32_t tms_Analyse(struct tms_context *pcontext, int8_t *pdata, int32_t len);
 int32_t tms_Tick(int fd,struct glink_addr *paddr);
 int32_t tms_Update(
 		int fd,	
@@ -634,6 +636,12 @@ void tms_SaveOTDRData(
 			struct tms_retotdr_chain      *pchain,
 			char *path,
 			int32_t flag);
+// hebei2
+int32_t tms_RetNodeTime(
+    struct tms_context *pcontext,
+    struct glink_addr *paddr,
+    char *tm);
+// end hebei2
 /**
  * @brief	得到OTDR返回数据的指针，pdata是连续的缓存区，如果采用环形缓存必须保证
  数据起始部分不在环形缓存末尾，结束部分在环形缓存开头。pdata的数据内容是glink协议中

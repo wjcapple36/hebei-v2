@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<bookstore>
+
+<group name="logicapp_root">
+<item name="cmd1" boot="cmd1" help=""></item>
+<item name="cmd2" boot="cmd2" help=""></item>
+<item name="cmd3" boot="cmd3" help=""></item>
+<item name="cmd4" boot="cmd4" help=""></item>
+<item name="quit_system" boot="" alias="quit" help="Exit from current command view"></item>
+</group>
+
+
+
+<group name="cmd1">
+<item name="val1"  boot="" alias="val1" help="" type="pass"></item>
+</group>
+
+<group name="cmd2">
+<item name="val1"  boot="" alias="val2" help="" type="pass"></item>
+</group>
+
+<group name="cmd3">
+<item name="val1"  boot="" alias="val3" help="" type="pass"></item>
+</group>
+
+<group name="cmd4">
+<item name="val1"  boot="" alias="val3" help="" type="pass"></item>
+</group>
+
+<group name="cmd5">
+<item name="val1"  boot="" alias="val3" help="" type="pass"></item>
+</group>
+
+<group name="cmd6">
+<item name="val1"  boot="" alias="val3" help="" type="pass"></item>
+</group>
+
+
+
+
+
+</bookstore>
