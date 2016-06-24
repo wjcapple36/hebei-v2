@@ -508,11 +508,67 @@ struct tms_getstatus_data_val
 	char time[20];
 	float section_atten;
 };
+// 0x80000011
+struct tms_otdr_crc_hdr
+{
+	uint32_t crc;
+	char id[12];
+	char name[64];
+	char addr[64];
+	char hw_ver[12];
+	char sf_ver[12];
+	uint32_t count;
+};
+struct tms_otdr_crc_val
+{
+	uint32_t pipe;
+	uint32_t wl;
+	uint32_t dr;
+	char wdm[16];
+	uint32_t reserved0;
+};
 
+struct tms_otdr_ch_status
+{
+	char id[12];
+	uint32_t ch_status;
+};
+
+struct tms_otdr_param_hdr
+{
+	char id[20];
+	uint32_t count;
+};
+struct tms_otdr_param_val
+{
+	uint32_t pipe;
+	uint32_t range;
+	uint32_t wl;
+	uint32_t pw;
+	uint32_t time;
+	float	gi;
+	float	end_threshold;
+	float	none_reflect_threshold;
+};
+
+extern struct tms_fibersection_hdr;
+extern struct tms_fibersection_val;
+
+struct tms_otdrbaseinfo
+{
+	struct tms_otdr_crc_hdr     *otdr_crc_hdr;
+	struct tms_otdr_crc_val     *otdr_crc_val;
+	struct tms_otdr_ch_status   *otdr_ch_status;
+	struct tms_otdr_param_hdr   *otdr_param_hdr;
+	struct tms_otdr_param_val   *otdr_param_val;
+	struct tms_fibersection_hdr *fiber_hdr;
+	struct tms_fibersection_val *fiber_val;
+};
+// end 0x80000011
 struct tms_get_otdrdata
 {
 	uint32_t pipe;
-	uint32_t rang;
+	uint32_t range;
 	uint32_t wl;
 	uint32_t pw;
 	uint32_t time;
@@ -1181,7 +1237,7 @@ struct tms_getotdr_test_hdr
 // 不同型号获取OTDR参数保持一致
 struct tms_getotdr_test_param
 {
-	int32_t	rang;					///< 测试量程
+	int32_t	range;					///< 测试量程
 	int32_t	wl;						///< 测试波长
 	int32_t	pw;						///< 测试脉宽
 	int32_t	time;					///< 测试时间
@@ -1234,7 +1290,7 @@ struct tms_retotdr_test_hdr
 };
 struct tms_retotdr_test_param
 {
-	int32_t	rang;					///< 测试量程
+	int32_t	range;					///< 测试量程
 	int32_t	wl;						///< 测试波长
 	int32_t	pw;						///< 测试脉宽
 	int32_t	time;					///< 测试时长
