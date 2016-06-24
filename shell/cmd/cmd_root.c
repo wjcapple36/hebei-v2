@@ -5,6 +5,7 @@
 
 static int do_fpga(void *ptr, int argc, char **argv);
 static int do_net(void *ptr, int argc, char **argv);
+static int do_logicapp(void *ptr, int argc, char **argv);
 static int do_quit_system(void *ptr, int argc, char **argv);
 
 
@@ -18,7 +19,7 @@ struct cmd_prompt boot_root[];
 	extern struct cmd_prompt boot_epollserver_root[];
 #endif
 
-
+extern struct cmd_prompt boot_logicapp_root[];
 
 
 struct cmd_prompt boot_root[] = {
@@ -34,6 +35,10 @@ struct cmd_prompt boot_root[] = {
 	(char *)"to do ",
 	(int)  NULL),
 #endif
+	PROMPT_NODE(NULL   ,      do_logicapp,
+	(char *)"logic"  ,
+	(char *)"",
+	(int)  NULL),
 	PROMPT_NODE(NULL    ,      do_quit_system,
 	(char *)"quit"  ,
 	(char *)"Exit from current command view",
@@ -61,6 +66,13 @@ static int do_net(void *ptr, int argc, char **argv)
 }
 #endif
 
+static int do_logicapp(void *ptr, int argc, char **argv)
+{
+	printf("%s\n", __FUNCTION__);
+	sh_editpath("logic");
+	sh_down_prompt_level(boot_logicapp_root);
+	return 0;
+}
 static int do_quit_system(void *ptr, int argc, char **argv)
 {
 	printf("%s\n", __FUNCTION__);
