@@ -19,4 +19,9 @@ INCLUDE_DIR	+=  -I./include -I./osnet -I./shell -I./ -I./src -I/usr/include/read
 LFLAGS		+= -lreadline -lpthread -lhistory   -ltermcap -lminishell-ex -lepollserver
 # -lsqlite3
 LIB_DIR 	+= 
-CFLAGS      += -DHEBEI2_DBG
+
+CFLAGS  += -DHEBEI2_DBG 
+CFLAGS	+= -DPRINT_CMD_NAME_DBG 
+CFLAGS	+= -DTRACE_DBG 
+
+

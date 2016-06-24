@@ -23,13 +23,13 @@ struct cmd_prompt boot_root[];
 
 struct cmd_prompt boot_root[] = {
 #ifdef CONFIG_CMD_FPGA
-	PROMPT_NODE(boot_fpga_root   ,      do_fpga,
+	PROMPT_NODE(NULL   ,      do_fpga,
 	(char *)"fpga"  ,
 	(char *)"connect something",
 	(int)  NULL),
 #endif
 #ifdef CONFIG_CMD_SERVER
-	PROMPT_NODE(boot_epollserver_root   ,      do_net,
+	PROMPT_NODE(NULL   ,      do_net,
 	(char *)"net"  ,
 	(char *)"to do ",
 	(int)  NULL),
