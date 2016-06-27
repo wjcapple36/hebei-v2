@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<bookstore>
+
+<group name="root">
+<item name="fpga" boot="fpga_root" help="connect something"></item>
+<item name="net" boot="epollserver_root" help="to do "></item>
+<item name="quit_system" boot="" alias="quit" help="Exit from current command view"></item>
+</group>
+
+
+
+
+
+
+
+</bookstore>

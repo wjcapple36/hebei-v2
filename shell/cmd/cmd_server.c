@@ -27,7 +27,7 @@ static int do_stop(void *ptr, int argc, char **argv);
 
 
 
-struct cmd_prompt boot_root[];
+struct cmd_prompt boot_epollserver_root[];
 struct cmd_prompt boot_connect[];
 struct cmd_prompt boot_con_ip[];
 struct cmd_prompt boot_inf[];
@@ -36,7 +36,7 @@ struct cmd_prompt boot_close[];
 
 
 
-struct cmd_prompt boot_root[] = {
+struct cmd_prompt boot_epollserver_root[] = {
 	PROMPT_NODE(boot_connect   ,      do_connect,
 	(char *)"connect"  ,
 	(char *)"connect something",
@@ -207,6 +207,8 @@ static int do_inf(void *ptr, int argc, char **argv)
 static int do_quit_system(void *ptr, int argc, char **argv)
 {
 	printf("%s\n", __FUNCTION__);
+	sh_editpath("");
+	sh_up_prompt_level();
 	return 0;
 }
 
