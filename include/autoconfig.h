@@ -12,5 +12,7 @@
 #define CONFIG_CMD_SERVER                                       1
 #define CONFIG_PROC_HEBEI2                                      1
 #define CONFIG_APP_HEBEI2                                       1
+#define CONFIG_MINISHELL_READLINE                               1
+#define CONFIG_MINISHELL_READLINE                               1
 
 #endif

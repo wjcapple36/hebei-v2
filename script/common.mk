@@ -4,12 +4,19 @@
 
 # ARCH=x
 SUPPORT_TARGET=x86 arm920t armv7 win32
+# SUPPORT_TARGET=x86 armv7 win32
+
+
 ifeq ("$(ARCH)", "")
 	ARCH=x86
 endif
 
 ifeq ("$(ARCH)", "arm920t")
 	CROSS_COMPILE	=/opt/EmbedSky/4.3.3/bin/arm-linux-
+	# ARCH=arm920t
+	# CROSS_COMPILE	=/opt/EmbedSky/4.3.3/bin/arm-none-linux-gnueabi-
+	# CROSS_COMPILE	=/opt/iTop-4412/4.3.2/bin/arm-linux-
+	# CROSS_COMPILE	=/opt/iTop-4412/4.3.2/bin/arm-none-linux-gnueabi-
 endif
 
 ifeq ("$(ARCH)", "armv7")
