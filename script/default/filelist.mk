@@ -17,6 +17,9 @@ SRCS-y += protocol/glink.c
 SRCS-$(CONFIG_PROC_HEBEI2) += protocol/tmsxx.c 
 
 SRCS-y += protocol/SPICommand.c
-	
+
+SRCS-$(CONFIG_RAMLOG) += ramlog/ramlog.c
+
+
 # SRCS-y += shell/minishell_core.c
 # SRCS-y += shell/minishell_core_ex.c
