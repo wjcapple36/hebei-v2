@@ -1,6 +1,7 @@
 #include <minishell_core.h>
 
 #include <stdio.h>
+#include <string.h>
 #include <protocol/SPICommand.h>
 static int do_alarm(void *ptr, int argc, char **argv);
 static int do_test(void *ptr, int argc, char **argv);
@@ -15,9 +16,9 @@ static int do_net(void *ptr, int argc, char **argv);
 
 
 
-struct cmd_prompt boot_fpga_root[];
-struct cmd_prompt boot_alarm[];
-struct cmd_prompt boot_fpga_get[];
+extern struct cmd_prompt boot_fpga_root[];
+extern struct cmd_prompt boot_alarm[];
+extern struct cmd_prompt boot_fpga_get[];
 
 
 
@@ -152,7 +153,7 @@ static int do_channal(void *ptr, int argc, char **argv)
 	char tx[7];
 	char rx[7];
 
-	CmdSPIGetPipeNum(tx);
+	CmdSPIGetPipeNum((unsigned char *)tx);
 
 
 	struct spi_ioc_transfer array[8];
@@ -205,7 +206,7 @@ static int do_slot(void *ptr, int argc, char **argv)
 	char tx[7];
 	char rx[7];
 
-	CmdSPIGetUnitNumber(tx);
+	CmdSPIGetUnitNumber((unsigned char*)tx);
 
 
 	struct spi_ioc_transfer array[8];

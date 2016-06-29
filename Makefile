@@ -167,7 +167,7 @@ CFLAGS      += -DBUILD_DATE=\"$(NOWTIME)\"		\
 
 
 #################################################################
-GCC_G++ = gcc
+GCC_G++ = g++
 CC 	= $(CROSS_COMPILE)$(GCC_G++)
 LD 	= $(CROSS_COMPILE)ld
 AR  = $(CROSS_COMPILE)ar
