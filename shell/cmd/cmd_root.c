@@ -2,6 +2,7 @@
 #include <minishell_core.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 
 static int do_fpga(void *ptr, int argc, char **argv);
 static int do_net(void *ptr, int argc, char **argv);
@@ -9,7 +10,7 @@ static int do_logicapp(void *ptr, int argc, char **argv);
 static int do_quit_system(void *ptr, int argc, char **argv);
 
 
-struct cmd_prompt boot_root[];
+extern struct cmd_prompt boot_root[];
 
 #ifdef CONFIG_CMD_FPGA
 	extern struct cmd_prompt boot_fpga_root[];

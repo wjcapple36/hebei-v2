@@ -27,12 +27,12 @@ static int do_stop(void *ptr, int argc, char **argv);
 
 
 
-struct cmd_prompt boot_epollserver_root[];
-struct cmd_prompt boot_connect[];
-struct cmd_prompt boot_con_ip[];
-struct cmd_prompt boot_inf[];
-struct cmd_prompt boot_server[];
-struct cmd_prompt boot_close[];
+extern struct cmd_prompt boot_epollserver_root[];
+extern struct cmd_prompt boot_connect[];
+extern struct cmd_prompt boot_con_ip[];
+extern struct cmd_prompt boot_inf[];
+extern struct cmd_prompt boot_server[];
+extern struct cmd_prompt boot_close[];
 
 
 
