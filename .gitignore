@@ -16,4 +16,5 @@ MDK-ARM/JLinkLog.txt
 *Module.symvers
 *.tmp_versions
 *.ko
+tags
 release
