@@ -67,6 +67,7 @@ extern "C" {
 	{
 		struct _tagCHCtrl ch_ctrl;	//通道控制状态
 		struct _tagCHState ch_state;	//通道状态
+		struct _tagCHPara ch_para;	//通道的参数
 		OtdrCtrlVariable_t otdr_ctrl;	//与otdr算法同类型全局变量匹配
 		OtdrStateVariable_t otdr_state;	//与otdr算法同类型全局变量匹配
 

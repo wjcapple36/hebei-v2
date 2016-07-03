@@ -25,9 +25,10 @@ extern OtdrStateVariable_t OtdrState;
 
 void thread_schedule(void *arg)
 {
-	int index;
+	int index, ret;
 	struct _tagCHCtrl *pCHCtrl;
 	struct _tagCHState *pCHState;
+	struct _tagCHPara *pCHPara;
 
 	index = 0;
 
@@ -36,6 +37,18 @@ void thread_schedule(void *arg)
 		index %= CH_NUM;
 		pCHState = &(otdrDev[index].ch_state);
 		pCHCtrl = &(otdrDev[index].ch_ctrl);
+		pCHPara = &(otdrDev[index].ch_para);
+		
+		ret = OtdrUpdateParam_r(pCHPara, pCHCtrl, pCHState);
+		if(ret != OP_OK)
+		{
+			printf("%s():%d: ch %d update para error,ret %d.\n",\
+					__FUNCTION__,__LINE__);
+			continue;
+		}
+		
+		ret = get_accum_counts(pCHPara.MeasureLength_m,& (pCHCtrl->hp_num),\
+			       &(pCHCtrl->lp_num));	
 		//新一轮的测试
 		if(!pCHCtrl->accum_num)
 		{
