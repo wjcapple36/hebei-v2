@@ -100,6 +100,18 @@ int32_t refresh_ch_accum_counts(
 usr_exit:
 	return ret;
 }
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  OtdrUpdateParam_r 根据输入的otdr参数，更新对应的通道的OtdrCtrl
+ *		和OtdrState 此函数是彭怀敏对应函数的克重入版本
+ * @param ch	通道
+ * @param pCHPara
+ * @param pOtdrCtrl
+ * @param pOtdrState
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
 int32_t OtdrUpdateParam_r(
 		int ch,
 		const struct _tagCHPara * pCHPara, 
@@ -543,5 +555,118 @@ void EstimateCurveConnect_r(
     pOtdrState->CurveConcatPoint = 0;
     return;
 }
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  pre_measure 测量前更新相关参数
+ *
+ * @param ch 通道
+ * @param potdrDev otdr资源
+ *
+ * @returns   0 ok others error
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t pre_measure(int32_t ch, struct _tagOtdrDev *potdrDev)
+{
+	int ret;
+	struct _tagCHCtrl *pCHCtrl;
+	struct _tagCHState *pCHState;
+	struct _tagCHPara *pCHPara;
 
+	ret = OP_OK;
 
+	pCHState = &(potdrDev->ch_state);
+	pCHCtrl = &(potdrDev->ch_ctrl);
+	pCHPara = &(potdrDev->ch_para);
+	//运行算法的时候根据下面的标志选取对应的通道进行操作
+	potdrDev->otdr_ctrl.option = ch;
+	//更新本通道参数
+	ret = OtdrUpdateParam_r(ch,pCHPara, &potdrDev->otdr_ctrl,&potdrDev->otdr_state);
+	if(ret != OP_OK)
+	{
+		printf("%s():%d: ch %d update para error,ret %d.\n",\
+				__FUNCTION__,__LINE__);
+		return ret;
+	}
+	//获取累加次数
+	ret = get_accum_counts(pCHPara->MeasureTime_ms,&(pCHCtrl->hp_num),\
+			&(pCHCtrl->lp_num));	
+	if(ret != OP_OK)
+	{
+		printf("%s():%d: ch %d get accum counts error,ret %d.\n",\
+				__FUNCTION__,__LINE__);
+		return ret;
+	}
+	return ret;
+}
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  usr_delay 延时函数，使用sleep延时，每次1s
+ *
+ * @param time_s
+ *
+ * @returns   0
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t usr_delay(int32_t time_s)
+{
+	int32_t ret,count, sleep_time;
+	ret = OP_OK;
+	count = time_s;
+
+	while(count > 1)
+	{
+		ret = sleep(1);
+		//返回值为剩余的时间，如果其他原因返回了继续睡觉
+		if(ret == 0)
+			count--;
+	}
+
+	return ret;
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  otdr_test 根据高低功率累加次数进行测量，并读取数据，完成累加
+ *	该函数回阻塞等待叠加时间
+ * @param ch	通道编号
+ * @param potdrDev	otdr设备
+ * @param pspiDev	spi设备
+ * @param pchBuf	存储空间
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t otdr_test(int32_t ch, struct _tagOtdrDev *potdrDev,
+		       	struct _tagSpiDev *pspiDev,
+			struct _tagCHBuf *pchBuf)
+{
+	int ret;
+	struct _tagCHCtrl *pCHCtrl;
+	struct _tagCHState *pCHState;
+	struct _tagFpgaPara *para;
+	ret = OP_OK;
+
+	pCHState = &(potdrDev->ch_state);
+	pCHCtrl = &(potdrDev->ch_ctrl);
+	while(pCHCtrl->accum_num > 0)
+	{
+		//如果需要拼接，高低功率均需要曲线均需要采集，否则，只需要高功率曲线
+		if(pCHCtrl->hp_num > 0)
+			ret = start_otdr_test(pspiDev, para);
+		else if(pCHCtrl->lp_num > 0)
+			ret = start_otdr_test(pspiDev, para);
+		else
+			break;
+
+		if(ret != OP_OK)
+			break;
+		usr_delay(MEASURE_TIME_MIN_S);
+
+		ret = read_otdr_data(pspiDev, NULL);
+		pCHCtrl->accum_num--;
+		pCHCtrl->hp_num--;
+		if(ret != OP_OK)
+			break;
+	}
+	return ret;
+}

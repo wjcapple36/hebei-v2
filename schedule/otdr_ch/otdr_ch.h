@@ -22,8 +22,10 @@ extern "C" {
 #endif
 
 #define CH_NUM		4 /* 通道数目*/
+//通道缓冲区交叉使用，0，2通道对应对应0缓冲区，1，3通道使用1缓冲
 #define CH_BUF_NUM	(CH_NUM / 2)/*测试的最小粒度为7秒，定义为通道数目的一半*/
 #define MEASURE_TIME_MIN_MS	7000 /*最小测试时间*/	
+#define MEASURE_TIME_MIN_S	(MEASURE_TIME_MIN_MS / 1000)
 #define OTDR_TEST_MOD_MONITOR		0	//监测模式
 #define OTDR_TEST_MOD_APPOINT		1	//点名测量
 	//#pragma pack (1) /*按照1B对齐*/
@@ -47,6 +49,8 @@ extern "C" {
 		int32_t success_num;	//测试成功的计数
 		int32_t fail_num;	//测试失败的计数
 		int32_t spi_error_num;	//spi通信失败的次数
+		int32_t ch_buf_collid_num;	//ch buf 访问冲突的次数
+		int32_t algro_collid_num;	//算法线程访问冲突的次数
 
 
 	};
@@ -76,6 +80,8 @@ extern "C" {
 	//通道缓存区，存放高低功率的累加数据
 	struct _tagCHBuf
 	{
+		pthread_mutex_t lock;		//资源锁
+		int32_t is_uesd;		//是否使用的标志
 		int32_t hp_buf_1310[DATA_LEN];	//高功率曲线buf
 		int32_t lp_buf_1310[DATA_LEN];	//低功率曲线buf
 		int32_t hp_buf_1550[DATA_LEN];	//高功率曲线buf

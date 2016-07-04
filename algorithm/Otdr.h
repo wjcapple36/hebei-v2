@@ -216,6 +216,7 @@ typedef struct
 	Uint32 IdelTime;           // 空闲时间计数         int
 	Uint32 ResetWhenSendError; // 当send函数出错时重启 bool
 	Uint32 HostConnected;      // 上位机与OTDR是否建立了连接   bool
+	Uint32 option;	//wjc 2016-07-04 ch index
 }OtdrCtrlVariable_t;
 
 // OTDR工作模式
