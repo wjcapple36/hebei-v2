@@ -444,8 +444,8 @@ static void tms_OTDRConv_tms_fibersection_val(
 	loop = phdr->count;
 	// loop = loop * sizeof (struct tms_hebei2_event_val) >> 2;	// 计算有多少个4Byte数据
 	// printf("loop %d\n", loop);
-	p32d = (int32_t *)pout;
-	p32s = (int32_t *)pin;
+	p32d = (struct tms_fibersection_val *)pout;
+	p32s = (struct tms_fibersection_val *)pin;
 	for (register int i = 0; i < loop; i++) {
 		p32d->pipe_num	 = htonl(p32s->pipe_num);
 		p32d->fiber_num	 = htonl(p32s->fiber_num);
@@ -551,8 +551,8 @@ static void tms_OTDRConv_tms_otdr_crc_val(
 	loop = count;
 	// loop = loop * sizeof (struct tms_hebei2_event_val) >> 2;	// 计算有多少个4Byte数据
 	// printf("loop %d\n", loop);
-	p32d = (int32_t *)pout;
-	p32s = (int32_t *)pin;
+	p32d = (struct tms_otdr_crc_val *)pout;
+	p32s = (struct tms_otdr_crc_val *)pin;
 	for (register int i = 0; i < loop; i++) {
 		p32d->pipe	 = htonl(p32s->pipe);
 		p32d->wl	 = htonl(p32s->wl);
@@ -636,7 +636,7 @@ void tms_Print_tms_hebei2_event(struct tms_hebei2_event_hdr *pevent_hdr, struct 
 	fecho("------------------------------------------------------------------------\n");
 	// p32d = (uint32_t*)pevent_val;
 
-	struct tms_retotdr_event_val  *ptevent_val;
+	struct tms_hebei2_event_val  *ptevent_val;
 	ptevent_val = pevent_val;
 	for (register int i = 0; i < pevent_hdr->count; i++) {
 		fecho("%d\t%d\t%8.2f\t%8.2f\t%8.2f\t%8.2f\n",
@@ -1090,7 +1090,8 @@ int32_t tms_RetNodeTime(
 		// fd =tms_SelectFdByAddr(&base_hdr.dst);
 	}
 	glink_Build(&base_hdr, ID_RETNODETIME, len);
-	glink_Send(pcontext->fd, NULL, &base_hdr, pmem, len);
+	glink_Send(pcontext->fd, &pcontext->mutex, &base_hdr, (uint8_t*)pmem, len);
+	// glink_Send(pcontext->fd, NULL, &base_hdr, (uint8_t*)pmem, len);
 }
 
 
@@ -1283,7 +1284,7 @@ int32_t tms_RetStatusData(struct tms_context *pcontext,
 	glink_SendSerial(pcontext->fd, (uint8_t *)&data_hdr,   sizeof(struct tms_getstatus_data_hdr));
 	glink_SendSerial(pcontext->fd, (uint8_t *)data_val, sizeof(struct tms_getstatus_data_val) * ilen);
 	glink_SendTail(pcontext->fd);
-	pthread_mutex_lock(&pcontext->mutex);
+	pthread_mutex_unlock(&pcontext->mutex);
 }
 static int32_t tms_AnalyseStatusData(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
@@ -1307,7 +1308,7 @@ int32_t tms_CheckoutResult(struct tms_context *pcontext,
                            struct glink_addr *paddr,
                            uint32_t *idata)
 {
-	uint32_t pdata = idata;
+	uint32_t pdata = *idata;
 	pdata = htonl(pdata);
 
 	struct glink_base  base_hdr;
@@ -1319,7 +1320,7 @@ int32_t tms_CheckoutResult(struct tms_context *pcontext,
 	glink_SendHead(pcontext->fd, &base_hdr);
 	glink_SendSerial(pcontext->fd, (uint8_t *)&pdata,   sizeof(uint32_t));
 	glink_SendTail(pcontext->fd);
-	pthread_mutex_lock(&pcontext->mutex);
+	pthread_mutex_unlock(&pcontext->mutex);
 }
 static int32_t tms_AnalyseCheckoutResult(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {

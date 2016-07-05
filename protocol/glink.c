@@ -176,7 +176,7 @@ int32_t glink_Send(
 	struct glink_frame frame;
 
 	if (mutex != NULL) {
-
+		pthread_mutex_lock(mutex);
 	}
 	// 钩子函数
 	glink_HookPrint();
@@ -220,13 +220,13 @@ int32_t glink_Send(
 	}
 
 	if (mutex != NULL) {
-
+		pthread_mutex_unlock(mutex);
 	}
 
 	return total;
 fail:;
 	if (mutex != NULL) {
-
+		pthread_mutex_unlock(mutex);
 	}
 	return -1;
 }

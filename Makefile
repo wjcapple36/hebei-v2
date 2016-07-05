@@ -21,7 +21,6 @@
 #	- script/default/project.mk
 #	- script/default/listprj.mk
 SHELL=/bin/bash
-
 export TOP_DIR = $(realpath ./)
 
 #################################################################
@@ -38,11 +37,11 @@ else
 endif
 
 ifeq ("$(file_config)", "")
-	ifeq ($(TOP_DIR)/script/config.mk, $(wildcard $(TOP_DIR)/script/config.mk))
-		file_config = ./script/config.mk
+	ifeq ($(TOP_DIR)/.config, $(wildcard $(TOP_DIR)/.config))
+		file_config = .config
 		include $(file_config)
 	else
-		file_config = ========== no such file ./script/config.mk
+		file_config = ========== no such file .config
 	endif
 else
 	include $(file_config)
@@ -53,6 +52,9 @@ endif
 # load all project items
 # DP,ARG defined in listprj.mk
 include script/listprj.mk
+mconf=script/kconfig
+	mconf_arg=mlib
+
 
 ifeq ("$($(DP)_arg)", "")
 $(warning  "project '$(DP)' unfind")
@@ -167,7 +169,7 @@ CFLAGS      += -DBUILD_DATE=\"$(NOWTIME)\"		\
 
 
 #################################################################
-GCC_G++ = gcc
+GCC_G++ = g++
 CC 	= $(CROSS_COMPILE)$(GCC_G++)
 LD 	= $(CROSS_COMPILE)ld
 AR  = $(CROSS_COMPILE)ar
@@ -232,6 +234,12 @@ configure: init_dir
 	echo $(file_config) include/autoconfig.h $(PRJ_NAME)
 	@mkheader $(file_config) include/autoconfig.h $(PRJ_NAME)
 
+menuconfig:mconf
+	./script/kconfig/mconf Kconfig
+	mkheader $(file_config) include/autoconfig.h $(PRJ_NAME)
+
+mconf:
+	$(MAKE) -C script/kconfig
 # 
 dis:echo-arch elf
 	@echo -e $(YELLOW)"    create     $(OUTPUT_DIR)-$(ARCH)/$(OUTPUT_DIS)"   			$(NORMAL)
@@ -444,7 +452,7 @@ splint:
 # all sub project
 
 each-all       := $(foreach n,$(PRJS),all-$(n))
-each-clean     := $(foreach n,$(PRJS),clean-$(n))
+each-clean     := $(foreach n,$(PRJS),clean-$(n))  clean-mconf
 each-distclean := $(foreach n,$(PRJS),distclean-$(n))
 each-strip     := $(foreach n,$(PRJS),strip-$(n))
 each-copy      := $(foreach n,$(PRJS),copy-$(n))
@@ -461,7 +469,6 @@ $(each-all):
 clean:$(each-clean)
 $(each-clean):
 	@$(MAKE) DP=$(patsubst clean-%,%,$@) aclean --no-print-directory
-	
 	
 # echo DP=$@
 # remote all output file and empty directory which create by Makefile

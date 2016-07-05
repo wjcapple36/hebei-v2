@@ -11,13 +11,13 @@ static int do_val1(void *ptr, int argc, char **argv);
 
 
 
-struct cmd_prompt boot_logicapp_root[];
-struct cmd_prompt boot_cmd1[];
-struct cmd_prompt boot_cmd2[];
-struct cmd_prompt boot_cmd3[];
-struct cmd_prompt boot_cmd4[];
-struct cmd_prompt boot_cmd5[];
-struct cmd_prompt boot_cmd6[];
+extern struct cmd_prompt boot_logicapp_root[];
+extern struct cmd_prompt boot_cmd1[];
+extern struct cmd_prompt boot_cmd2[];
+extern struct cmd_prompt boot_cmd3[];
+extern struct cmd_prompt boot_cmd4[];
+extern struct cmd_prompt boot_cmd5[];
+extern struct cmd_prompt boot_cmd6[];
 
 
 
