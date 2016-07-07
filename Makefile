@@ -236,7 +236,7 @@ configure: init_dir
 
 menuconfig:mconf
 	./script/kconfig/mconf Kconfig
-	mkheader $(file_config) include/autoconfig.h $(PRJ_NAME)
+	mkheader .config include/autoconfig.h $(PRJ_NAME)
 
 mconf:
 	$(MAKE) -C script/kconfig
