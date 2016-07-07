@@ -518,12 +518,12 @@ int ConnectCU(struct ep_t *pep)
 static pthread_t g_pthreadshell, g_pthreadconnect_cu;
 void *ThreadConnectCU(void *arg);
 #include <minishell_core.h>
-#if defined(CONFIG_USE_MINISHELL_EX) && defined(CMD_BOOT)
+#if defined(CONFIG_USE_MINISHELL_EX) && defined(CONFIG_CMD_BOOT)
 extern struct cmd_prompt boot_root[];
 #endif
 void *ThreadShell(void *arg)
 {
-#if defined(CMD_BOOT)
+#if defined(CONFIG_CMD_BOOT)
 	int ret = 1;
 
 	ret = -1;

@@ -1,0 +1,85 @@
+mainmenu "Lsdf"
+
+menu "module"
+config USE_MINISHELL_EX
+	bool "module minishell-ex"
+	default y
+	select CMD_BOOT
+
+config MINISHELL_READLINE
+	bool "minishell use readline library"
+	default y	
+	depends on USE_MINISHELL_EX
+
+
+config EPOLLSERVER
+	bool "module epollserver"
+	default y
+
+endmenu
+
+menu "MiniShell widget"
+config CMD_BOOT
+	bool "cmd boot"
+	default y
+	depends on USE_MINISHELL_EX
+
+
+
+config CMD_FPGA
+	bool "cmd fpga"
+	depends on USE_MINISHELL_EX
+	select CMD_BOOT
+
+choice
+	prompt "SPI communication format"
+
+config SPI_1FRAME_1CS
+	bool "perial 1 frame clock 1 CS signal"
+	default y
+config SPI_8BIT_1CS
+	bool "perial 8bit clock 1 CS signal"
+	default n
+
+
+endchoice
+
+
+config CMD_SERVER
+	bool "cmd epollserver"
+	depends on USE_MINISHELL_EX
+	select CMD_BOOT
+
+endmenu
+
+
+
+
+
+menu "HEBEI2 project"
+
+config HEBEI2_DBG
+	bool "enable debug output HEBEI2_DBG"
+
+config PROC_HEBEI2
+	bool "protocol tmsxx for hebei2"
+	default y
+
+config APP_HEBEI2
+	bool "app tmsxx for hebei2 (wml write it)"
+	default y
+
+endmenu
+
+menu "Other project tools"
+
+config RAMMAC
+	bool "ramd mac"
+	default y
+
+config PROJECT_TEST
+	bool "project auto test for production"
+	default y
+
+
+endmenu
