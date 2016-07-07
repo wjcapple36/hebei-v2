@@ -14,12 +14,12 @@
 #include "../../algorithm/prototypes.h"
 #include "../../protocol/tmsxx.h"
 //声明otdr算法中定义的全局变量
-extern const Uint32 OtdrMeasureLength[MEASURE_LENGTH_NUM];
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 
 #define CH_NUM		4 /* 通道数目*/
 //通道缓冲区交叉使用，0，2通道对应对应0缓冲区，1，3通道使用1缓冲
@@ -28,12 +28,22 @@ extern "C" {
 #define MEASURE_TIME_MIN_S	(MEASURE_TIME_MIN_MS / 1000)
 #define OTDR_TEST_MOD_MONITOR		0	//监测模式
 #define OTDR_TEST_MOD_APPOINT		1	//点名测量
+//定义操作码
+#define OP_OK	0
+//文件操作返回码
+#define OPEN_ERROR	1  //打开文件失败
+#define SAVE_DATA_LEN_NO_EQ	2	//写入的数据长度和要写入的不相等
+#define READ_DATA_LEN_ERROR	3	//读取文件长度错误
+#define FILE_RUIN		4	//文件损坏	
+#define NEW_BUF_FAIL		5	//分配内存失败:w
 	//#pragma pack (1) /*按照1B对齐*/
 
 	//描述通道控制参数
 	struct _tagCHCtrl
 	{
-		int32_t mod;		//测量模式
+		int32_t enable;		//是否启用
+		int32_t is_cfged;	//是否配置
+		int32_t mod;		//0,轮询，1点名测量
 		int32_t accum_num;	//累加次数0，表示本通道累加结束
 		int32_t hp_num;		//高功率次数
 		int32_t lp_num;		//低功率次数
@@ -82,10 +92,8 @@ extern "C" {
 	{
 		pthread_mutex_t lock;		//资源锁
 		int32_t is_uesd;		//是否使用的标志
-		int32_t hp_buf_1310[DATA_LEN];	//高功率曲线buf
-		int32_t lp_buf_1310[DATA_LEN];	//低功率曲线buf
-		int32_t hp_buf_1550[DATA_LEN];	//高功率曲线buf
-		int32_t lp_buf_1550[DATA_LEN];	//低功率曲线buf
+		int32_t hp_buf[DATA_LEN];	//高功率曲线buf
+		int32_t lp_buf[DATA_LEN];	//低功率曲线buf
 	};
 	//描述启动测量发送到fpga的参数
 	struct _tagFpgaPara
@@ -95,6 +103,26 @@ extern "C" {
 		uint8_t range;
 		uint8_t power;
 
+	};
+	//与tms_fibersectioncfg的差别是将固定长度的变量设置成了非指针
+	struct _tagFiberSecCfg
+	{
+		struct tms_fibersection_hdr fiber_hdr; //光纤段头
+		struct tms_fibersection_val *fiber_val;//光纤段信息
+		struct tms_otdr_param       otdr_param;//otdr参数
+		struct tms_test_result      test_result;//测量结果
+		struct tms_hebei2_data_hdr  otdr_hdr;//采样点数据头
+		struct tms_hebei2_data_val  *otdr_val;//otdr数据部分
+		struct tms_hebei2_event_hdr event_hdr;//时间点头
+		struct tms_hebei2_event_val *event_val;//时间点缓冲区
+		int32_t is_initialize;
+		int32_t error_num;
+	};
+	//设备状态
+	struct _tagDevState
+	{
+		int32_t on_use;//处于启用的状态
+		int32_t error_state;
 	};
 
 

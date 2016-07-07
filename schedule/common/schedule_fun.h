@@ -5,8 +5,8 @@
  * @version 2.0
  * @date 2016-06-28
  */
-#ifndef SCHEEDULE_FUN_H
-#define  SCHEEDULE_FUN_H
+#ifndef _SCHEEDULE_FUN_H
+#define  _SCHEEDULE_FUN_H
 
 #include "../otdr_ch/otdr_ch.h"
 
@@ -33,8 +33,8 @@ extern "C" {
 			);
 	//初始化功率模式
 	void PowerModeInit_r(
-		OtdrCtrlVariable_t  *pOtdrCtrl,
-		OtdrStateVariable_t *pOtdrState);
+			OtdrCtrlVariable_t  *pOtdrCtrl,
+			OtdrStateVariable_t *pOtdrState);
 	//otdr算法可重入函数
 	void OtdrStateInit_r(OtdrStateVariable_t  *pOtdrState);
 	//计算输入脉宽对应的采样点数目
@@ -46,8 +46,8 @@ extern "C" {
 			OtdrStateVariable_t  *pOtdrState);
 	//设定低功率模式，根据EstimateCurveConnect估算结果调用该函数
 	void UseLowPowerMode_r(
-		OtdrCtrlVariable_t  *pOtdrCtrl,
-		OtdrStateVariable_t  *pOtdrState);
+			OtdrCtrlVariable_t  *pOtdrCtrl,
+			OtdrStateVariable_t  *pOtdrState);
 	//矫正采样率和脉宽周期
 	void AdaptSampleFreq_PulsePeriod_r(
 			int ch,
@@ -59,15 +59,6 @@ extern "C" {
 	//延时
 	int32_t usr_delay(int32_t time_s);
 	//启动测量，并等待返回
-	int32_t otdr_test(int32_t ch, struct _tagOtdrDev *potdrDev,
-		       	struct _tagSpiDev *pspiDev,
-			struct _tagCHBuf *pchBuf);
-
-
-
-
-
-
 
 
 #ifdef __cplusplus

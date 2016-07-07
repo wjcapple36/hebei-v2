@@ -15,8 +15,8 @@ OUTPUT_DIR 	=
 
 
 
-INCLUDE_DIR	+=  -I./include -I./osnet -I./shell -I./ -I./src -I/usr/include/readline -I/usr/local/install/include
-LFLAGS		+= -lreadline -lpthread -lhistory   -ltermcap -lminishell-ex -lepollserver
+INCLUDE_DIR	+=  -I./include -I./osnet -I./shell -I./ -I./src -I/usr/include/readline -I/usr/local/install/include -I./schdule -I./algorithm
+LFLAGS		+= -lreadline -lpthread -lhistory   -ltermcap -lminishell-ex -lepollserver -lm
 # -lsqlite3
 LIB_DIR 	+= 
 

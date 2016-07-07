@@ -500,7 +500,7 @@ void EstimateCurveConnect_r(
 					break;
 				}
 				v = (float)An[i] / An[i+m];
-				v = 5* FastLog10_Addr(&v) - k;
+				v = 5* FastLog10(v) - k;
 
 				if(fabs(v) > 0.5) 
 				{
@@ -584,7 +584,7 @@ int32_t pre_measure(int32_t ch, struct _tagOtdrDev *potdrDev)
 	if(ret != OP_OK)
 	{
 		printf("%s():%d: ch %d update para error,ret %d.\n",\
-				__FUNCTION__,__LINE__);
+				__FUNCTION__,__LINE__, ret);
 		return ret;
 	}
 	//获取累加次数
@@ -593,7 +593,7 @@ int32_t pre_measure(int32_t ch, struct _tagOtdrDev *potdrDev)
 	if(ret != OP_OK)
 	{
 		printf("%s():%d: ch %d get accum counts error,ret %d.\n",\
-				__FUNCTION__,__LINE__);
+				__FUNCTION__,__LINE__,ret);
 		return ret;
 	}
 	return ret;
@@ -636,11 +636,12 @@ int32_t usr_delay(int32_t time_s)
  * @returns   
  */
 /* ----------------------------------------------------------------------------*/
-int32_t otdr_test(int32_t ch, struct _tagOtdrDev *potdrDev,
-		       	struct _tagSpiDev *pspiDev,
-			struct _tagCHBuf *pchBuf)
+int32_t otdr_test(int32_t ch, 
+		struct _tagOtdrDev *potdrDev,
+	   	struct _tagSpiDev *pspiDev,
+		struct _tagCHBuf *pchBuf)
 {
-	int ret;
+	int32_t ret;
 	struct _tagCHCtrl *pCHCtrl;
 	struct _tagCHState *pCHState;
 	struct _tagFpgaPara *para;
@@ -670,3 +671,4 @@ int32_t otdr_test(int32_t ch, struct _tagOtdrDev *potdrDev,
 	}
 	return ret;
 }
+

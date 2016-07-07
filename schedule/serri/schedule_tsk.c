@@ -68,7 +68,7 @@ void thread_schedule(void *arg)
 		pCHCtrl->hp_num--;
 
 		//判断是否拼接,如果不拼接，那么将低功率累加次数设置成0
-		EstimateCurveConnect_r(chBuf[buf_index].hp_buf_1310,NULL, NULL);
+		EstimateCurveConnect_r(chBuf[buf_index].hp_buf,NULL, NULL);
 		if(!pCHCtrl->curv_cat)
 		{
 			pCHCtrl->hp_num = pCHCtrl->accum_num;

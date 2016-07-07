@@ -15,8 +15,8 @@
  **************************************************************************************
 */
 
-#ifndef PROGRAM_RUN_LOG_H
-#define PROGRAM_RUN_LOG_H
+#ifndef _PROGRAM_RUN_LOG_H
+#define _PROGRAM_RUN_LOG_H
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>

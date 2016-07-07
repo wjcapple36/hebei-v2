@@ -21,8 +21,6 @@ struct _tagSpiDev
 	pthread_mutex_t mtx;
 	int32_t fd;
 };
-//定义SPI操作码
-#define OP_OK	0
 //启动otdr测试
 int32_t start_otdr_test(struct _tagSpiDev *dev, struct _tagFpgaPara *para);
 //读取fpga累加好的数据

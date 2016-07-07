@@ -21,21 +21,20 @@ SRCS-y += protocol/SPICommand.c
 
 SRCS-y += schedule/common/schedule_fun.c \
 	schedule/common/program_run_log.c \
+	schedule/common/hb_app.c \
 	schedule/otdr_ch/hb_spi.c \
-	schedule/serri/schedule_tsk.c \
+	schedule/serri/schedule_tsk.c 
 
 SRCS-y += \
 	algorithm/OtdrEdma.c  \
 	algorithm/Utility.c \
-	algorithm/OtdrTable.c
+	algorithm/OtdrTable.c \
+	algorithm/Event.c \
+	algorithm/Filter.c  \
+     	algorithm/OtdrMain.c   \
+	algorithm/Otdr.c   \
+	algorithm/EventParam.c \
+	algorithm/OtdrAlgo.c    \
+	algorithm/NetworkSocket.c  \
+	algorithm/OtdrTouch.c \
 
-#################################
-
-#algorithm/Event.c \
-	#algorithm/NetworkSocket.c  \
-	#algorithm/OtdrTouch.c \
-#	algorithm/Filter.c  \
-#     	algorithm/OtdrMain.c   \
-#	algorithm/Otdr.c   \
-#	algorithm/EventParam.c \
-#	algorithm/OtdrAlgo.c    \
