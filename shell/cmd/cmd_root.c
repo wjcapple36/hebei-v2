@@ -2,6 +2,7 @@
 #include <minishell_core.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 
 static int do_fpga(void *ptr, int argc, char **argv);
 static int do_net(void *ptr, int argc, char **argv);

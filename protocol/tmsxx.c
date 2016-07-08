@@ -1090,7 +1090,8 @@ int32_t tms_RetNodeTime(
 		// fd =tms_SelectFdByAddr(&base_hdr.dst);
 	}
 	glink_Build(&base_hdr, ID_RETNODETIME, len);
-	glink_Send(pcontext->fd, NULL, &base_hdr, (uint8_t*)pmem, len);
+	glink_Send(pcontext->fd, &pcontext->mutex, &base_hdr, (uint8_t*)pmem, len);
+	// glink_Send(pcontext->fd, NULL, &base_hdr, (uint8_t*)pmem, len);
 }
 
 
@@ -1283,7 +1284,7 @@ int32_t tms_RetStatusData(struct tms_context *pcontext,
 	glink_SendSerial(pcontext->fd, (uint8_t *)&data_hdr,   sizeof(struct tms_getstatus_data_hdr));
 	glink_SendSerial(pcontext->fd, (uint8_t *)data_val, sizeof(struct tms_getstatus_data_val) * ilen);
 	glink_SendTail(pcontext->fd);
-	pthread_mutex_lock(&pcontext->mutex);
+	pthread_mutex_unlock(&pcontext->mutex);
 }
 static int32_t tms_AnalyseStatusData(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
@@ -1319,7 +1320,7 @@ int32_t tms_CheckoutResult(struct tms_context *pcontext,
 	glink_SendHead(pcontext->fd, &base_hdr);
 	glink_SendSerial(pcontext->fd, (uint8_t *)&pdata,   sizeof(uint32_t));
 	glink_SendTail(pcontext->fd);
-	pthread_mutex_lock(&pcontext->mutex);
+	pthread_mutex_unlock(&pcontext->mutex);
 }
 static int32_t tms_AnalyseCheckoutResult(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
