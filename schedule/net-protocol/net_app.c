@@ -7,7 +7,7 @@
 // #include "tmsxxdb.h"
 #include "sys/wait.h"
 // #include <strings.h>
-
+#include "../otdr_ch/otdr_ch.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -121,9 +121,16 @@ int32_t OnCurAlarm(struct tms_context *pcontext)
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	return 0;
 }
-int32_t OnGetOTDRData(struct tms_context *pcontext)
+int32_t OnGetOTDRData(struct tms_context *pcontext,struct tms_get_otdrdata *pGet_otdr_data)
 {
+	int ret;
+	struct tms_ack ack;
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	//正在累加中，不能响应用户的测量需求
+	if(usrOtdrTest.state == USR_OTDR_TEST_ACCUM)
+	{
+		ack.errcode = CMD_RET_EXIST_CMD;
+	}
 	return 0;
 }
 int32_t OnGetStandardCurv(struct tms_context *pcontext, struct tms_getstandardcurv *pval)

@@ -18,3 +18,4 @@ MDK-ARM/JLinkLog.txt
 *.ko
 tags
 release
+.config

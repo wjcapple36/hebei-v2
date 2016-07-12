@@ -8,8 +8,8 @@
 
 #include "schedule_fun.h"
 #include "program_run_log.h"
-#include"../otdr_ch/hb_spi.h"
-
+#include "../otdr_ch/hb_spi.h"
+#include "global.h"
 /* --------------------------------------------------------------------------*/
 /**
  * @synopsis  get_accum_counts  用测量时间按照3:1的比例换算出高低功率累加时间	
@@ -565,7 +565,7 @@ void EstimateCurveConnect_r(
  * @returns   0 ok others error
  */
 /* ----------------------------------------------------------------------------*/
-int32_t pre_measure(int32_t ch, struct _tagOtdrDev *potdrDev)
+int32_t pre_measure(int32_t ch, struct _tagOtdrDev *potdrDev,struct _tagCHPara *pUsrPara)
 {
 	int ret;
 	struct _tagCHCtrl *pCHCtrl;
@@ -576,15 +576,18 @@ int32_t pre_measure(int32_t ch, struct _tagOtdrDev *potdrDev)
 
 	pCHState = &(potdrDev->ch_state);
 	pCHCtrl = &(potdrDev->ch_ctrl);
-	pCHPara = &(potdrDev->ch_para);
+	//如果是用户测量，则使用用户指定参数
+	if(pCHCtrl->mod == OTDR_TEST_MOD_USR)
+		pCHPara = pUsrPara;
+	else
+		pCHPara = &(potdrDev->ch_para);
 	//运行算法的时候根据下面的标志选取对应的通道进行操作
-	potdrDev->otdr_ctrl.option = ch;
 	//更新本通道参数
 	ret = OtdrUpdateParam_r(ch,pCHPara, &potdrDev->otdr_ctrl,&potdrDev->otdr_state);
 	if(ret != OP_OK)
 	{
 		printf("%s():%d: ch %d update para error,ret %d.\n",\
-				__FUNCTION__,__LINE__, ret);
+				__FUNCTION__,__LINE__, ch, ret);
 		return ret;
 	}
 	//获取累加次数
@@ -605,10 +608,10 @@ int32_t pre_measure(int32_t ch, struct _tagOtdrDev *potdrDev)
  *
  * @param time_s
  *
- * @returns   0
+ * @returns   0, 超时退出，-1中断测量退出 
  */
 /* ----------------------------------------------------------------------------*/
-int32_t usr_delay(int32_t time_s)
+int32_t usr_delay(int32_t ch, int32_t time_s)
 {
 	int32_t ret,count, sleep_time;
 	ret = OP_OK;
@@ -616,6 +619,10 @@ int32_t usr_delay(int32_t time_s)
 
 	while(count > 1)
 	{
+		if(usrOtdrTest.state == USR_OTDR_TEST_WAIT){
+			ret = -1;
+			break;
+		}
 		ret = sleep(1);
 		//返回值为剩余的时间，如果其他原因返回了继续睡觉
 		if(ret == 0)
@@ -661,7 +668,7 @@ int32_t otdr_test(int32_t ch,
 
 		if(ret != OP_OK)
 			break;
-		usr_delay(MEASURE_TIME_MIN_S);
+		usr_delay(ch,MEASURE_TIME_MIN_S);
 
 		ret = read_otdr_data(pspiDev, NULL);
 		pCHCtrl->accum_num--;
@@ -669,6 +676,30 @@ int32_t otdr_test(int32_t ch,
 		if(ret != OP_OK)
 			break;
 	}
+	return ret;
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  get_usr_otdr_test_para 将点名测量的参数赋值给本地
+ *
+ * @param pusr_para
+ * @param pnet_para
+ *
+ * @returns   0
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t get_usr_otdr_test_para(struct _tagCHPara *pusr_para, 
+		const struct _tagUsrOtdrTest *pnet_para)
+{
+	int32_t ret;
+	ret = OP_OK;
+	pusr_para->Lambda_nm = pnet_para->wl;
+	pusr_para->MeasureLength_m = pnet_para->range;
+	pusr_para->MeasureTime_ms = pnet_para->time*1000;
+	pusr_para->NonRelectThreshold = pnet_para->none_ref_th;
+	pusr_para->PulseWidth_ns = pnet_para->pw;
+	pusr_para->n = pnet_para->gi;
+	pusr_para->EndThreshold = pnet_para->end_th;
 	return ret;
 }
 
