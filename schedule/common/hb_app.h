@@ -32,7 +32,7 @@ extern "C" {
 	int32_t creat_folder(const char folder_path[]);
 	//协议0x80000004内容，光纤段内容对应和保存
 	int32_t save_fiber_sec_para(int ch, struct tms_fibersectioncfg *pfiber_sec);
-	int32_t read_fiber_sec_para(int ch, struct _tagFiberSecCfg *pfiber_sec);
+	int32_t read_fiber_sec_para(int ch, struct _tagCHFiberSec *pch_fiber_sec);
 	//为光纤段分配缓冲
 	int32_t alloc_fiber_sec_buf(struct _tagFiberSecHead secHead,
 			struct _tagFiberSecCfg *pFiberSecCfg);
@@ -40,13 +40,17 @@ extern "C" {
 	int32_t free_fiber_sec_buf(struct _tagFiberSecCfg *pFiberSecCfg);
 	//初始化otdr模块
 	int32_t initialize_otdr_dev(struct _tagOtdrDev *pOtdrDev,
-		struct _tagFiberSecCfg *pFiberSec,
 		int32_t ch_num);
 	//初始化光纤段参数
-	int32_t initialize_fiber_sec_cfg(struct _tagFiberSecCfg *pFiberSec, int32_t num);
+	int32_t initialize_fiber_sec_cfg();
 	//更新通道参数
 	int32_t get_ch_para_from_fiber_sec(struct _tagCHPara *pCHPara, 
-			const struct _tagFiberSecCfg *FiberSec);
+			const struct _tagCHFiberSec *FiberSec);
+	//自定义快速锁操作函数
+	int32_t quick_lock( QUICK_LOCK *plock);
+	int32_t quick_unlock( QUICK_LOCK *plock);
+
+
 
 
 

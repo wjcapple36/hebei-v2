@@ -13,6 +13,7 @@
 #include "../../algorithm/OtdrEdma.h"
 #include "../../algorithm/prototypes.h"
 #include "../../protocol/tmsxx.h"
+#include <pthread.h>
 //声明otdr算法中定义的全局变量
 
 
@@ -21,13 +22,13 @@ extern "C" {
 #endif
 
 
-#define CH_NUM		4 /* 通道数目*/
+#define CH_NUM		8 /* 通道数目*/
 //通道缓冲区交叉使用，0，2通道对应对应0缓冲区，1，3通道使用1缓冲
-#define CH_BUF_NUM	(CH_NUM / 2)/*测试的最小粒度为7秒，定义为通道数目的一半*/
+#define CH_BUF_NUM	2 //串行测试，2个缓冲区即可
 #define MEASURE_TIME_MIN_MS	7000 /*最小测试时间*/	
 #define MEASURE_TIME_MIN_S	(MEASURE_TIME_MIN_MS / 1000)
 #define OTDR_TEST_MOD_MONITOR		0	//监测模式
-#define OTDR_TEST_MOD_APPOINT		1	//点名测量
+#define OTDR_TEST_MOD_USR		1	//点名测量
 //定义操作码
 #define OP_OK	0
 //文件操作返回码
@@ -37,7 +38,17 @@ extern "C" {
 #define FILE_RUIN		4	//文件损坏	
 #define NEW_BUF_FAIL		5	//分配内存失败:w
 	//#pragma pack (1) /*按照1B对齐*/
-
+#define LOCK_TYPE_SPIN
+//定义快速锁 万一有什么问题，直接在这里修改定义
+#ifdef LOCK_TYEP_SPIN
+	//自旋转锁
+	typedef pthread_spinlock_t QUICK_LOCK; 
+#else
+	//带任务切换的互斥量
+	typedef pthread_mutex_t QUICK_LOCK; 
+#endif
+#define OTDR_TEST_MONITOR	0	//监控测量
+#define OTDR_TEST_USR		1	//用户指定测量
 	//描述通道控制参数
 	struct _tagCHCtrl
 	{
@@ -87,10 +98,20 @@ extern "C" {
 
 
 	};
+	//算法运行的时候一些指示信息
+	struct _tagAlgroCHInfo
+	{
+		int32_t cmd;
+		int32_t state;	//0 空闲，1正忙
+		int32_t ch;	//通道号
+		int32_t resource_id;	//资源id
+		int32_t mod;	//测试方式 点名测量，轮询
+	};
+
 	//通道缓存区，存放高低功率的累加数据
 	struct _tagCHBuf
 	{
-		pthread_mutex_t lock;		//资源锁
+		QUICK_LOCK lock;		//资源锁
 		int32_t is_uesd;		//是否使用的标志
 		int32_t hp_buf[DATA_LEN];	//高功率曲线buf
 		int32_t lp_buf[DATA_LEN];	//低功率曲线buf
@@ -118,13 +139,101 @@ extern "C" {
 		int32_t is_initialize;
 		int32_t error_num;
 	};
+	//需要加锁
+	struct _tagCHFiberSec
+	{
+		QUICK_LOCK lock;
+		struct _tagFiberSecCfg para;
+	};
+	//上报时使用的otdr参数,下面配置的时候会多20个字节的标志，sb
+	struct _tagUpOtdrPara
+	{
+		int32_t rang_m;	//量程
+		int32_t lamda_nm;	//波长
+		int32_t pl;	//脉宽
+		int32_t test_time_s;	//测试时间
+		float gi;	//折射率
+		float end_th;	//结束门限门限
+		float no_ref_th;//非反射门限
+		
+	};
+	//测量结果
+	struct _tagUpOtdrTestResult
+	{
+		char id[20];	//标志
+		float chain;	//链长
+		float loss;	//链损耗
+		float attu;	//衰减
+		char date[20];	//日期
+	};
+	struct _tagOtdrEvent
+	{
+		int32_t distance;
+		int32_t type;
+		float insert_loss;
+		float attu;
+		float total_loss;
+	};
+	struct _tagUpOtdrEvent
+	{
+		char id[12];
+		struct _tagOtdrEvent buf[MAX_EVENT_NUM];
+	};
+	struct _tagUpOtdrData
+	{
+		char id[12];
+		int32_t num;
+		int16_t buf[DATA_LEN];
+	};
+	//上传曲线结构
+	struct _tagUpOtdrCurv
+	{
+		struct _tagUpOtdrPara para;
+		struct _tagUpOtdrTestResult result;
+		struct _tagUpOtdrData data;
+		struct _tagUpOtdrEvent event;
+	};
+
+	//周期性测量曲线,每个测试完毕，就更新一次
+	struct _tagCycCurv
+	{
+		QUICK_LOCK lock;
+		struct _tagUpOtdrCurv curv;
+	};
 	//设备状态
 	struct _tagDevState
 	{
 		int32_t on_use;//处于启用的状态
 		int32_t error_state;
 	};
+#define USR_OTDR_TEST_IDLE	0	//点名测量空闲，可以点名测量
+#define USR_OTDR_TEST_WAIT	1	//正在等待测量
+#define USR_OTDR_TEST_ACCUM	2	//正处于累加中，不能响应点名测量
+#define USR_OTDR_TEST_ALGRO	3	//正处于找时间点的中，
+	//点名测量结构体
+	struct _tagUsrOtdrTest
+	{
+		uint32_t state;		//空闲？累加？找事件点？
+		uint32_t cmd;		//0x80*014/0x80*15 点名测量，配置测量
 
+		uint32_t ch;
+		uint32_t range;
+		uint32_t wl;
+		uint32_t pw;
+		uint32_t time;
+		float	gi;
+		float	end_th;
+		float	none_ref_th;
+
+	};
+	//光纤段统计数据
+	struct _tagFiberStatisData
+	{
+		int32_t ch_no;
+		int32_t sec_no;
+		char date[20];
+		float attu_vale;
+	};
 
 
 

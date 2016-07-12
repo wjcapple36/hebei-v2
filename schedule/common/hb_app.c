@@ -9,12 +9,13 @@
 #include <dirent.h>
 #include "hb_app.h"
 #include "program_run_log.h"
+#include "global.h"
 
 const char cfg_path[] = "./dev_cfg/\0";
 const char cfg_fiber[] = "fiber_sec_para\0";
 const char node_name[] = "state_address.cfg\0";
 
-struct _tagFiberSecCfg FiberSecCfg[CH_NUM];
+struct _tagCHFiberSec chFiberSec[CH_NUM];
 
 /* --------------------------------------------------------------------------*/
 /**
@@ -27,8 +28,8 @@ int32_t initialize_sys_para()
 {
 	int32_t ret;
 	ret = OP_OK;
-	initialize_fiber_sec_cfg(FiberSecCfg,CH_NUM);
-	initialize_otdr_dev(otdrDev,FiberSecCfg, CH_NUM);
+	initialize_fiber_sec_cfg(CH_NUM);
+	initialize_otdr_dev(otdrDev,CH_NUM);
 
 	return ret;
 }
@@ -42,14 +43,20 @@ int32_t initialize_sys_para()
  * @returns   0成功，其他失败
  */
 /* ----------------------------------------------------------------------------*/
-int32_t initialize_fiber_sec_cfg(struct _tagFiberSecCfg *pFiberSec, int32_t num)
+int32_t initialize_fiber_sec_cfg()
 {
 	int32_t ret, i;
 	ret = OP_OK;
-	//全部清空，仅限于系统第一次运行的时候使用
-	memset(pFiberSec, 0, sizeof(struct _tagFiberSecCfg)*num);
-	for(i = 0; i < num;i++)
-		read_fiber_sec_para(i,&pFiberSec[i]);
+	for(i = 0; i < CH_NUM;i++)
+	{
+#ifdef LOCK_TYPE_SPIN
+		pthread_spin_init(&chFiberSec[i].lock, 0);
+#else
+		pthread_mutex_init(&chFiberSec[i].lock,NULL);
+#endif
+		memset(&chFiberSec[i].para,0, sizeof(struct _tagFiberSecCfg));		
+		read_fiber_sec_para(i,&chFiberSec[i]);
+	}
 
 	return ret;
 }
@@ -65,24 +72,26 @@ int32_t initialize_fiber_sec_cfg(struct _tagFiberSecCfg *pFiberSec, int32_t num)
  */
 /* ----------------------------------------------------------------------------*/
 int32_t initialize_otdr_dev(struct _tagOtdrDev *pOtdrDev,
-		struct _tagFiberSecCfg *pFiberSec,
 		int32_t ch_num)
 {
 	int ret, i;
+	struct _tagFiberSecCfg *pFiberSec;
+
 	ret = OP_OK;
 	memset(pOtdrDev,0,sizeof(struct _tagOtdrDev)*ch_num);
 	for(i = 0; i < ch_num;i++)
 	{
-		if(pFiberSec[i].is_initialize)
+
+		if(chFiberSec[i].para.is_initialize)
 		{
-			get_ch_para_from_fiber_sec(&pOtdrDev[i].ch_para,&pFiberSec[i]);
+			get_ch_para_from_fiber_sec(&pOtdrDev[i].ch_para,&chFiberSec[i]);
 			pOtdrDev[i].ch_ctrl.is_cfged = 1;
 
 		}
 
 
-		return ret;
 	}
+	return ret;
 }
 
 /* --------------------------------------------------------------------------*/
@@ -96,19 +105,18 @@ int32_t initialize_otdr_dev(struct _tagOtdrDev *pOtdrDev,
  */
 /* ----------------------------------------------------------------------------*/
 int32_t get_ch_para_from_fiber_sec(struct _tagCHPara *pCHPara, 
-		const struct _tagFiberSecCfg *pFiberSec)
+		const struct _tagCHFiberSec *pFiberSec)
 {
 	int ret;
 	ret = OP_OK;
-
-	pCHPara->Lambda_nm = pFiberSec->otdr_param.wl;
-	pCHPara->Lambda_nm = pFiberSec->otdr_param.wl;
-	pCHPara->PulseWidth_ns = pFiberSec->otdr_param.pw;
-	pCHPara->MeasureTime_ms = pFiberSec->otdr_param.time*1000;
-	pCHPara->n = pFiberSec->otdr_param.gi;
-	pCHPara->EndThreshold = pFiberSec->otdr_param.end_threshold;
-	pCHPara->NonRelectThreshold = pFiberSec->otdr_param.none_reflect_threshold;
-
+	quick_lock(&pFiberSec->lock);
+	pCHPara->Lambda_nm = pFiberSec->para.otdr_param.wl;
+	pCHPara->PulseWidth_ns = pFiberSec->para.otdr_param.pw;
+	pCHPara->MeasureTime_ms = pFiberSec->para.otdr_param.time*1000;
+	pCHPara->n = pFiberSec->para.otdr_param.gi;
+	pCHPara->EndThreshold = pFiberSec->para.otdr_param.end_threshold;
+	pCHPara->NonRelectThreshold = pFiberSec->para.otdr_param.none_reflect_threshold;
+	quick_unlock(&pFiberSec->lock);
 	return ret;
 }
 /* --------------------------------------------------------------------------*/
@@ -261,15 +269,18 @@ usr_exit:
  * @returns   0 成功，其他失败
  */
 /* ----------------------------------------------------------------------------*/
-int32_t read_fiber_sec_para(int ch, struct _tagFiberSecCfg *pfiber_sec)
+int32_t read_fiber_sec_para(int ch, struct _tagCHFiberSec *pch_fiber_sec)
 {
-	int ret, counts, tmp;
-	uint8_t is_free;
+	int32_t ret, counts, tmp;
+	uint8_t is_free, is_lock;
 	char file_path[FILE_PATH_LEN] = {0};
 	FILE *fp;
 	struct _tagFiberSecHead secHead;
+	struct _tagFiberSecCfg	*pfiber_sec;
 
 	is_free = 0;
+	is_lock	= 0;
+	pfiber_sec = &(pch_fiber_sec->para);
 	snprintf(file_path,FILE_PATH_LEN , "%s%s_%d.cfg",cfg_path, cfg_fiber,ch);
 	fp = NULL;
 	ret = OP_OK;
@@ -285,6 +296,8 @@ int32_t read_fiber_sec_para(int ch, struct _tagFiberSecCfg *pfiber_sec)
 		ret = errno;
 		goto usr_exit;
 	}
+	quick_lock(&pch_fiber_sec->lock);
+	is_lock = 1;
 	//为光纤段，数据段，时间点等位置分配空间
 	ret = alloc_fiber_sec_buf(secHead, pfiber_sec);
 	if(ret != OP_OK)
@@ -363,6 +376,8 @@ int32_t read_fiber_sec_para(int ch, struct _tagFiberSecCfg *pfiber_sec)
 	fp = NULL;
 
 usr_exit:
+	if(is_lock)
+		quick_unlock(&pch_fiber_sec->lock);
 	if(fp != NULL)
 		fclose(fp);
 	printf("%s():%d: save fiber sec para ch %d ret %d .\n",\
@@ -464,3 +479,46 @@ int32_t free_fiber_sec_buf(struct _tagFiberSecCfg *pFiberSecCfg)
 	return ret;
 
 }
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  quick_lock 自定义快速锁的上锁函数
+ *
+ * @param plock
+ *
+ * @returns   0
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t quick_lock( QUICK_LOCK *plock)
+{
+	int32_t ret;
+	ret = OP_OK;
+#ifdef LOCK_TYPE_SPIN
+	pthread_spin_lock(plock);
+#else
+	pthread_mutex_lock(plock);
+#endif
+	return ret;
+
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  quick_unlock 字定义快速锁解锁
+ *
+ * @param plock
+ *
+ * @returns   0
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t quick_unlock( QUICK_LOCK *plock)
+{
+	int32_t ret;
+	ret = OP_OK;
+#ifdef LOCK_TYPE_SPIN
+	pthread_spin_unlock(plock);
+#else
+	pthread_mutex_unlock(plock);
+#endif
+	return ret;
+}
+

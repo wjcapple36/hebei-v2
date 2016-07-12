@@ -13,16 +13,33 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+	//定义返回给网管的错误码
+#define CMD_RET_OK			0 // 成功	
+#define CMD_RET_PARA_INVLADE		1 //参数非法
+#define CMD_RET_CANT_SAVE		2 //不能保存
+#define CMD_RET_EXIST_CMD		3 //已存在一条命令
+#define CMD_RET_CH_UNUSE		4 //通道未启用
+#define CMD_RET_CH_UNCFG		5 //通道未配置
+#define CMD_RET_MANAGER_EXIST		6 //节点管理器已存在
+#define CMD_RET_CH_UNEXIST		7 //通道不存在
+#define CMD_RET_TEST_ERROR		8 //测试异常
+#define CMD_RET_FPGA_COMMU_ERROR	9 //FPGA通信异常
+
 	//通道的基数，从fpga中获取到，通道号+该基数为对外使用的通道号
-	extern volatile int32_t ch_offset; 
+	extern volatile int32_t chOffset; 
 	//通道的光纤段参数
-	extern struct _tagFiberSecCfg FiberSecCfg[CH_NUM];
+	extern struct _tagCHFiberSec chFiberSec[CH_NUM];
 	//定义otdr通道资源
 	extern struct _tagOtdrDev otdrDev[CH_NUM];
 	//通道缓冲区，存放高低功率累加数据
 	extern struct _tagCHBuf chBuf[CH_BUF_NUM];
 	//spi设备
 	extern struct _tagSpiDev spiDev;
+	//用户点名测量
+	extern struct _tagUsrOtdrTest usrOtdrTest;
+	//周期性测量曲线存储区
+	extern struct _tagCycCurv cycCrve[CH_NUM];
+	extern struct _tagFiberStatisData statisDataBuf[CH_NUM];
 
 
 
