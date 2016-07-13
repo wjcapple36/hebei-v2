@@ -1,4 +1,11 @@
 /*! \page workhis 河北2期项目 项目工作日志
+2016-07-13: Menglong Wu
+    * 演示怎么在回调函数里获取cmdid
+    * 添加tms_AnalyseFiberSectionCfg的回调函数
+    * TODO 添加0x80000016-18,13的发送函数
+    * 
+
+
 2016-07-5: Menglong Wu
     - 应用互斥锁unlock
 
