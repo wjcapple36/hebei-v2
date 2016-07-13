@@ -1118,7 +1118,7 @@ static int32_t tms_AnalyseFiberSectionCfg(struct tms_context *pcontext, int8_t *
 	hb2_dbg("待测试\n");
 #endif
 
-
+	struct tms_fibersectioncfg   val;
 	struct tms_fibersection_hdr *fiber_hdr;
 	struct tms_fibersection_val *fiber_val;
 	struct tms_otdr_param       *otdr_param;
@@ -1127,6 +1127,15 @@ static int32_t tms_AnalyseFiberSectionCfg(struct tms_context *pcontext, int8_t *
 	struct tms_hebei2_data_val  *otdr_val;
 	struct tms_hebei2_event_hdr *event_hdr;
 	struct tms_hebei2_event_val *event_val;
+
+	val.fiber_hdr   = fiber_hdr;
+	val.fiber_val   = fiber_val;
+	val.otdr_param  = otdr_param;
+	val.test_result = test_result;
+	val.otdr_hdr    = otdr_hdr;
+	val.otdr_val    = otdr_val;
+	val.event_hdr   = event_hdr;
+	val.event_val   = event_val;
 
 	fiber_hdr = (struct tms_fibersection_hdr *)(pdata + GLINK_OFFSET_DATA);
 	if ( !CHECK_PTR(
@@ -1195,6 +1204,9 @@ static int32_t tms_AnalyseFiberSectionCfg(struct tms_context *pcontext, int8_t *
 	tms_Print_tms_test_result(test_result);
 	tms_Print_tms_hebei2_event(event_hdr, event_val);
 #endif
+	if (pcontext->ptcb->pf_OnFiberSectionCfg) {
+		pcontext->ptcb->pf_OnFiberSectionCfg(pcontext, &val);
+	}
 	return 0;
 }
 
@@ -1209,6 +1221,7 @@ static int32_t tms_AnalyseConfigPipeState(struct tms_context *pcontext, int8_t *
 	pval = (struct tms_cfgpip_status *)(pdata + GLINK_OFFSET_DATA);
 	//
 	pval->status = htonl(pval->status);
+
 
 	if (pcontext->ptcb->pf_OnConfigPipeState) {
 		pcontext->ptcb->pf_OnConfigPipeState(pcontext, pval);
@@ -1791,16 +1804,16 @@ int32_t tms_Analyse(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 
 
 	// 可以考虑在这里提取 glink 头指针 pcontext->pgb = htonl(pbase_hdr->xxx);
-	// pbase_hdr->pklen 	= htonl(pbase_hdr->pklen);
+	pbase_hdr->pklen 	= htonl(pbase_hdr->pklen);
 	// pbase_hdr->version 	= htonl(pbase_hdr->version);
-	// pbase_hdr->src 		= htonl(pbase_hdr->src);
-	// pbase_hdr->dst 		= htonl(pbase_hdr->dst);
+	pbase_hdr->src 		= htonl(pbase_hdr->src);
+	pbase_hdr->dst 		= htonl(pbase_hdr->dst);
 	// pbase_hdr->type 		= htons(pbase_hdr->type);
 	// pbase_hdr->pkid 		= htons(pbase_hdr->pkid);
 	// pbase_hdr->reserve 	= htonl(pbase_hdr->reserve);
-	// pbase_hdr->cmdid 	= htonl(pbase_hdr->cmdid);
+	pbase_hdr->cmdid 	= htonl(pbase_hdr->cmdid);
 	// pbase_hdr->datalen 	= htonl(pbase_hdr->datalen);
-	// pcontext->pgb = pbase_hdr;
+	pcontext->pgb = pbase_hdr;
 
 	// printf("----------id %x len %x-----------\n", pbase_hdr->cmdid,glinkbase.datalen);
 	// PrintfMemory((uint8_t*)pdata,20);
