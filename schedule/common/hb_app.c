@@ -11,11 +11,25 @@
 #include "program_run_log.h"
 #include "global.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+//通道偏移量
+volatile int32_t ch_offset = 0;
+//配置文件目录
 const char cfg_path[] = "./dev_cfg/\0";
-const char cfg_fiber[] = "fiber_sec_para\0";
-const char node_name[] = "state_address.cfg\0";
-
+//光纤段配置信息
+const char file_fiber_sec[] = "fiber_sec_para\0";
+//节点名称
+const char file_node_name[] = "state_address.cfg\0";
+//通道相关信息
+const char file_ch_fpga[] = "ch_fpga.cfg\0";
+//光纤段配置信息，里面含有指针，程序结束的时候，需要释放
 struct _tagCHFiberSec chFiberSec[CH_NUM];
+//通道硬件信息，激光器，波长，动态范围
+struct _tagCHInfo chFpgaInfo[CH_NUM];
+//杂项，包含了节点名称，通道状态这样比较好管理
+struct _tagDevMisc devMisc;
 
 /* --------------------------------------------------------------------------*/
 /**
@@ -177,7 +191,7 @@ int32_t save_fiber_sec_para(int ch, struct tms_fibersectioncfg *pfiber_sec)
 
 
 
-	snprintf(file_path,FILE_PATH_LEN , "%s%s_%d.cfg",cfg_path, cfg_fiber,ch);
+	snprintf(file_path,FILE_PATH_LEN , "%s%s_%d.cfg",cfg_path, file_fiber_sec,ch);
 	fp = NULL;
 	ret = OP_OK;
 	//获取日志名字
@@ -271,6 +285,7 @@ usr_exit:
 /* ----------------------------------------------------------------------------*/
 int32_t read_fiber_sec_para(int ch, struct _tagCHFiberSec *pch_fiber_sec)
 {
+
 	int32_t ret, counts, tmp;
 	uint8_t is_free, is_lock;
 	char file_path[FILE_PATH_LEN] = {0};
@@ -281,7 +296,7 @@ int32_t read_fiber_sec_para(int ch, struct _tagCHFiberSec *pch_fiber_sec)
 	is_free = 0;
 	is_lock	= 0;
 	pfiber_sec = &(pch_fiber_sec->para);
-	snprintf(file_path,FILE_PATH_LEN , "%s%s_%d.cfg",cfg_path, cfg_fiber,ch);
+	snprintf(file_path,FILE_PATH_LEN , "%s%s_%d.cfg",cfg_path, file_fiber_sec,ch);
 	fp = NULL;
 	ret = OP_OK;
 	//获取日志名字
@@ -521,4 +536,240 @@ int32_t quick_unlock( QUICK_LOCK *plock)
 #endif
 	return ret;
 }
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  save_ch_fpga_info 保存fpga信息
+ *
+ * @param pch_fpga_info
+ * @param ch_num
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t save_ch_fpga_info(const struct _tagCHInfo *pch_fpga_info,int32_t ch_num)
+{
+	int32_t ret, counts, tmp;
+	char file_path[FILE_PATH_LEN] = {0};
+	FILE *fp;
 
+	snprintf(file_path,FILE_PATH_LEN , "%s%s.cfg",cfg_path, file_ch_fpga);
+	fp = NULL;
+	ret = OP_OK;
+
+	//获取日志名字
+	fp = fopen(file_path,"wb");
+	if(fp == NULL){
+		ret = errno;
+		goto usr_exit;
+
+	}
+	//保存光纤段可变信息
+	counts = fwrite(pch_fpga_info, ch_num*sizeof(struct _tagCHInfo),1,fp);
+	if(counts != 1){
+		ret = errno;
+		goto usr_exit;
+	}
+
+usr_exit:
+	if(fp != NULL)
+		fclose(fp);
+
+	return ret;
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  read_ch_fpga_info 读取保存在文件里面的信息
+ *
+ * @param pch_fpga_info
+ * @param ch_num
+ *
+ * @returns 0   
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t read_ch_fpga_info(const struct _tagCHInfo *pch_fpga_info,int32_t ch_num)
+{
+	int32_t ret, counts, tmp;
+	char file_path[FILE_PATH_LEN] = {0};
+	FILE *fp;
+	//初始化，全部赋值成0
+	memset(pch_fpga_info, 0, sizeof(struct _tagCHInfo)*ch_num);
+
+	snprintf(file_path,FILE_PATH_LEN , "%s%s.cfg",cfg_path, file_ch_fpga);
+	fp = NULL;
+	ret = OP_OK;
+
+	//获取日志名字
+	fp = fopen(file_path,"rb");
+	if(fp == NULL){
+		ret = errno;
+		goto usr_exit;
+
+	}
+	//保存光纤段可变信息
+	counts = fread(pch_fpga_info, ch_num*sizeof(struct _tagCHInfo),1,fp);
+	if(counts != 1){
+		ret = errno;
+		goto usr_exit;
+	}
+
+usr_exit:
+	if(fp != NULL)
+		fclose(fp);
+
+	return ret;
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  save_node_name_address 保存节点名称，和通道使用状态
+ *
+ * @param pdev_misc 节点名称，地址，设备信息都保存在杂项里面
+ *
+ * @returns   0 成功，其他失败
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t save_node_name_address(const struct _tagDevMisc *pdev_misc)
+{
+
+	int32_t ret, counts, size;
+	char file_path[FILE_PATH_LEN] = {0};
+	FILE *fp;
+
+	snprintf(file_path,FILE_PATH_LEN , "%s%s.cfg",cfg_path, file_node_name);
+	fp = NULL;
+	ret = OP_OK;
+
+	//获取日志名字
+	fp = fopen(file_path,"wb");
+	if(fp == NULL){
+		ret = errno;
+		goto usr_exit;
+
+	}
+	//保存光纤段可变信息
+	size = sizeof(struct _tagDevNameAddr) + sizeof(struct _tagDevCHState);
+	counts = fwrite(pdev_misc,size,1,fp);
+	if(counts != 1){
+		ret = errno;
+		goto usr_exit;
+	}
+
+usr_exit:
+	if(fp != NULL)
+		fclose(fp);
+
+	return ret;
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  reade_node_name_address 读取文件中保存的节点名称和地址
+ *	节点名称地址通道使用状态均保存在杂项里面
+ * @param pdev_misc
+ *
+ * @returns   0 成功，其他失败
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t reade_node_name_address(struct _tagDevMisc *pdev_misc)
+{
+
+	int32_t ret, counts, size;
+	char file_path[FILE_PATH_LEN] = {0};
+	FILE *fp;
+
+	snprintf(file_path,FILE_PATH_LEN , "%s%s.cfg",cfg_path, file_node_name);
+	fp = NULL;
+	ret = OP_OK;
+
+	//获取日志名字
+	fp = fopen(file_path,"rb");
+	if(fp == NULL){
+		ret = errno;
+		goto usr_exit;
+
+	}
+	//保存光纤段可变信息
+	size = sizeof(struct _tagDevNameAddr) + sizeof(struct _tagDevCHState);
+	memset(pdev_misc, 0, size);
+	counts = fread(pdev_misc,size,1,fp);
+	if(counts != 1){
+		ret = errno;
+		goto usr_exit;
+	}
+
+usr_exit:
+	if(fp != NULL)
+		fclose(fp);
+
+	return ret;
+}
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  check_usr_otdr_test_para 对点名测量的参数进行检查
+ *
+ * @param pget_otdrdata
+ *
+ * @returns   0 其他非法值
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t check_usr_otdr_test_para(struct tms_get_otdrdata *pget_otdrdata)
+{
+	int32_t ret;
+	if(pget_otdrdata->pipe < ch_offset || \
+			pget_otdrdata->pipe > (ch_offset + CH_NUM)){
+		ret = CMD_RET_PARA_INVLADE;
+		goto usr_exit;
+	}
+	if(pget_otdrdata->range < 0 || \
+			pget_otdrdata->range > MAX_RANG_M){
+		ret = CMD_RET_PARA_INVLADE;
+		goto usr_exit;
+	}
+
+
+usr_exit:
+	return ret;
+}
+
+int32_t check_fiber_sec_para(const struct tms_fibersectioncfg *pfiber_sec_cfg)
+{
+	int32_t ret, i, tmp,ch;
+	ret = CMD_RET_OK;
+	
+	tmp = pfiber_sec_cfg->fiber_hdr->count;
+	if(tmp <= 0){
+		ret = CMD_RET_PARA_INVLADE;
+		printf("%s() %d : sec num error %d ch_offset %d\n",\
+				       	__FUNCTION__ ,__LINE__, tmp, ch_offset);
+		goto usr_exit;
+	}
+
+	//检查通道号
+	for(i = 0; i < tmp; i++)
+	{
+		ch = pfiber_sec_cfg->fiber_val->pipe_num; 
+		if(ch < ch_offset || ch > (ch_offset + CH_NUM)){
+			ret = CMD_RET_PARA_INVLADE;
+			printf("%s() %d : ch error %d ch_offset %d\n",\
+				       	__FUNCTION__ ,__LINE__, ch, ch_offset);
+			goto usr_exit;
+		}
+	}
+	//检查量程
+	tmp = pfiber_sec_cfg->otdr_param->range;
+	if(tmp <= 0 || tmp > MAX_RANG_M){
+		ret = CMD_RET_PARA_INVLADE;
+		printf("%s() %d : range over flow %d \n",\
+				       	__FUNCTION__ ,__LINE__, tmp);
+		goto usr_exit;
+	}
+
+usr_exit:
+	return ret;
+}
+
+
+
+//按照C风格编译
+#ifdef __cplusplus
+}
+#endif

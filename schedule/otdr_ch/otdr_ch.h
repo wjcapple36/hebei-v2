@@ -49,196 +49,235 @@ extern "C" {
 #endif
 #define OTDR_TEST_MONITOR	0	//监控测量
 #define OTDR_TEST_USR		1	//用户指定测量
-	//描述通道控制参数
-	struct _tagCHCtrl
-	{
-		int32_t enable;		//是否启用
-		int32_t is_cfged;	//是否配置
-		int32_t mod;		//0,轮询，1点名测量
-		int32_t accum_num;	//累加次数0，表示本通道累加结束
-		int32_t hp_num;		//高功率次数
-		int32_t lp_num;		//低功率次数
-		int32_t cur_pw_mod;	//当前测量的是高功率还是低功率
-		int32_t curv_cat;	//曲线拼接标志
-		int32_t refresh_para;	//更新光纤段参数
-	};
-	//描述otdr通道状态
-	struct _tagCHState
-	{
-		int32_t algro_run;	//算法运行状态，0表示算法运行结束
-		int32_t resource_id;	//资源id，tsk_otdr保留一个副本
-		int32_t success_num;	//测试成功的计数
-		int32_t fail_num;	//测试失败的计数
-		int32_t spi_error_num;	//spi通信失败的次数
-		int32_t ch_buf_collid_num;	//ch buf 访问冲突的次数
-		int32_t algro_collid_num;	//算法线程访问冲突的次数
+//描述通道控制参数
+struct _tagCHCtrl
+{
+	int32_t enable;		//是否启用
+	int32_t is_cfged;	//是否配置
+	int32_t mod;		//0,轮询，1点名测量
+	int32_t accum_num;	//累加次数0，表示本通道累加结束
+	int32_t hp_num;		//高功率次数
+	int32_t lp_num;		//低功率次数
+	int32_t cur_pw_mod;	//当前测量的是高功率还是低功率
+	int32_t curv_cat;	//曲线拼接标志
+	int32_t refresh_para;	//更新光纤段参数
+};
+//描述otdr通道状态
+struct _tagCHState
+{
+	int32_t algro_run;	//算法运行状态，0表示算法运行结束
+	int32_t resource_id;	//资源id，tsk_otdr保留一个副本
+	int32_t success_num;	//测试成功的计数
+	int32_t fail_num;	//测试失败的计数
+	int32_t spi_error_num;	//spi通信失败的次数
+	int32_t ch_buf_collid_num;	//ch buf 访问冲突的次数
+	int32_t algro_collid_num;	//算法线程访问冲突的次数
 
 
-	};
-	//通道的测量参数
-	struct _tagCHPara
-	{
-		uint32_t Lambda_nm;		// 波长，单位nm
-		uint32_t MeasureLength_m;	// 量程，单位m
-		uint32_t PulseWidth_ns;		// 光脉冲宽度，单位ns
-		uint32_t MeasureTime_ms;	// 测量时间，单位ms
-		float n;                  	// 折射率
+};
+//通道的测量参数
+struct _tagCHPara
+{
+	uint32_t Lambda_nm;		// 波长，单位nm
+	uint32_t MeasureLength_m;	// 量程，单位m
+	uint32_t PulseWidth_ns;		// 光脉冲宽度，单位ns
+	uint32_t MeasureTime_ms;	// 测量时间，单位ms
+	float n;                  	// 折射率
 
-		float   EndThreshold;       // 结束门限
-		float   NonRelectThreshold; // 非反射门限;
-	};
-	//otdr设备，包含描述该设备的其他结构体变量
-	struct _tagOtdrDev
-	{
-		struct _tagCHCtrl ch_ctrl;	//通道控制状态
-		struct _tagCHState ch_state;	//通道状态
-		struct _tagCHPara ch_para;	//通道的参数
-		OtdrCtrlVariable_t otdr_ctrl;	//与otdr算法同类型全局变量匹配
-		OtdrStateVariable_t otdr_state;	//与otdr算法同类型全局变量匹配
+	float   EndThreshold;       // 结束门限
+	float   NonRelectThreshold; // 非反射门限;
+};
+//otdr设备，包含描述该设备的其他结构体变量
+struct _tagOtdrDev
+{
+	struct _tagCHCtrl ch_ctrl;	//通道控制状态
+	struct _tagCHState ch_state;	//通道状态
+	struct _tagCHPara ch_para;	//通道的参数
+	OtdrCtrlVariable_t otdr_ctrl;	//与otdr算法同类型全局变量匹配
+	OtdrStateVariable_t otdr_state;	//与otdr算法同类型全局变量匹配
 
 
-	};
-	//算法运行的时候一些指示信息
-	struct _tagAlgroCHInfo
-	{
-		int32_t cmd;
-		int32_t state;	//0 空闲，1正忙
-		int32_t ch;	//通道号
-		int32_t resource_id;	//资源id
-		int32_t mod;	//测试方式 点名测量，轮询
-	};
+};
+//算法运行的时候一些指示信息
+struct _tagAlgroCHInfo
+{
+	int32_t cmd;
+	int32_t state;	//0 空闲，1正忙
+	int32_t ch;	//通道号
+	int32_t resource_id;	//资源id
+	int32_t mod;	//测试方式 点名测量，轮询
+};
 
-	//通道缓存区，存放高低功率的累加数据
-	struct _tagCHBuf
-	{
-		QUICK_LOCK lock;		//资源锁
-		int32_t is_uesd;		//是否使用的标志
-		int32_t hp_buf[DATA_LEN];	//高功率曲线buf
-		int32_t lp_buf[DATA_LEN];	//低功率曲线buf
-	};
-	//描述启动测量发送到fpga的参数
-	struct _tagFpgaPara
-	{
-		uint8_t no;
-		uint8_t pulse;
-		uint8_t range;
-		uint8_t power;
+//通道缓存区，存放高低功率的累加数据
+struct _tagCHBuf
+{
+	QUICK_LOCK lock;		//资源锁
+	int32_t is_uesd;		//是否使用的标志
+	int32_t hp_buf[DATA_LEN];	//高功率曲线buf
+	int32_t lp_buf[DATA_LEN];	//低功率曲线buf
+};
+//与tms_fibersectioncfg的差别是将固定长度的变量设置成了非指针
+struct _tagFiberSecCfg
+{
+	struct tms_fibersection_hdr fiber_hdr; //光纤段头
+	struct tms_fibersection_val *fiber_val;//光纤段信息
+	struct tms_otdr_param       otdr_param;//otdr参数
+	struct tms_test_result      test_result;//测量结果
+	struct tms_hebei2_data_hdr  otdr_hdr;//采样点数据头
+	struct tms_hebei2_data_val  *otdr_val;//otdr数据部分
+	struct tms_hebei2_event_hdr event_hdr;//时间点头
+	struct tms_hebei2_event_val *event_val;//时间点缓冲区
+	int32_t is_initialize;
+	int32_t error_num;
+};
+//需要加锁
+struct _tagCHFiberSec
+{
+	QUICK_LOCK lock;
+	struct _tagFiberSecCfg para;
+};
+//上报时使用的otdr参数,下面配置的时候会多20个字节的标志，sb
+struct _tagUpOtdrPara
+{
+	int32_t rang_m;	//量程
+	int32_t lamda_nm;	//波长
+	int32_t pl;	//脉宽
+	int32_t test_time_s;	//测试时间
+	float gi;	//折射率
+	float end_th;	//结束门限门限
+	float no_ref_th;//非反射门限
 
-	};
-	//与tms_fibersectioncfg的差别是将固定长度的变量设置成了非指针
-	struct _tagFiberSecCfg
-	{
-		struct tms_fibersection_hdr fiber_hdr; //光纤段头
-		struct tms_fibersection_val *fiber_val;//光纤段信息
-		struct tms_otdr_param       otdr_param;//otdr参数
-		struct tms_test_result      test_result;//测量结果
-		struct tms_hebei2_data_hdr  otdr_hdr;//采样点数据头
-		struct tms_hebei2_data_val  *otdr_val;//otdr数据部分
-		struct tms_hebei2_event_hdr event_hdr;//时间点头
-		struct tms_hebei2_event_val *event_val;//时间点缓冲区
-		int32_t is_initialize;
-		int32_t error_num;
-	};
-	//需要加锁
-	struct _tagCHFiberSec
-	{
-		QUICK_LOCK lock;
-		struct _tagFiberSecCfg para;
-	};
-	//上报时使用的otdr参数,下面配置的时候会多20个字节的标志，sb
-	struct _tagUpOtdrPara
-	{
-		int32_t rang_m;	//量程
-		int32_t lamda_nm;	//波长
-		int32_t pl;	//脉宽
-		int32_t test_time_s;	//测试时间
-		float gi;	//折射率
-		float end_th;	//结束门限门限
-		float no_ref_th;//非反射门限
-		
-	};
-	//测量结果
-	struct _tagUpOtdrTestResult
-	{
-		char id[20];	//标志
-		float chain;	//链长
-		float loss;	//链损耗
-		float attu;	//衰减
-		char date[20];	//日期
-	};
-	struct _tagOtdrEvent
-	{
-		int32_t distance;
-		int32_t type;
-		float insert_loss;
-		float attu;
-		float total_loss;
-	};
-	struct _tagUpOtdrEvent
-	{
-		char id[12];
-		struct _tagOtdrEvent buf[MAX_EVENT_NUM];
-	};
-	struct _tagUpOtdrData
-	{
-		char id[12];
-		int32_t num;
-		int16_t buf[DATA_LEN];
-	};
-	//上传曲线结构
-	struct _tagUpOtdrCurv
-	{
-		struct _tagUpOtdrPara para;
-		struct _tagUpOtdrTestResult result;
-		struct _tagUpOtdrData data;
-		struct _tagUpOtdrEvent event;
-	};
+};
+//测量结果
+struct _tagUpOtdrTestResult
+{
+	char id[20];	//标志
+	float chain;	//链长
+	float loss;	//链损耗
+	float attu;	//衰减
+	char date[20];	//日期
+};
+struct _tagOtdrEvent
+{
+	int32_t distance;
+	int32_t type;
+	float insert_loss;
+	float attu;
+	float total_loss;
+};
+struct _tagUpOtdrEvent
+{
+	char id[12];
+	struct _tagOtdrEvent buf[MAX_EVENT_NUM];
+};
+struct _tagUpOtdrData
+{
+	char id[12];
+	int32_t num;
+	int16_t buf[DATA_LEN];
+};
+//上传曲线结构
+struct _tagUpOtdrCurv
+{
+	struct _tagUpOtdrPara para;
+	struct _tagUpOtdrTestResult result;
+	struct _tagUpOtdrData data;
+	struct _tagUpOtdrEvent event;
+};
 
-	//周期性测量曲线,每个测试完毕，就更新一次
-	struct _tagCycCurv
-	{
-		QUICK_LOCK lock;
-		struct _tagUpOtdrCurv curv;
-	};
-	//设备状态
-	struct _tagDevState
-	{
-		int32_t on_use;//处于启用的状态
-		int32_t error_state;
-	};
+//周期性测量曲线,每个测试完毕，就更新一次
+struct _tagCycCurv
+{
+	QUICK_LOCK lock;
+	struct _tagUpOtdrCurv curv;
+};
+//设备状态
+struct _tagDevState
+{
+	int32_t on_use;//处于启用的状态
+	int32_t error_state;
+};
 #define USR_OTDR_TEST_IDLE	0	//点名测量空闲，可以点名测量
 #define USR_OTDR_TEST_WAIT	1	//正在等待测量
 #define USR_OTDR_TEST_ACCUM	2	//正处于累加中，不能响应点名测量
 #define USR_OTDR_TEST_ALGRO	3	//正处于找时间点的中，
-	//点名测量结构体
-	struct _tagUsrOtdrTest
-	{
-		uint32_t state;		//空闲？累加？找事件点？
-		uint32_t cmd;		//0x80*014/0x80*15 点名测量，配置测量
+//点名测量结构体
+struct _tagUsrOtdrTest
+{
+	uint32_t state;		//空闲？累加？找事件点？
+	uint32_t cmd;		//0x80*014/0x80*15 点名测量，配置测量
 
-		uint32_t ch;
-		uint32_t range;
-		uint32_t wl;
-		uint32_t pw;
-		uint32_t time;
-		float	gi;
-		float	end_th;
-		float	none_ref_th;
+	uint32_t ch;
+	uint32_t range;
+	uint32_t wl;
+	uint32_t pw;
+	uint32_t time;
+	float	gi;
+	float	end_th;
+	float	none_ref_th;
 
-	};
-	//光纤段统计数据
-	struct _tagFiberStatisData
-	{
-		int32_t ch_no;
-		int32_t sec_no;
-		char date[20];
-		float attu_vale;
-	};
+};
+struct _tagSecStatisData
+{
+	int32_t ch_no;
+	int32_t sec_no;
+	char date[20];
+	float attu_vale;
+};
+//光纤段统计数据,在读取文件的时候分配
+struct _tagFiberStatisData
+{
+	int32_t state;		/*状态，0，ok，其他出现错误*/
+	int32_t counts;		/*计数，当前数据是第几次更新*/
+	int32_t ch;		/*通道号*/
+	int32_t sec_num;	/*段的数目*/
+	struct _tagSecStatisData *buf;
+};
+//通道相关的信息，包括激光器波长，动态范围等相关硬件信息
+struct _tagFpgaPara
+{
+	int32_t ch;
+	int32_t lamda;
+	int32_t scope_dB;
+	char wdm[16];
+	int32_t option;
+
+};
+//通道信息
+struct _tagCHInfo
+{
+	int32_t initial; //是否初始化标志 0，未初始化，1初始化
+	struct _tagFpgaPara para;
+};	
+//节点名称和地址
+struct _tagDevNameAddr
+{
+	char name[64];
+	char ip[16];
+	char mask[16];
+	char gate[16];
+};
+struct _tagDevCHState
+{
+	int32_t state;
+};
+//杂项，乱七八糟
+struct _tagDevMisc
+{ 
+	struct _tagDevNameAddr name;
+	struct _tagDevCHState ch_state;
+};
+//激光器控制参数
+struct _tagLaserCtrPara
+{
+	int32_t rcv;
+	int32_t power;
+	int32_t apd;
+	int32_t trail_length;
+};
 
 
-
-
-	//#pragma pack () /*恢复默认的对其方式*/
+//#pragma pack () /*恢复默认的对其方式*/
 #ifdef __cplusplus
 }
 #endif

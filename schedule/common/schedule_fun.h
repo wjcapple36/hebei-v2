@@ -62,6 +62,14 @@ extern "C" {
 	//将点名测量的参数赋值到本地
 	int32_t get_usr_otdr_test_para(struct _tagCHPara *pusr_para, 
 		const struct _tagUsrOtdrTest *pnet_para);
+	//获取激光器控制参数，启动测量时使用
+	int32_t get_laser_ctrl_para(
+			int32_t range_m,
+			int32_t pl_ns,
+			int32_t lamda,
+			int32_t is_low_power,
+			struct _tagLaserCtrPara *plaser_ctr_para);
+
 
 
 #ifdef __cplusplus

@@ -688,7 +688,8 @@ int32_t otdr_test(int32_t ch,
  * @returns   0
  */
 /* ----------------------------------------------------------------------------*/
-int32_t get_usr_otdr_test_para(struct _tagCHPara *pusr_para, 
+int32_t get_usr_otdr_test_para(
+		struct _tagCHPara *pusr_para, 
 		const struct _tagUsrOtdrTest *pnet_para)
 {
 	int32_t ret;
@@ -702,4 +703,75 @@ int32_t get_usr_otdr_test_para(struct _tagCHPara *pusr_para,
 	pusr_para->EndThreshold = pnet_para->end_th;
 	return ret;
 }
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  get_laser_ctrl_para 根据量程，脉宽，波长获取激光器功率，接收机
+ *			夸阻.一次测量使用高功率
+ * @param range_m	量程
+ * @param pl_ns		脉宽
+ * @param lamda		波长
+ * @param is_low_power	是否使用低功率，仅在100km以上适用
+ * @param plaser_ctr_para	传递出去的参数
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t get_laser_ctrl_para(
+		int32_t range_m,
+		int32_t pl_ns,
+		int32_t lamda,
+		int32_t is_low_power,
+		struct _tagLaserCtrPara *plaser_ctr_para)
+{
+	uint32_t i, j, power, hp, lp, rcv, rh, rl;
+	uint32_t apdv;
 
+	OtdrPowerLevel_t OtdrPowerLevel;
+
+	i  = GetMeasureLengthIndex(range_m);
+	j  = GetPulseWidthIndex(pl_ns);
+	OtdrPowerLevel = GetPowerLevelIndex(lamda);
+
+	power = OtdrPowerLevel[i][j];
+	rcv = OtdrReceiver[i][j];
+
+
+	rh = (rcv >> 8) & 0xff;
+	rl = (rcv & 0xff);
+	if(rh == 0)
+		rh = rl;
+
+	hp = (power >> 8) & 0xff;
+	lp = (power & 0xff);
+	if(hp == 0)
+		hp = lp;
+
+
+	if(!is_low_power)
+	{
+		power = hp;
+		rcv = rh;
+	}
+	else 
+	{
+		power = lp;
+		rcv = rl;
+	}
+
+	apdv = APDV_LOW;
+
+	if(pl_ns <= 40)
+	{
+		apdv = APDV_HIGH;
+	}
+
+	plaser_ctr_para->rcv = rcv;
+	plaser_ctr_para->power = power;
+	plaser_ctr_para->apd = apdv;
+	if(plaser_ctr_para->rcv == R_6)           plaser_ctr_para->trail_length = 1000;
+	else if(plaser_ctr_para->rcv == R_7)      plaser_ctr_para->trail_length = 1500;
+	else if(plaser_ctr_para->rcv == R_A)      plaser_ctr_para->trail_length = 2000;
+	else if(plaser_ctr_para->rcv == R_C)      plaser_ctr_para->trail_length = 3000;
+	else                                    plaser_ctr_para->trail_length = 5000;
+	
+}

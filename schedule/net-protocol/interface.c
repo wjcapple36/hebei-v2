@@ -8,13 +8,11 @@
 #include "sys/wait.h"
 // #include <strings.h>
 #include "../otdr_ch/otdr_ch.h"
+#include "../common/hb_app.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 //通道的偏移量，CU通过通道来确定偏移来确定与哪一个otdr通信
-volatile int32_t ch_offset = 0;
-struct tms_cfgpip_status ch_state;
-
 
 
 int32_t OnGetBasicInfo(struct tms_context *pcontext)
@@ -51,32 +49,90 @@ int32_t OnRetNodeTime(struct tms_context *pcontext)
 
 	return 0;
 }
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  OnNameAndAddress 处理收到节点名称和地址
+ *
+ * @param pcontext
+ *
+ * @returns   0成功，以及无法保存的命令
+ */
+/* ----------------------------------------------------------------------------*/
 int32_t OnNameAndAddress(struct tms_context *pcontext)
 {
+	struct tms_ack ack;
+	int32_t ret;
+	//该回调函数缺乏输入节点名称，需要woo配合修改
+	ack.cmdid = pcontext->pgb->cmdid;
+	ret = save_node_name_address(&devMisc);
+
+	if(ret != CMD_RET_OK)
+	       ret = CMD_RET_CANT_SAVE;
+
+	ack.errcode = ret;
+	tms_AckEx(pcontext->fd, NULL, &ack);	
+
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	return 0;
 }
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  OnFiberSectionCfg 主机配置光纤段参数
+ *
+ * @param pcontext	主机相关地址
+ * @param pval		具体参数
+ *
+ * @returns   		0 ，参数非法，无法保存
+ */
+/* ----------------------------------------------------------------------------*/
 int32_t OnFiberSectionCfg(struct tms_context *pcontext,struct tms_fibersectioncfg *pval)
 {
+	int32_t ret;
+	struct tms_ack ack;
+
+	ack.cmdid = pcontext->pgb->cmdid;
+
+	ret = check_fiber_sec_para(pval);
+	if(ret != CMD_RET_OK)
+		goto usr_exit;
+
+	ret = save_fiber_sec_para(pval);
+	if(ret != CMD_RET_OK)
+		ret = CMD_RET_CANT_SAVE;
+usr_exit:
+	ack.errcode = ret;
+	tms_AckEx(pcontext->fd, NULL,&ack);
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
-	return 0;
+	return ret;
 }
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  OnConfigPipeState 主机配置通道使用状态
+ *
+ * @param pcontext
+ * @param pval
+ *
+ * @returns   0，无法保存
+ */
+/* ----------------------------------------------------------------------------*/
 int32_t OnConfigPipeState(struct tms_context *pcontext, struct tms_cfgpip_status *pval)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
-	uint32_t status = pval->status;
-	char ch8[8];
+	int32_t ret;
+	struct tms_ack ack;
 
-	for (int i = 0; i < 8; i++) {
-		ch8[i] = status & (0x01 << i);
-		if (ch8[i]) {
-			printf("\tch%2d on\n", i + 1);
-		}
+	ack.cmdid = pcontext->pgb->cmdid;
+	devMisc.ch_state = pval->status;
+	ret = save_node_name_address(&devMisc);
+	if(ret != CMD_RET_OK){
+		ret = CMD_RET_CANT_SAVE;
 	}
-	// todo 该设备在本机框第几槽位，对应第几通道，写入配置文件
-	hb2_dbg("Warning CU 需要多次转发此消息\n");
+	ack.errcode = ret;
+	tms_AckEx(pcontext->fd, NULL, &ack);
 
-	return 0;
+	// todo 该设备在本机框第几槽位，对应第几通道，写入配置文件
+	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	
+	return ret;
 }
 int32_t OnGetCycleTestCuv(struct tms_context *pcontext, struct tms_getcyctestcuv *pval)
 {
@@ -84,8 +140,25 @@ int32_t OnGetCycleTestCuv(struct tms_context *pcontext, struct tms_getcyctestcuv
 	printf("\tget pipe %d\n", pval->pipe);
 	return 0;
 }
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  OnGetStatusData 获取某通道的统计数据
+ *
+ * @param pcontext
+ * @param pval
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
 int32_t OnGetStatusData(struct tms_context *pcontext, struct tms_getstatus_data *pval)
 {
+	int ret;
+	struct tms_ack ack;
+	ack.cmdid = pcontext->pgb->cmdid;
+	ret = CMD_RET_OK;
+
+
+
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	printf("\tget pipe status %d\n", pval->pipe);
 	return 0;
@@ -121,18 +194,54 @@ int32_t OnCurAlarm(struct tms_context *pcontext)
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	return 0;
 }
-int32_t OnGetOTDRData(struct tms_context *pcontext,struct tms_get_otdrdata *pGet_otdr_data)
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  OnGetOTDRData 用户点名测量
+ *
+ * @param pcontext
+ * @param pget_otdr_data
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t OnGetOTDRData(struct tms_context *pcontext,struct tms_get_otdrdata *pget_otdr_data)
 {
 	int ret;
 	struct tms_ack ack;
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	ack.cmdid = pcontext->pgb->cmdid;
+	
+
+	ret = check_usr_otdr_test_para(pget_otdr_data);
+	if(ret != CMD_RET_OK)
+		goto usr_exit;
 	//正在累加中，不能响应用户的测量需求
-	if(usrOtdrTest.state == USR_OTDR_TEST_ACCUM)
-	{
-		ack.errcode = CMD_RET_EXIST_CMD;
+	if(usrOtdrTest.state == USR_OTDR_TEST_ACCUM ||
+			usrOtdrTest.state == USR_OTDR_TEST_WAIT){
+		ret = CMD_RET_EXIST_CMD;
+		goto usr_exit;
 	}
-	return 0;
+	//给点名测量传递参数
+	memcpy(&usrOtdrTest.ch, &pget_otdr_data->pipe, sizeof(_tagUsrOtdrTest) - 8);
+	usrOtdrTest.cmd = ack.cmdid;
+	usrOtdrTest.state = USR_OTDR_TEST_WAIT;
+	
+usr_exit:
+	ack.errcode = ret;
+	tms_AckEx(pcontext->fd,NULL, &ack);
+	return ret;
 }
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  OnGetStandardCurv 获取标准曲线
+ *
+ * @param pcontext
+ * @param pval
+ *
+ * @returns   标准曲线
+ */
+/* ----------------------------------------------------------------------------*/
 int32_t OnGetStandardCurv(struct tms_context *pcontext, struct tms_getstandardcurv *pval)
 {
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
@@ -141,12 +250,32 @@ int32_t OnGetStandardCurv(struct tms_context *pcontext, struct tms_getstandardcu
 }
 int32_t OnSetOTDRFPGAInfo(struct tms_context *pcontext, struct tms_setotdrfpgainfo *pval)
 {
+	int32_t ret, ch;
+	struct tms_ack ack;
+	ack.cmdid = pcontext->pgb->cmdid;
+
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	hb2_dbg("pipe %d wl %d dr %d wdm %s\n",
 	        pval->pipe,
 	        pval->wl,
 	        pval->dr,
 	        pval->wdm);
+	if(pval->pipe < ch_offset || pval->pipe > (ch_offset + CH_NUM)){
+		ret = CMD_RET_PARA_INVLADE;
+		goto usr_exit;
+	}
+	ch = pval->pipe;
+	memcpy(&chFpgaInfo[ch].para, &pval->pipe, sizeof(struct _tagFpgaPara));
+	chFpgaInfo[ch].initial = 1;
+	ret = save_ch_fpga_info(&chFpgaInfo, CH_NUM);
+	if(ret != OP_OK)
+		ret = CMD_RET_CANT_SAVE;
+usr_exit:
+	ack.errcode = ret;
+	tms_AckEx(pcontext->fd,NULL,&ack);
+
+	return ret;
+
 }
 int32_t OnSetOCVMPara(struct tms_context *pcontext, struct tms_setocvmpara *pval)
 {

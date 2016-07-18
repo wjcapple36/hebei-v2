@@ -13,7 +13,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-	//定义返回给网管的错误码
+//定义返回给网管的错误码
 #define CMD_RET_OK			0 // 成功	
 #define CMD_RET_PARA_INVLADE		1 //参数非法
 #define CMD_RET_CANT_SAVE		2 //不能保存
@@ -24,9 +24,11 @@ extern "C" {
 #define CMD_RET_CH_UNEXIST		7 //通道不存在
 #define CMD_RET_TEST_ERROR		8 //测试异常
 #define CMD_RET_FPGA_COMMU_ERROR	9 //FPGA通信异常
+//定义一些其他关键变量
+#define MAX_RANG_M	180000
 
 	//通道的基数，从fpga中获取到，通道号+该基数为对外使用的通道号
-	extern volatile int32_t chOffset; 
+	extern volatile int32_t ch_offset; 
 	//通道的光纤段参数
 	extern struct _tagCHFiberSec chFiberSec[CH_NUM];
 	//定义otdr通道资源
@@ -39,7 +41,11 @@ extern "C" {
 	extern struct _tagUsrOtdrTest usrOtdrTest;
 	//周期性测量曲线存储区
 	extern struct _tagCycCurv cycCrve[CH_NUM];
+	//统计数据存储区
 	extern struct _tagFiberStatisData statisDataBuf[CH_NUM];
+	//通道状态
+	extern struct tms_cfgpip_status ch_state;
+	extern struct _tagDevMisc devMisc;
 
 
 
