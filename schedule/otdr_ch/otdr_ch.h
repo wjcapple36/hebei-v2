@@ -87,14 +87,24 @@ struct _tagCHPara
 	float   EndThreshold;       // 结束门限
 	float   NonRelectThreshold; // 非反射门限;
 };
+//激光器控制参数
+struct _tagLaserCtrPara
+{
+	int32_t rcv;
+	int32_t power;
+	int32_t apd;
+	int32_t trail_length;
+};
+
 //otdr设备，包含描述该设备的其他结构体变量
 struct _tagOtdrDev
 {
-	struct _tagCHCtrl ch_ctrl;	//通道控制状态
-	struct _tagCHState ch_state;	//通道状态
-	struct _tagCHPara ch_para;	//通道的参数
-	OtdrCtrlVariable_t otdr_ctrl;	//与otdr算法同类型全局变量匹配
-	OtdrStateVariable_t otdr_state;	//与otdr算法同类型全局变量匹配
+	struct _tagCHCtrl ch_ctrl;		//通道控制状态
+	struct _tagCHState ch_state;		//通道状态
+	struct _tagCHPara ch_para;		//通道的参数
+	struct _tagLaserCtrPara laser_para;	//激光器参数
+	OtdrCtrlVariable_t otdr_ctrl;		//与otdr算法同类型全局变量匹配
+	OtdrStateVariable_t otdr_state;		//与otdr算法同类型全局变量匹配
 
 
 };
@@ -267,15 +277,13 @@ struct _tagDevMisc
 	struct _tagDevNameAddr name;
 	struct _tagDevCHState ch_state;
 };
-//激光器控制参数
-struct _tagLaserCtrPara
+//保存线程sys_id ,htop id htop id 主要用来查看线程占用率
+struct _tagThreadInfo
 {
-	int32_t rcv;
-	int32_t power;
-	int32_t apd;
-	int32_t trail_length;
+	pthread_t tidp;	//create_thread 赋值
+	int32_t htop_id;	//线程自身赋值
+	int32_t ch;		//
 };
-
 
 //#pragma pack () /*恢复默认的对其方式*/
 #ifdef __cplusplus

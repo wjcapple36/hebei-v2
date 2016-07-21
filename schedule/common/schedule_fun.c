@@ -643,7 +643,8 @@ int32_t usr_delay(int32_t ch, int32_t time_s)
  * @returns   
  */
 /* ----------------------------------------------------------------------------*/
-int32_t otdr_test(int32_t ch, 
+int32_t otdr_test(
+		int32_t ch, 
 		struct _tagOtdrDev *potdrDev,
 	   	struct _tagSpiDev *pspiDev,
 		struct _tagCHBuf *pchBuf)
@@ -651,18 +652,20 @@ int32_t otdr_test(int32_t ch,
 	int32_t ret;
 	struct _tagCHCtrl *pCHCtrl;
 	struct _tagCHState *pCHState;
-	struct _tagFpgaPara *para;
+	struct _tagLaserCtrPara *plaser_para;
+	struct _tagCHPara *pCHPara;
 	ret = OP_OK;
 
 	pCHState = &(potdrDev->ch_state);
 	pCHCtrl = &(potdrDev->ch_ctrl);
+	pCHPara = &(potdrDev->ch_para);
 	while(pCHCtrl->accum_num > 0)
 	{
 		//如果需要拼接，高低功率均需要曲线均需要采集，否则，只需要高功率曲线
 		if(pCHCtrl->hp_num > 0)
-			ret = start_otdr_test(pspiDev, para);
+			ret = start_otdr_test(ch,pspiDev,pCHPara, plaser_para);
 		else if(pCHCtrl->lp_num > 0)
-			ret = start_otdr_test(pspiDev, para);
+			ret = start_otdr_test(ch, pspiDev, pCHPara, plaser_para);
 		else
 			break;
 
@@ -670,7 +673,6 @@ int32_t otdr_test(int32_t ch,
 			break;
 		usr_delay(ch,MEASURE_TIME_MIN_S);
 
-		ret = read_otdr_data(pspiDev, NULL);
 		pCHCtrl->accum_num--;
 		pCHCtrl->hp_num--;
 		if(ret != OP_OK)

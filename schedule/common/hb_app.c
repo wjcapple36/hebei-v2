@@ -44,7 +44,7 @@ int32_t initialize_sys_para()
 	ret = OP_OK;
 	initialize_fiber_sec_cfg(CH_NUM);
 	initialize_otdr_dev(otdrDev,CH_NUM);
-
+	create_usr_tsk();
 	return ret;
 }
 /* --------------------------------------------------------------------------*/
@@ -746,7 +746,7 @@ int32_t check_fiber_sec_para(const struct tms_fibersectioncfg *pfiber_sec_cfg)
 	//检查通道号
 	for(i = 0; i < tmp; i++)
 	{
-		ch = pfiber_sec_cfg->fiber_val->pipe_num; 
+		ch = pfiber_sec_cfg->fiber_val[i].pipe_num; 
 		if(ch < ch_offset || ch > (ch_offset + CH_NUM)){
 			ret = CMD_RET_PARA_INVLADE;
 			printf("%s() %d : ch error %d ch_offset %d\n",\
@@ -766,7 +766,40 @@ int32_t check_fiber_sec_para(const struct tms_fibersectioncfg *pfiber_sec_cfg)
 usr_exit:
 	return ret;
 }
+extern int32_t tsk_schedule(void * arg);
+extern int32_t tsk_otdr(void *arg);
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  create_usr_tsk 创建tsk_otdr, tsk_schedule任务
+ *
+ * @returns   如果失败，直接重启
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t create_usr_tsk()
+{
+	int32_t ret;
+	uint8_t log[NUM_CHAR_LOG_MSG] = {0};
+	ret = 0; 
+	pthread_mutex_init(&mutex_otdr, NULL);
+	ret = pthread_create(&tsk_schedule_info.tidp, NULL,\
+		       	tsk_schedule,(void *)(&tsk_schedule_info));
+	if(ret != 0){
 
+		snprintf(log, NUM_CHAR_LOG_MSG,"creat tsk schedule failed %d!",errno);
+		LOGW(__FUNCTION__, __LINE__,LOG_LEV_FATAL_ERRO, log);
+		system("sync");
+		exit(0);
+	}
+	ret = pthread_create(&tsk_otdr_info.tidp, NULL,\
+		       	tsk_schedule,(void *)(&tsk_otdr_info));
+	if(ret != 0){
+		snprintf(log, NUM_CHAR_LOG_MSG,"creat tsk otdr failed %d!",errno);
+		LOGW(__FUNCTION__, __LINE__,LOG_LEV_FATAL_ERRO, log);
+		system("sync");
+		exit(0);
+	}
+	return 0;
+}
 
 
 //按照C风格编译

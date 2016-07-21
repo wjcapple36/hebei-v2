@@ -4,9 +4,9 @@
 
 
 ################################
-SRCS-y += src/main.c \
+SRCS-y += schedule/main.c \
 	src/ep_app.c 
-SRCS-$(CONFIG_APP_HEBEI2) += src/tms_app.c 	
+SRCS-$(CONFIG_APP_HEBEI2) += src/interface-wjc.c 	
 
 ifeq ("$(CONFIG_USE_MINISHELL_EX)", "y")
 	SRCS-$(CONFIG_CMD_BOOT) += shell/cmd/cmd_root.c
@@ -37,4 +37,5 @@ SRCS-y += \
 	algorithm/OtdrAlgo.c    \
 	algorithm/NetworkSocket.c  \
 	algorithm/OtdrTouch.c \
+	algorithm/tsk_otdr_wjc.c \
 

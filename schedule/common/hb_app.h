@@ -56,6 +56,8 @@ int32_t quick_unlock( QUICK_LOCK *plock);
 int32_t check_usr_otdr_test_para(struct tms_get_otdrdata *pget_otdrdata);
 //检查用户配置光纤段测量参数
 int32_t check_fiber_sec_para(const struct tms_fibersectioncfg *pfiber_sec_cfg);
+//创建调度，算法任务
+int32_t create_usr_tsk();
 
 
 

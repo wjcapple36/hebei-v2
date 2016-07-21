@@ -22,7 +22,8 @@ struct _tagCycCurv cycCurvBuf[CH_NUM];
 struct _tagFiberStatisData statisDataBuf[CH_NUM];
 //算法运行时当前的通道信息,开始测量的时候赋值，算法运行完毕清空
 struct _tagAlgroCHInfo algroCHInfo;
-
+//spi 读取数据的缓冲区 spi 数据格式： fe 4B 2B fe 4B 2B
+uint8_t spi_buf[DATA_LEN*7];
 
 /*
  *本任务负责根据通道参数更新OtdrCtrl,OtdrState，
@@ -37,7 +38,7 @@ extern pthread_mutex_t mutex_otdr;
 
 /* --------------------------------------------------------------------------*/
 /**
- * @synopsis  thread_schedule 
+ i* @synopsis  thread_schedule 
  * 流程：1、首先检查是否有用户指定的测量，如果有，将命令码，保存，并设置对应的
  * 	    对应的测量模式，并用用户指定的参数初始化控制测量参数。
  * 	 2、测试时间不应小于7s，小于7s以7s计。高功率测试第一阶段，收集曲线，如果
@@ -51,22 +52,30 @@ extern pthread_mutex_t mutex_otdr;
  * @param arg
  */
 /* ----------------------------------------------------------------------------*/
-int32_t thread_schedule(void *arg)
+struct _tagThreadInfo tsk_schedule_info;
+int32_t tsk_schedule(void *arg)
 {
 	int32_t index, ret, buf_index, last_index;
 	uint32_t cmd;
 	struct _tagCHCtrl *pCHCtrl;
 	struct _tagCHState *pCHState;
 	struct _tagCHPara *pCHPara;
-	struct _tagCHPara usr_para;
+	struct _tagCHPara appoint_test_para;
+	struct _tagLaserCtrPara laser_para;
+	struct _tagThreadInfo *ptsk_info;
+	const int32_t invalid_index = -2;
+	const int32_t step = 2;
+	
+	ptsk_info = (struct _tagThreadInfo *)arg;
+	//htop 命令显示的就是下面这个东西
+	ptsk_info->htop_id = (long int)syscall(224);
 
-
-	index = -1;
-	last_index = -1;
+	index = invalid_index;
+	last_index = invalid_index;
 
 	while(1)
 	{
-		index++;
+		index += step;
 		//如果是点名测量，则保存上次的轮询的通道号
 		if(usrOtdrTest.state == USR_OTDR_TEST_WAIT){
 			usrOtdrTest.state = USR_OTDR_TEST_ACCUM;
@@ -90,18 +99,24 @@ int32_t thread_schedule(void *arg)
 		//获取otdr测量参数	
 		if(usrOtdrTest.state != USR_OTDR_TEST_IDLE){
 			pCHCtrl->mod = OTDR_TEST_MOD_USR;
-			get_usr_otdr_test_para(&usr_para,\
+			get_usr_otdr_test_para(&appoint_test_para,\
 					(const struct _tagUsrOtdrTest*)&usrOtdrTest);
 		}
 		else
 			pCHCtrl->mod = OTDR_TEST_MOD_MONITOR;
 		//更新本通道参数
-		ret = pre_measure(index, &otdrDev[index],&usr_para);
+		ret = pre_measure(index, &otdrDev[index],&appoint_test_para);
 
 		if(ret != OP_OK)
 			continue;
 		//新一轮的测试
-		ret = start_otdr_test(&spiDev, NULL);
+		get_laser_ctrl_para(pCHPara->MeasureLength_m,
+			pCHPara->PulseWidth_ns,
+			pCHPara->Lambda_nm,
+			0,
+			&laser_para);
+
+		ret = start_otdr_test(index, &spiDev, pCHPara,&laser_para);
 		if(ret != OP_OK)
 			continue;
 		//延时7s之后，读取数据
@@ -114,7 +129,7 @@ int32_t thread_schedule(void *arg)
 			pCHState->ch_buf_collid_num++;
 
 		pthread_mutex_lock(&chBuf[buf_index].lock);
-		ret = read_otdr_data(&spiDev, NULL);
+		ret = read_otdr_data(index, &spiDev, pCHPara, &laser_para,NULL,0);
 		if(ret != OP_OK)
 		{
 			pthread_mutex_unlock(&chBuf[buf_index].lock);

@@ -46,8 +46,13 @@ extern "C" {
 	//通道状态
 	extern struct tms_cfgpip_status ch_state;
 	extern struct _tagDevMisc devMisc;
-
-
+	//调度任务信息
+	extern struct _tagThreadInfo tsk_schedule_info;
+	//otdr 算法线程
+	extern struct _tagThreadInfo tsk_otdr_info;
+	//otdr线程锁
+	extern pthread_mutex_t mutex_otdr;
+	extern struct _tagCHInfo chFpgaInfo[CH_NUM];
 
 
 #ifdef __cplusplus
