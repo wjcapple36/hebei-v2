@@ -532,13 +532,16 @@ void *ThreadShell(void *arg)
 	sh_whereboot(boot_root);
 	
 
+	char hostname[HOSTNAME_PATH];
 	struct sh_detach_depth depth;
 	char *cmd[12];
+
 
 	depth.cmd = cmd;
 	depth.len = 12;
 	depth.seps = " \t";
-
+	depth.hostname = hostname;
+	gethostname(hostname, HOSTNAME_PATH - 1);
 	while(ret == -1) {
 		// ret = sh_enter();
 

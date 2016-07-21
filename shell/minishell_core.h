@@ -65,8 +65,9 @@ struct cmd_table {
 
 
 #define SHELL_PATH_LEN (96)
+#define HOSTNAME_PATH (24)
 struct env {
-	char host[10];
+	char host[HOSTNAME_PATH];
 	char path[SHELL_PATH_LEN];
 };
 
@@ -76,6 +77,7 @@ struct sh_detach_depth
 	int len;
 	int count;
 	char *seps;
+	char *hostname;
 };
 
 
@@ -94,6 +96,7 @@ extern int sh_enter();
 extern int sh_enter_ex(struct sh_detach_depth *env, void *ptr);
 extern void sh_editpath(char *path);
 extern void sh_analyse (char *fmt, long len);
+extern void sh_analyse_ex (char *fmt, long len, struct sh_detach_depth *depth2, void *ptr);
 extern void sh_editpath(char *path);
 extern void sh_sort();
 extern void sh_sort_ex(struct cmd_prompt *cmdlist, int count);

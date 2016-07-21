@@ -582,7 +582,7 @@ struct tms_callback
 	int32_t (*pf_OnOTDRBasicInfo)(struct tms_context *pcontext);
 	int32_t (*pf_OnConfigNodeTime)(struct tms_context *pcontext);
 	int32_t (*pf_OnCurAlarm)(struct tms_context *pcontext);
-	int32_t (*pf_OnGetOTDRData)(struct tms_context *pcontext);
+	int32_t (*pf_OnGetOTDRData)(struct tms_context *pcontext, struct tms_get_otdrdata *pval);
 	int32_t (*pf_OnGetStandardCurv)(struct tms_context *pcontext, struct tms_getstandardcurv *pval);
 
 	// 20000000

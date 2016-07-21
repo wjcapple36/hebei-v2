@@ -1466,7 +1466,7 @@ static int32_t tms_AnalyseGetOTDRData(struct tms_context *pcontext, int8_t *pdat
 	tms_Print_tms_get_otdrdata(potdr);
 #endif
 	if (pcontext->ptcb->pf_OnGetOTDRData) {
-		pcontext->ptcb->pf_OnGetOTDRData(pcontext);
+		pcontext->ptcb->pf_OnGetOTDRData(pcontext, potdr);
 	}
 
 }
