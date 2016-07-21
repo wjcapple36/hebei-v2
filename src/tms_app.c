@@ -117,7 +117,7 @@ int32_t OnCurAlarm(struct tms_context *pcontext)
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	return 0;
 }
-int32_t OnGetOTDRData(struct tms_context *pcontext)
+int32_t OnGetOTDRData(struct tms_context *pcontext, struct tms_get_otdrdata *pval)
 {
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	return 0;
