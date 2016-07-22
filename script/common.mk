@@ -12,7 +12,8 @@ ifeq ("$(ARCH)", "")
 endif
 
 ifeq ("$(ARCH)", "arm920t")
-	CROSS_COMPILE	=/opt/EmbedSky/4.3.3/bin/arm-linux-
+	CROSS_COMPILE	=/usr/local/arm/4.3.3/bin/arm-linux-
+	#CROSS_COMPILE	=/opt/EmbedSky/4.3.3/bin/arm-linux-
 	# ARCH=arm920t
 	# CROSS_COMPILE	=/opt/EmbedSky/4.3.3/bin/arm-none-linux-gnueabi-
 	# CROSS_COMPILE	=/opt/iTop-4412/4.3.2/bin/arm-linux-
@@ -20,7 +21,8 @@ ifeq ("$(ARCH)", "arm920t")
 endif
 
 ifeq ("$(ARCH)", "armv7")
-	CROSS_COMPILE	=/opt/iTop-4412/4.3.2/bin/arm-linux-
+	CROSS_COMPILE	=/usr/local/arm/4.3.2/bin/arm-linux-
+	#CROSS_COMPILE	=/opt/iTop-4412/4.3.2/bin/arm-linux-
 endif
 
 ifeq ("$(ARCH)", "win32")
