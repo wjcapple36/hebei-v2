@@ -395,7 +395,7 @@ usr_exit:
 		quick_unlock(&pch_fiber_sec->lock);
 	if(fp != NULL)
 		fclose(fp);
-	printf("%s():%d: save fiber sec para ch %d ret %d .\n",\
+	printf("%s():%d: read fiber sec para ch %d ret %d .\n",\
 			__FUNCTION__, __LINE__, ch, ret);
 	return ret;
 
@@ -714,6 +714,7 @@ usr_exit:
 int32_t check_usr_otdr_test_para(struct tms_get_otdrdata *pget_otdrdata)
 {
 	int32_t ret;
+	ret = CMD_RET_OK;
 	if(pget_otdrdata->pipe < ch_offset || \
 			pget_otdrdata->pipe > (ch_offset + CH_NUM)){
 		ret = CMD_RET_PARA_INVLADE;

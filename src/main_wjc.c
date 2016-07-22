@@ -375,7 +375,7 @@ extern void ep_Callback(struct ep_t *pep);
 #include <netdb.h> 
 // #include <sockets.h>
 #include <stdio.h>
-#include "common/hb_app.h"
+#include "../schedule/common/hb_app.h"
 
 // #define SERVER_NAME     "bule-sea.6655.la"  //服务器域名地址
 
@@ -419,6 +419,7 @@ int main(int argc, char const *argv[])
 	
 	// return 0;
 	ThreadRunServerAndShell(&ep);
+	initialize_sys_para();
 	while(1) {
 		sleep(2);
 	}
@@ -453,7 +454,6 @@ int main(int argc, char const *argv[])
 	// 包括新连接的建立、接收数据，函数回调
 	// ep_CreateThread(&ep,0);
 	ep_RunServer(&ep);
-	initialize_sys_para();
 	// sleep(1);
 	// ep_StopServer(&ep);
 
