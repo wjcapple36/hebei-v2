@@ -108,6 +108,8 @@ int32_t get_data_from_spi_buf(
 		uint8_t spi_buf[],
 		int32_t spi_data_num,
 		int32_t is_accum);
+//从缓冲区中输出整形数据
+void print_buf(int8_t buf[], int32_t len,int8_t *info);
 
 #ifdef __cplusplus
 }

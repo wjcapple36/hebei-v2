@@ -12,6 +12,7 @@
 #include "prototypes.h"
 #include "sys/ioctl.h"
 #include "../schedule/otdr_ch/otdr_ch.h"
+#include "../schedule/common/global.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -32,6 +33,7 @@ int32_t tsk_OtdrAlgo(void * arg)
 	ptsk_info = (struct _tagThreadInfo *)arg;
 	//htop 命令显示的就是下面这个东西
 	ptsk_info->htop_id = (long int)syscall(224);
+	printf("%s %s  pid %d  self_id 0x%x \n",__FILENAME__, __FUNCTION__, ptsk_info->htop_id,(int)pthread_self());
 	ch = ptsk_info->ch;
 
 	for(;;)

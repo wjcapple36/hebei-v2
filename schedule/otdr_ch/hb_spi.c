@@ -105,6 +105,7 @@ int32_t spi_send_usual_cmd(
 
 	//上锁
 	pthread_mutex_lock(&dev->mutex);
+	is_lock = 1;
 	ret = ioctl(fd, SPI_IOC_MESSAGE(8), &array[0]);
 	dev->statis.total_num++;
 	if (ret == 1) {
@@ -137,12 +138,13 @@ int32_t spi_send_usual_cmd(
 usr_exit:
 	if(is_lock)
 		pthread_mutex_unlock(&dev->mutex);
-	if(ret >= SPI_RET_OP_OK)
+	if(ret != SPI_RET_OP_OK){
 		printf("%s() %d: %s errno %d \n",\
-			       	__FUNCTION__,__LINE__, spi_msg[ret],errno);
-	else
-		printf("%s() %d: ret %d errno %d \n",\
-			       	__FUNCTION__,__LINE__, ret, errno);
+				__FUNCTION__,__LINE__, spi_msg[ret],errno);
+		print_buf(tx, SPI_CMD_LEN,"tx\0");
+		print_buf(rx, SPI_CMD_LEN, "rx\0");
+	}
+	
 
 	return ret;
 
@@ -514,7 +516,27 @@ usr_exit:
 	return ret;
 }
 
-
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  print_buf 将缓冲区内容输出
+ *
+ * @param buf[]
+ * @param len
+ */
+/* ----------------------------------------------------------------------------*/
+void print_buf(int8_t buf[], int32_t len,int8_t *info)
+{
+	int32_t i;
+	printf("%s\n", info);
+	for(i = 0; i < len;i++)
+	{
+		printf("0x%x ", buf[i]);
+		if(i == 10)
+			printf("\n");
+	}
+	printf("\n");
+	return;
+}
 
 #ifdef __cplusplus
 }
