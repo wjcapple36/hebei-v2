@@ -8,6 +8,7 @@
 #include "../otdr_ch/otdr_ch.h"
 #include "../otdr_ch/hb_spi.h"
 #include "../common/schedule_fun.h"
+#include "../common/global.h"
 //定义otdr通道资源
 struct _tagOtdrDev otdrDev[CH_NUM];
 //通道缓冲区，存放高低功率累加数据
@@ -35,7 +36,7 @@ extern OtdrStateVariable_t OtdrState;
 extern pthread_mutex_t mutex_otdr;
 
 
-
+static int32_t get_test_ch(int32_t ch, int32_t step);
 /* --------------------------------------------------------------------------*/
 /**
  i* @synopsis  thread_schedule 
@@ -63,12 +64,15 @@ int32_t tsk_schedule(void *arg)
 	struct _tagCHPara appoint_test_para;
 	struct _tagLaserCtrPara laser_para;
 	struct _tagThreadInfo *ptsk_info;
-	const int32_t invalid_index = -2;
-	const int32_t step = 2;
+	const int32_t invalid_index = -1;
+	const int32_t step = 1;
 	
 	ptsk_info = (struct _tagThreadInfo *)arg;
 	//htop 命令显示的就是下面这个东西
 	ptsk_info->htop_id = (long int)syscall(224);
+	
+	
+	printf("%s %s  pid %d  self_id 0x%x \n",__FILENAME__, __FUNCTION__, ptsk_info->htop_id,(int)pthread_self());
 
 	index = invalid_index;
 	last_index = invalid_index;
@@ -76,19 +80,21 @@ int32_t tsk_schedule(void *arg)
 	while(1)
 	{
 		index += step;
+		index %= CH_NUM;
+		index = get_test_ch(index,step);
 		//如果是点名测量，则保存上次的轮询的通道号
 		if(usrOtdrTest.state == USR_OTDR_TEST_WAIT){
 			usrOtdrTest.state = USR_OTDR_TEST_ACCUM;
 			//如果last_index不等-1，说明是连续点名测量
-			last_index = last_index == -1 ? index : last_index;
+			last_index = last_index == invalid_index ? index : last_index;
 			index = usrOtdrTest.ch;
 			cmd = usrOtdrTest.cmd;
 			
 		}
 		else{
-			if(last_index != -1)
+			if(last_index != invalid_index)
 				index = last_index;
-			last_index = -1;
+			last_index = invalid_index;
 			index %= CH_NUM;
 			cmd = 0x80000013;
 		}
@@ -104,6 +110,7 @@ int32_t tsk_schedule(void *arg)
 		}
 		else
 			pCHCtrl->mod = OTDR_TEST_MOD_MONITOR;
+		
 		//更新本通道参数
 		ret = pre_measure(index, &otdrDev[index],&appoint_test_para);
 
@@ -175,4 +182,31 @@ int32_t tsk_schedule(void *arg)
 			usrOtdrTest.state = USR_OTDR_TEST_IDLE;
 	}
 	return 0;
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  get_test_ch  从输入的通道号中获取可测量通道
+ *
+ * @param ch	 通道
+ * @param step	步长
+ *
+ * @returns   返回通道
+ */
+/* ----------------------------------------------------------------------------*/
+static int32_t get_test_ch(int32_t ch, int32_t step)
+{
+	int32_t index;
+	index = ch;
+	while(1)
+	{
+		for(;index < CH_NUM;index +=step)
+		{
+			if(otdrDev[index].ch_ctrl.enable ||\
+					usrOtdrTest.state == USR_OTDR_TEST_WAIT)
+				break;
+		}
+		usleep(500000);
+	}
+	index %= CH_NUM;
+	return index;
 }

@@ -44,7 +44,8 @@ int32_t initialize_sys_para()
 	ret = OP_OK;
 	initialize_fiber_sec_cfg(CH_NUM);
 	initialize_otdr_dev(otdrDev,CH_NUM);
-	create_usr_tsk();
+	initial_spi_dev(&spiDev,"/dev/spidev1.0",0,8,0,1000000);
+ 	create_usr_tsk();
 	return ret;
 }
 /* --------------------------------------------------------------------------*/
@@ -768,7 +769,7 @@ usr_exit:
 	return ret;
 }
 extern int32_t tsk_schedule(void * arg);
-extern int32_t tsk_otdr(void *arg);
+extern int32_t tsk_OtdrAlgo(void *arg);
 /* --------------------------------------------------------------------------*/
 /**
  * @synopsis  create_usr_tsk 创建tsk_otdr, tsk_schedule任务
@@ -778,6 +779,7 @@ extern int32_t tsk_otdr(void *arg);
 /* ----------------------------------------------------------------------------*/
 int32_t create_usr_tsk()
 {
+	
 	int32_t ret;
 	uint8_t log[NUM_CHAR_LOG_MSG] = {0};
 	ret = 0; 
@@ -791,8 +793,9 @@ int32_t create_usr_tsk()
 		system("sync");
 		exit(0);
 	}
+	
 	ret = pthread_create(&tsk_otdr_info.tidp, NULL,\
-		       	tsk_schedule,(void *)(&tsk_otdr_info));
+		tsk_OtdrAlgo,(void *)(&tsk_otdr_info));
 	if(ret != 0){
 		snprintf(log, NUM_CHAR_LOG_MSG,"creat tsk otdr failed %d!",errno);
 		LOGW(__FUNCTION__, __LINE__,LOG_LEV_FATAL_ERRO, log);

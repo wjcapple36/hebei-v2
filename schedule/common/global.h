@@ -13,6 +13,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define __FILENAME__ (strrchr(__FILE__, '/') ? (strrchr(__FILE__, '/') + 1):__FILE__)
 //定义返回给网管的错误码
 #define CMD_RET_OK			0 // 成功	
 #define CMD_RET_PARA_INVLADE		1 //参数非法
