@@ -108,7 +108,7 @@ static int do_request(void *ptr, int argc, char **argv)
 
 static uint8_t mode;
 static uint8_t bits = 8;
-static uint32_t speed = 1000000;
+static uint32_t speed = 20000000;
 static uint16_t delay  = 0;
 
 static int do_fpga_get(void *ptr, int argc, char **argv)
@@ -160,7 +160,7 @@ static int do_channal(void *ptr, int argc, char **argv)
 
 	int fd, ret;
 	fd = open(device, O_RDWR);
-	if (fd == NULL) {
+	if (fd == -1) {
 		printf("open file %s error\n", device);
 		return 0;
 	}

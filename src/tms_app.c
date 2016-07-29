@@ -52,7 +52,7 @@ int32_t OnNameAndAddress(struct tms_context *pcontext)
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	return 0;
 }
-int32_t OnFiberSectionCfg(struct tms_context *pcontext,struct tms_fibersectioncfg *pval)
+int32_t OnFiberSectionCfg(struct tms_context *pcontext, struct tms_fibersectioncfg *pval)
 {
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	return 0;
@@ -120,6 +120,83 @@ int32_t OnCurAlarm(struct tms_context *pcontext)
 int32_t OnGetOTDRData(struct tms_context *pcontext, struct tms_get_otdrdata *pval)
 {
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	struct tms_ret_otdrdata otdrdata;
+	struct tms_ret_otdrparam    ret_otdrparam;
+	struct tms_test_result      test_result;
+	struct tms_hebei2_data_hdr  hebei2_data_hdr;
+	struct tms_hebei2_data_val  hebei2_data_val[1024 * 32], *tmp_data_val;
+	struct tms_hebei2_event_hdr hebei2_event_hdr;
+	struct tms_hebei2_event_val hebei2_event_val[128];
+
+
+	otdrdata.ret_otdrparam    = &ret_otdrparam;
+	otdrdata.test_result      = &test_result;
+	otdrdata.hebei2_data_hdr  = &hebei2_data_hdr;
+	otdrdata.hebei2_data_val  = hebei2_data_val;
+	otdrdata.hebei2_event_hdr = &hebei2_event_hdr;
+	otdrdata.hebei2_event_val = hebei2_event_val;
+
+
+	// ret_otdrparam.pipe   = pval->pipe;
+	ret_otdrparam.range  = 30000;//pval->range;
+	ret_otdrparam.wl     = pval->wl;
+	ret_otdrparam.pw     = pval->pw;
+	ret_otdrparam.time   = pval->time;
+	ret_otdrparam.gi     = 1.1f;//pval->gi;
+	ret_otdrparam.end_threshold          = pval->end_threshold;
+	ret_otdrparam.none_reflect_threshold = pval->none_reflect_threshold;
+
+	strcpy(test_result.result, "OTDRTestResultInfo");
+	test_result.range = 30000;
+	test_result.loss = 2;
+	test_result.atten = 2;
+	strcpy(test_result.time, "2016-03-02 22:11:31");
+
+	strcpy((char*)hebei2_data_hdr.dpid, "OTDRData");
+	hebei2_data_hdr.count = 16000;
+	hebei2_data_hdr.count = 15000;
+
+	tmp_data_val = hebei2_data_val;
+	for (int i = 0; i < 4000; i++) {
+		tmp_data_val->data = 40000 + i;
+		tmp_data_val++;
+	}
+	for (int i = 4000; i < 8000; i++) {
+		tmp_data_val->data = 40000 - i;
+		tmp_data_val++;
+	}
+	for (int i = 8000; i < 16000; i++) {
+		tmp_data_val->data = 40000 + i;
+		tmp_data_val++;
+	}
+	strcpy((char*)hebei2_event_hdr.eventid, "KeyEvents");
+	hebei2_event_hdr.count = 2;
+
+	hebei2_event_val[0].distance   = 10;
+	hebei2_event_val[0].event_type = 0;
+	hebei2_event_val[0].att        = 3;
+	hebei2_event_val[0].loss       = 3;
+	hebei2_event_val[0].reflect    = 3;
+	hebei2_event_val[0].link_loss  = 3;
+
+	hebei2_event_val[1].distance   = 10000;
+	hebei2_event_val[1].event_type = 3;
+	hebei2_event_val[1].att        = 4;
+	hebei2_event_val[1].loss       = 4;
+	hebei2_event_val[1].reflect    = 4;
+	hebei2_event_val[1].link_loss  = 4;
+
+
+	if (pcontext->pgb->cmdid == ID_GETOTDRDATA_15) {
+		tms_RetOTDRData(pcontext->fd, NULL, &otdrdata, ID_RETOTDRDATA_17);	
+	}
+	// else if () {
+		// tms_RetOTDRData(pcontext->fd, NULL, &otdrdata, ID_RETOTDRDATA_17);
+	// }
+	else {
+		trace_dbg("unknow cmd\n");
+	}
+	
 	return 0;
 }
 int32_t OnGetStandardCurv(struct tms_context *pcontext, struct tms_getstandardcurv *pval)

@@ -74,7 +74,7 @@ static int do_fpga(void *ptr, int argc, char **argv)
 	int ret, fd;
 
 	fd = open(device, O_RDWR);
-	if (fd == NULL) {
+	if (fd == -1) {
 		printf("open file %s error\n", device);
 		return 0;
 	}
