@@ -9,7 +9,7 @@
 #define  _GLOBALE_H
 
 #include "../otdr_ch/otdr_ch.h"
-
+#include "../../protocol/tmsxx.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -26,6 +26,10 @@ extern "C" {
 #define CMD_RET_CH_UNEXIST		7 //通道不存在
 #define CMD_RET_TEST_ERROR		8 //测试异常
 #define CMD_RET_FPGA_COMMU_ERROR	9 //FPGA通信异常
+//节点管理器地址，网管客户端地址，网管服务器	
+#define ADDR_HOST_NODE			0x0000001e
+#define ADDR_HOST_CLIENT		0x0000002e
+#define ADDR_HOST_SERVER		0x0000003e
 //定义一些其他关键变量
 #define MAX_RANG_M	180000
 

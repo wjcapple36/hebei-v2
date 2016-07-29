@@ -30,6 +30,7 @@ extern "C" {
 #define SPI_RET_CONFIRM_FAIL	2	//确认失败
 #define	SPI_RET_NOT_RCV_DATA	3	//未收到otdr数据
 #define SPI_RET_DATA_ERROR	4	//OTDR 数据格式错误
+#define SPI_RET_RCV_ERROR	5	//接收错误
 //描述spi操作设备	
 struct _tagSpiStatis
 {
@@ -48,6 +49,9 @@ struct _tagSpiDev
 	uint8_t bits;		//
 	uint16_t delay;		//延迟
 	uint32_t speed;		//速度
+	int32_t len;
+	uint8_t buf[DATA_LEN*7];
+	
 };
 //初始化spi设备
 int32_t initial_spi_dev(struct _tagSpiDev *pspi_dev,
@@ -110,6 +114,8 @@ int32_t get_data_from_spi_buf(
 		int32_t is_accum);
 //从缓冲区中输出整形数据
 void print_buf(int8_t buf[], int32_t len,int8_t *info);
+//获取槽位号
+int32_t get_dev_slot(struct _tagSpiDev *dev, int32_t *pslot); 
 
 #ifdef __cplusplus
 }

@@ -40,11 +40,16 @@ struct _tagDevMisc devMisc;
 /* ----------------------------------------------------------------------------*/
 int32_t initialize_sys_para()
 {
-	int32_t ret;
+	int32_t ret, slot;
 	ret = OP_OK;
 	initialize_fiber_sec_cfg(CH_NUM);
 	initialize_otdr_dev(otdrDev,CH_NUM);
-	initial_spi_dev(&spiDev,"/dev/spidev1.0",0,8,0,1000000);
+	memset(&usrOtdrTest, 0, sizeof(struct _tagUsrOtdrTest));
+	//dev指针，设备地址，mod,bits,delay,speed
+	initial_spi_dev(&spiDev,"/dev/spidev1.0",0,8,0,20000000);
+	read_slot();
+	read_net_flag();
+
  	create_usr_tsk();
 	return ret;
 }
@@ -804,7 +809,89 @@ int32_t create_usr_tsk()
 	}
 	return 0;
 }
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  get_context_by_dst 通过目的地址获取context
+ *
+ * @param dst	目的地址，网管服务器，客户端，节点管理器
+ * @param pcontext 获取的context
+ *
+ * @returns   0成功，其他失败
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t get_context_by_dst(int32_t dst, struct tms_context *pcontext)
+{
+	int ret;
+	ret = 1;
+	switch(dst)
+	{
+		case ADDR_HOST_NODE:
+		       ret = tms_SelectNodeMangerContext(pcontext);
+		       break;	       
+		case ADDR_HOST_SERVER:
+		       ret = tms_SelectMangerContext(pcontext);
+		       break;
+		default:
+		       ret = 1;
+	}
+	return ret;
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  hb_Ret_Ack 封装了向上发送回应的函数
+ *
+ * @param ack
+ *
+ * @returns   0 成功 其他失败
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t hb_Ret_Ack(int32_t dst, struct tms_ack ack)
+{
+	struct tms_context dst_context;
+	int32_t ret;
+	ret = get_context_by_dst(dst, &dst_context);
+	if(!ret)
+		ret =  tms_AckEx(dst_context.fd,NULL, &ack);
+	
+	return ret;
+}
+//读取槽位号，不成功，就去死
+int32_t read_slot()
+{
+	int32_t ret, slot;
+	char msg[NUM_CHAR_LOG_MSG] ={0};
+	ret = get_dev_slot(&spiDev, &slot);
+	if(ret != OP_OK)
+		goto usr_exit;
 
+	if(!slot)
+		ch_offset = 0;
+	else
+		ch_offset = CH_NUM;
+usr_exit:
+	if(ret != OP_OK){
+		snprintf(log, NUM_CHAR_LOG_MSG,"get slot error %d",ret);
+		LOGW(__FUNCTION__, __LINE__,LOG_LEV_FATAL_ERRO, log);
+		exit(0);
+	}
+	return ret;
+
+}
+//读取网络标志，不成功就去死
+int32_t read_net_flag()
+{
+	int32_t ret, slot;
+	char msg[NUM_CHAR_LOG_MSG] ={0};
+	ret = get_net_flag(&spiDev, &slot);
+usr_exit:
+	if(ret != OP_OK){
+		snprintf(log, NUM_CHAR_LOG_MSG,"get net flag error %d",ret);
+		LOGW(__FUNCTION__, __LINE__,LOG_LEV_FATAL_ERRO, log);
+		exit(0);
+	}
+	return ret;
+
+}
 
 //按照C风格编译
 #ifdef __cplusplus

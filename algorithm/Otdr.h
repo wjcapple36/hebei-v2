@@ -70,7 +70,8 @@ typedef int Int32;
  *   数据结构定义
  **************************************************************************************
 */
-#define	DATA_LEN		32000       // 数据长度
+//#define	DATA_LEN		32000       // 数据长度
+#define	DATA_LEN		16000       // 数据长度
 #define	NOISE_LEN		1000        // 噪声长度
 #define	CHAN_MASK		0x000FFFFF	// 20 bits data
 

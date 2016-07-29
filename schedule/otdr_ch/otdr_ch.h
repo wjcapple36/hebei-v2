@@ -49,18 +49,24 @@ extern "C" {
 #endif
 #define OTDR_TEST_MONITOR	0	//监控测量
 #define OTDR_TEST_USR		1	//用户指定测量
+#define OTDR_CH_ON		1	//通道可操作
+#define OTDR_CH_OFF		0	//通道不可操作
 //描述通道控制参数
 struct _tagCHCtrl
 {
 	int32_t enable;		//是否启用
 	int32_t is_cfged;	//是否配置
+	int32_t refresh_para;	//更新光纤段参数
+	/*下面的代码部分初始化部分要赋值成0*/
 	int32_t mod;		//0,轮询，1点名测量
+	int32_t on_ff;		//1, on, 0 ff, 串行工作模式，如果处于off状态则意味这不可操作
+	int32_t send_num;	//发送测量参数次数
+	int32_t accum_ms;	//实际累加的时间，如果超过测量时间，那么意味着失败
 	int32_t accum_num;	//累加次数0，表示本通道累加结束
 	int32_t hp_num;		//高功率次数
 	int32_t lp_num;		//低功率次数
 	int32_t cur_pw_mod;	//当前测量的是高功率还是低功率
 	int32_t curv_cat;	//曲线拼接标志
-	int32_t refresh_para;	//更新光纤段参数
 };
 //描述otdr通道状态
 struct _tagCHState
@@ -95,6 +101,20 @@ struct _tagLaserCtrPara
 	int32_t apd;
 	int32_t trail_length;
 };
+//通道缓存区，存放高低功率的累加数据
+struct _tagCHBuf
+{
+	QUICK_LOCK lock;		//资源锁
+	int32_t is_uesd;		//是否使用的标志
+	int32_t hp_buf[DATA_LEN];	//高功率曲线buf
+	int32_t lp_buf[DATA_LEN];	//低功率曲线buf
+};
+struct _tagCycCurvBuf
+{
+	QUICK_LOCK lock;		//资源锁
+	int32_t is_empty;		//是否使用的标志
+	int32_t buf[DATA_LEN];	//高功率曲线buf
+};
 
 //otdr设备，包含描述该设备的其他结构体变量
 struct _tagOtdrDev
@@ -105,6 +125,8 @@ struct _tagOtdrDev
 	struct _tagLaserCtrPara laser_para;	//激光器参数
 	OtdrCtrlVariable_t otdr_ctrl;		//与otdr算法同类型全局变量匹配
 	OtdrStateVariable_t otdr_state;		//与otdr算法同类型全局变量匹配
+	struct _tagCHBuf ch_buf;		//存放高低功率数据
+	struct _tagCycCurvBuf curv_buf;		//周期性测量曲线buf	
 
 
 };
@@ -116,16 +138,10 @@ struct _tagAlgroCHInfo
 	int32_t ch;	//通道号
 	int32_t resource_id;	//资源id
 	int32_t mod;	//测试方式 点名测量，轮询
+	int32_t src_addr; //如果是点名测量，用来指示数据发向哪里
 };
 
-//通道缓存区，存放高低功率的累加数据
-struct _tagCHBuf
-{
-	QUICK_LOCK lock;		//资源锁
-	int32_t is_uesd;		//是否使用的标志
-	int32_t hp_buf[DATA_LEN];	//高功率曲线buf
-	int32_t lp_buf[DATA_LEN];	//低功率曲线buf
-};
+
 //与tms_fibersectioncfg的差别是将固定长度的变量设置成了非指针
 struct _tagFiberSecCfg
 {
@@ -216,6 +232,8 @@ struct _tagUsrOtdrTest
 {
 	uint32_t state;		//空闲？累加？找事件点？
 	uint32_t cmd;		//0x80*014/0x80*15 点名测量，配置测量
+	uint32_t src_addr;	//操作设备的地址
+	uint32_t reserv_ch;	//点名测量前抢占的的通道
 
 	uint32_t ch;
 	uint32_t range;
@@ -283,6 +301,12 @@ struct _tagThreadInfo
 	pthread_t tidp;	//create_thread 赋值
 	int32_t htop_id;	//线程自身赋值
 	int32_t ch;		//
+};
+struct _tagOtdrAlgroPara
+{
+	OtdrCtrlVariable_t *pCtrl;	
+	OtdrStateVariable_t *pState;
+	struct _tagAlgroCHInfo *pCHInfo;			
 };
 
 //#pragma pack () /*恢复默认的对其方式*/

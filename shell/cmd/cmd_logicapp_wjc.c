@@ -11,8 +11,6 @@ static int do_val1(void *ptr, int argc, char **argv);
 
 //二级子函数
 static int get_fpga_ch_num(void *ptr, int argc, char **argv);
-static int get_fpga_slot(void *ptr, int argc, char **argv);
-static int get_fpga_net_flags(void *ptr, int argc, char **argv);
 
 extern struct cmd_prompt boot_logicapp_root[];
 extern struct cmd_prompt boot_fpga_info[];
@@ -27,7 +25,7 @@ extern struct cmd_prompt boot_cmd6[];
 struct cmd_prompt boot_logicapp_root[] = {
 	PROMPT_NODE(boot_fpga_info   ,      do_get_fpga_info,
 		 (char*)"get"  ,
-		 (char*)"fpga info: ch, net_flag, slot and so on ",
+		 (char*)"cmd: ch net slot alarm0 alarm1",
 		 (int)  NULL),
 	PROMPT_NODE(boot_cmd2   ,      do_cmd2,
 		 (char*)"cmd2"  ,
@@ -96,10 +94,31 @@ struct cmd_prompt boot_cmd6[] = {
 #include "../../schedule/otdr_ch/hb_spi.h"
 static int do_get_fpga_info(void *ptr, int argc, char **argv)
 {
+	int32_t  ret,op;
+	ret = 0;
+	op = 0;
 	if(argc >= 2 && strcmp(argv[1], "ch") == 0)
-		get_fpga_ch_num(ptr, argc, argv);
-	else
+		ret = get_ch_num(&spiDev, &op);
+	else if(argc >= 2 && strcmp(argv[1], "net") == 0)
+		ret = get_net_flag(&spiDev, &op);
+	else if(argc >= 2 && strcmp(argv[1], "slot") == 0)
+		ret = get_dev_slot(&spiDev, &op);
+	else if(argc >= 2 && strcmp(argv[1], "alarm1") == 0)
+		ret = alarm_find(&spiDev, op);
+	else if(argc >= 2 && strcmp(argv[1], "alarm0") == 0)
+		ret = alarm_disappear(&spiDev, op);
+
+	else{
 		printf("%s\n", __FUNCTION__);
+		return 0;
+	}
+
+	if(ret == 0)
+		printf("%s() %d: %s result %d \n", __FUNCTION__, __LINE__,argv[1], op);
+	else
+		printf("%s() %d: %s fail ret  %d \n", __FUNCTION__, __LINE__,argv[1], ret);
+		
+	return 0;
 
 	return 0;
 }

@@ -11,7 +11,6 @@
 #include <pthread.h>
 #include "global.h"
 #include "../otdr_ch/otdr_ch.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -58,7 +57,12 @@ int32_t check_usr_otdr_test_para(struct tms_get_otdrdata *pget_otdrdata);
 int32_t check_fiber_sec_para(const struct tms_fibersectioncfg *pfiber_sec_cfg);
 //创建调度，算法任务
 int32_t create_usr_tsk();
-
+//通过目的地址获取context
+int32_t get_context_by_dst(int32_t dst, struct tms_context *pcontext0);
+//回应
+int32_t hb_Ret_Ack(int32_t dst, struct tms_ack ack);
+int32_t read_slot();
+int32_t read_net_flag();
 
 
 
