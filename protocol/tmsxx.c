@@ -564,6 +564,23 @@ static void tms_OTDRConv_tms_otdr_crc_val(
 	}
 }
 
+// 0x80000016 ~ 0x80000019
+static void tms_OTDRConv_tms_ret_otdrparam(
+    struct tms_ret_otdrparam *pout,
+    struct tms_ret_otdrparam *pin)
+{
+	register uint32_t *p32s, *p32d;
+	// register uint16_t *p16s, *p16d;
+	// register int loop;
+
+	p32d = (uint32_t *)pout;
+	p32s = (uint32_t *)pin;
+	for (register uint32_t i = 0; i < sizeof (struct tms_ret_otdrparam) / sizeof(int32_t); i++) {
+		*p32d = htonl(*p32s);
+		p32d++;
+		p32s++;
+	}
+}
 #ifdef HEBEI2_DBG
 void tms_Print_tms_fibersection_hdr(struct tms_fibersection_hdr *pval)
 {
@@ -1090,7 +1107,7 @@ int32_t tms_RetNodeTime(
 		// fd =tms_SelectFdByAddr(&base_hdr.dst);
 	}
 	glink_Build(&base_hdr, ID_RETNODETIME, len);
-	glink_Send(pcontext->fd, &pcontext->mutex, &base_hdr, (uint8_t*)pmem, len);
+	glink_Send(pcontext->fd, &pcontext->mutex, &base_hdr, (uint8_t *)pmem, len);
 	// glink_Send(pcontext->fd, NULL, &base_hdr, (uint8_t*)pmem, len);
 }
 
@@ -1379,7 +1396,7 @@ int32_t tms_OTDRBasicInfo(
 	memcpy(&fiber_hdr,         pfiber_hdr,      sizeof(struct tms_fibersection_hdr));
 	memcpy(&fiber_val[0],      pfiber_val,      sizeof(struct tms_fibersection_val) * pfiber_hdr->count);
 
-	
+
 	// 转字节序
 	// todo CRC
 	otdr_crc_hdr.crc   = htonl(otdr_crc_hdr.crc);
@@ -1471,8 +1488,76 @@ static int32_t tms_AnalyseGetOTDRData(struct tms_context *pcontext, int8_t *pdat
 
 }
 
-
 // 0x80000019	ID_RETOTDRDATA_19
+int32_t tms_RetOTDRData(
+    int fd,
+    struct glink_addr *paddr,
+    struct tms_ret_otdrdata *val,
+    unsigned long cmdid)
+{
+	struct tms_ret_otdrparam    ret_otdrparam;
+	struct tms_test_result      test_result;
+	struct tms_hebei2_data_hdr  hebei2_data_hdr;
+	struct tms_hebei2_data_val  hebei2_data_val[1024 * 32];
+	struct tms_hebei2_event_hdr hebei2_event_hdr;
+	struct tms_hebei2_event_val hebei2_event_val[128];
+
+	memcpy(&ret_otdrparam, &val->ret_otdrparam, sizeof(struct tms_ret_otdrparam));
+	memcpy(&test_result, val->test_result, sizeof(struct tms_test_result));
+	memcpy(&hebei2_data_hdr, val->hebei2_data_hdr, sizeof(struct tms_hebei2_data_hdr));
+	if (val->hebei2_data_hdr->count >= sizeof(hebei2_data_val) / sizeof(struct tms_hebei2_data_val)) {
+		return -1;
+	}
+	memcpy(hebei2_data_val, val->hebei2_data_val, sizeof(struct tms_hebei2_data_val) * val->hebei2_data_hdr->count);
+	memcpy(&hebei2_event_hdr, val->hebei2_event_hdr, sizeof(struct tms_hebei2_event_hdr));
+	if (val->hebei2_event_hdr->count >= sizeof(hebei2_event_val) / sizeof(struct tms_hebei2_event_val)) {
+		return -1;
+	}
+	memcpy(hebei2_event_val, val->hebei2_event_val, sizeof(struct tms_hebei2_event_val) * val->hebei2_event_hdr->count);
+
+
+	
+	tms_OTDRConv_tms_get_otdrdata(
+	    (struct tms_get_otdrdata *)&ret_otdrparam,
+	    (struct tms_get_otdrdata *)&ret_otdrparam);
+
+	tms_OTDRConv_tms_test_result(&test_result, &test_result);
+
+	
+	tms_OTDRConv_tms_hebei2_data_hdr(&hebei2_data_hdr, &hebei2_data_hdr);
+	
+	tms_OTDRConv_tms_hebei2_data_val(&hebei2_data_val[0], &hebei2_data_val[0], val->hebei2_data_hdr);
+	
+	tms_OTDRConv_tms_hebei2_event_hdr(&hebei2_event_hdr, &hebei2_event_hdr);
+	
+	tms_OTDRConv_tms_hebei2_event_val(&hebei2_event_val[0], &hebei2_event_val[0], val->hebei2_event_hdr);
+
+
+	int len;
+	struct glink_base  base_hdr;
+
+	len =
+	    sizeof(struct tms_ret_otdrparam) +
+	    sizeof(struct tms_test_result) +
+	    sizeof(struct tms_hebei2_data_hdr) +
+	    sizeof(struct tms_hebei2_data_val) * val->hebei2_data_hdr->count +
+	    sizeof(struct tms_hebei2_event_hdr) +
+	    sizeof(struct tms_hebei2_event_val) * val->hebei2_event_hdr->count;
+
+	tms_FillGlinkFrame(&base_hdr, paddr);
+
+	glink_Build(&base_hdr, cmdid, len);
+	glink_SendHead(fd, &base_hdr);
+	glink_SendSerial(fd, (uint8_t *)&ret_otdrparam, sizeof(struct tms_ret_otdrparam) );
+	glink_SendSerial(fd, (uint8_t *)&test_result, sizeof(struct tms_test_result) );
+	glink_SendSerial(fd, (uint8_t *)&hebei2_data_hdr, sizeof(struct tms_hebei2_data_hdr) );
+	glink_SendSerial(fd, (uint8_t *)hebei2_data_val, sizeof(struct tms_hebei2_data_val) * val->hebei2_data_hdr->count );
+	glink_SendSerial(fd, (uint8_t *)&hebei2_event_hdr, sizeof(struct tms_hebei2_event_hdr) );
+	glink_SendSerial(fd, (uint8_t *)hebei2_event_val, sizeof(struct tms_hebei2_event_val) * val->hebei2_event_hdr->count);
+	glink_SendTail(fd);
+	return 0;
+}
+
 static int32_t tms_AnalyseRetOTDRData(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
 	return 0;

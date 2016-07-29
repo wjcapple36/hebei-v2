@@ -419,6 +419,30 @@ struct tms_getstandardcurv
 {
 	uint32_t pipe;
 };
+
+
+// 0x80000016 ~ 0x80000019
+struct tms_ret_otdrparam
+{
+	// uint32_t pipe;
+	uint32_t range;
+	uint32_t wl;
+	uint32_t pw;
+	uint32_t time;
+	float	gi;
+	float	end_threshold;
+	float	none_reflect_threshold;
+};
+
+struct tms_ret_otdrdata
+{
+	struct tms_ret_otdrparam    *ret_otdrparam;
+	struct tms_test_result      *test_result;
+	struct tms_hebei2_data_hdr  *hebei2_data_hdr;
+	struct tms_hebei2_data_val  *hebei2_data_val;
+	struct tms_hebei2_event_hdr *hebei2_event_hdr;
+	struct tms_hebei2_event_val *hebei2_event_val;
+};
 // 20000000
 struct tms_setotdrfpgainfo
 {
@@ -668,7 +692,11 @@ int32_t tms_RetNodeTime(
 	pevent_val  = (struct tms_retotdr_event_val  *)(((char*)pevent_hdr) + sizeof(struct tms_retotdr_event_hdr)); \
 	pchain      = (struct tms_retotdr_chain      *)(((char*)pevent_val) + sizeof(struct tms_retotdr_event_val) * (pevent_hdr->count));
 
-
+int32_t tms_RetOTDRData(
+    int fd,
+    struct glink_addr *paddr,
+    struct tms_ret_otdrdata *val,
+    unsigned long cmdid);
 int32_t tms_Transmit2Dev(struct tms_context *pcontext, int8_t *pdata, int32_t len);
 int32_t tms_Transmit2Manager(struct tms_context *pcontext, int8_t *pdata, int32_t len);
 
