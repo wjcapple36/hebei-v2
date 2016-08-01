@@ -284,6 +284,7 @@ int32_t tsk_schedule(void *arg)
 	OtdrAlgroPara.pCHInfo = &algroCHInfo;
 	OtdrAlgroPara.pCtrl = &OtdrCtrl;
 	OtdrAlgroPara.pState = &OtdrState;
+	OtdrAlgroPara.pOtdrData = &OtdrData;
 	while(1)
 	{
 		for(ch = 0; ch < CH_NUM; ch++)
@@ -442,7 +443,7 @@ int32_t agin_process(
 	pCHState = &pOtdrDev->ch_state;
 	pCHBuf = &pOtdrDev->ch_buf;
 	pOtdrState = &pOtdrDev->otdr_state;
-	pOtdrCtl = &pOtdrDev->otdr_state;
+	pOtdrCtl = &pOtdrDev->otdr_ctrl;
 	ret = OP_OK;
 	is_ack = 1;
 
@@ -482,6 +483,7 @@ int32_t agin_process(
 	//测量完成，启动算法进程
 	if(pCHCtrl->accum_num <= 0){
 		is_ack = 0; 
+		start_otdr_algro(ch, pOtdrDev, pUsrTest, pAlgroPara);
 		ret = RET_SWITCH_CH;
 		goto usr_exit;
 	}
@@ -555,17 +557,21 @@ int32_t start_otdr_algro(
 	pCHState = &pOtdrDev->ch_state;
 	pCHBuf = &pOtdrDev->ch_buf;
 	pOtdrState = &pOtdrDev->otdr_state;
-	pOtdrCtl = &pOtdrDev->otdr_state;
-	pAlgroCHInfo = &pAlgroPara->pCHInfo;
+	pOtdrCtl = &pOtdrDev->otdr_ctrl;
+	pAlgroCHInfo = pAlgroPara->pCHInfo;
 
 	//说明算法没有处理完成，7s的时间没有处理完，说明有问题
 	if(ALGO_READY_FLAG_START_NEW == pAlgroPara->pCtrl->OtdrAlgoReadyFlag)
 		pCHState->algro_collid_num++;
 	//只要能获取到信号量，说明那边的算法已经处理完毕
 	pthread_mutex_lock(&mutex_otdr);
-	memset(&pAlgroPara->pCHInfo, 0, sizeof(struct _tagAlgroCHInfo));
-	memcpy(&pAlgroPara->pCtrl, pOtdrCtl,sizeof(OtdrCtrl));
-	memcpy(&pAlgroPara->pState,pOtdrState, sizeof(OtdrState));
+	memset(pAlgroPara->pCHInfo, 0, sizeof(struct _tagAlgroCHInfo));
+	memcpy(pAlgroPara->pCtrl, pOtdrCtl,sizeof(OtdrCtrl));
+	memcpy(pAlgroPara->pState,pOtdrState, sizeof(OtdrState));
+	memcpy(pAlgroPara->pOtdrData->ChanData, &pOtdrDev->ch_buf.hp_buf,DATA_LEN); 
+	memcpy(pAlgroPara->pOtdrData->LowPowerData,& pOtdrDev->ch_buf.lp_buf,DATA_LEN); 
+	pAlgroPara->pCtrl->OtdrMode = OTDR_MODE_AVG;
+	pAlgroPara->pCtrl->FindEvent = 1;
 	//保存算法运行期间的通道信息
 	pAlgroCHInfo->ch = ch;
 	pAlgroCHInfo->mod = pCHCtrl->mod;
@@ -580,6 +586,6 @@ int32_t start_otdr_algro(
 	pAlgroCHInfo->resource_id = pCHState->resource_id;			
 	pthread_mutex_unlock(&mutex_otdr);
 	//启动算法处理
-	pAlgroPara->pCtrl->OtdrDataReadyFlag = ALGO_READY_FLAG_START_NEW ;
+	pAlgroPara->pCtrl->OtdrAlgoReadyFlag = ALGO_READY_FLAG_START_NEW ;
 	return ret;
 }

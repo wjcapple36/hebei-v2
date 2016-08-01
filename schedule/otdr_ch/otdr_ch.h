@@ -306,7 +306,9 @@ struct _tagOtdrAlgroPara
 {
 	OtdrCtrlVariable_t *pCtrl;	
 	OtdrStateVariable_t *pState;
-	struct _tagAlgroCHInfo *pCHInfo;			
+	struct _tagAlgroCHInfo *pCHInfo;
+	OTDR_ChannelData_t *pOtdrData;
+
 };
 
 //#pragma pack () /*恢复默认的对其方式*/

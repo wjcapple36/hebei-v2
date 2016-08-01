@@ -139,6 +139,7 @@ int32_t OtdrUpdateParam_r(
 
 	pOtdrCtrl->PulsePeriod_us     = 1000;             
 	pOtdrCtrl->AccCountOnce       = TIMES_COUNT_ONCE; 
+	pOtdrCtrl->RawDataLevel = 0xffffffff;
 
 	// 根据测量参数设定下面的模式
 	if(0 == pCHPara->MeasureLength_m)      

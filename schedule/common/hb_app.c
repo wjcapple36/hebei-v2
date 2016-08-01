@@ -892,7 +892,10 @@ usr_exit:
 	return ret;
 
 }
-
+int32_t otdr_test_finish()
+{
+	return 0;
+}
 //按照C风格编译
 #ifdef __cplusplus
 }

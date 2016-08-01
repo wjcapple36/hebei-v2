@@ -52,8 +52,10 @@ int32_t tsk_OtdrAlgo(void * arg)
         pthread_mutex_lock(&mutex_otdr);
         if((OTDR_MODE_AVG == OtdrCtrl.OtdrMode) || (OTDR_MODE_REALTIME == OtdrCtrl.OtdrMode))
         {
-            if(OtdrCtrl.FindEvent == 0)     ProcessRefreshData(OtdrState.RefreshCount);
-            else                            ProcessFinalData(MEASURE_PURPOSE_OTDR);
+            if(OtdrCtrl.FindEvent == 0)    
+		    ProcessRefreshData(OtdrState.RefreshCount);
+            else                           
+		    ProcessFinalData(MEASURE_PURPOSE_OTDR);
         }
 
         OtdrCtrl.OtdrAlgoBusyNow = 0;
