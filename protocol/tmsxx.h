@@ -38,21 +38,21 @@ extern "C" {
 #endif
 
 #if defined(TMS_DEBUG)
-	#define dbg_tms( format, args...) printf(format, ##args) 
+#define dbg_tms( format, args...) printf(format, ##args)
 #else
- 	#define dbg_tms( format, args...)
+#define dbg_tms( format, args...)
 #endif
 
 #if defined(TMS_DEBUG1)
-	#define dbg_tms1( format, args...) printf(format, ##args) 
+#define dbg_tms1( format, args...) printf(format, ##args)
 #else
- 	#define dbg_tms1( format, args...)
+#define dbg_tms1( format, args...)
 #endif
 
- #if defined(TMS_DEBUG2)
-	#define dbg_tms2( format, args...) printf(format, ##args) 
+#if defined(TMS_DEBUG2)
+#define dbg_tms2( format, args...) printf(format, ##args)
 #else
- 	#define dbg_tms2( format, args...)
+#define dbg_tms2( format, args...)
 #endif
 
 /*
@@ -64,8 +64,8 @@ extern "C" {
 */
 
 #define CHECK_PTR(ptrA, struct_A, struct_B, B_Count, PtrEnd) 	\
- 				( ((uint8_t*)(ptrA)) + sizeof(struct_A) + \
-				   sizeof(struct_B) * (int32_t)(B_Count-1) <= ((uint8_t*)(PtrEnd)-sizeof(struct_B)) )
+	( ((uint8_t*)(ptrA)) + sizeof(struct_A) + \
+	  sizeof(struct_B) * (int32_t)(B_Count-1) <= ((uint8_t*)(PtrEnd)-sizeof(struct_B)) )
 
 ////////////////////////////////////////////////////////////////////////////////
 // 机框，槽位数
@@ -155,18 +155,18 @@ extern "C" {
 #define DEV_SMS 0x2000000e
 
 #ifdef _MANAGE
-	#define TMS_DEFAULT_LOCAL_ADDR GLINK_MANAGE_ADDR
-	#define TMS_DEFAULT_RMOTE_ADDR GLINK_CU_ADDR
+#define TMS_DEFAULT_LOCAL_ADDR GLINK_MANAGE_ADDR
+#define TMS_DEFAULT_RMOTE_ADDR GLINK_CU_ADDR
 #else
-	#if 1 
-		#define TMS_DEFAULT_LOCAL_ADDR DEV_OTDR
-		#define TMS_DEFAULT_RMOTE_ADDR NODE_MANAGE
-	#endif
-	#if 0
-		// TMSxxV1.2 废除 GLINK_4412_ADDR
-		#define TMS_DEFAULT_LOCAL_ADDR  GLINK_CU_ADDR
-		#define TMS_DEFAULT_RMOTE_ADDR  GLINK_MANAGE_ADDR
-	#endif
+#if 1
+#define TMS_DEFAULT_LOCAL_ADDR DEV_OTDR
+#define TMS_DEFAULT_RMOTE_ADDR NODE_MANAGE
+#endif
+#if 0
+// TMSxxV1.2 废除 GLINK_4412_ADDR
+#define TMS_DEFAULT_LOCAL_ADDR  GLINK_CU_ADDR
+#define TMS_DEFAULT_RMOTE_ADDR  GLINK_MANAGE_ADDR
+#endif
 #endif
 
 
@@ -235,13 +235,11 @@ extern "C" {
 // hebei2
 // 0x80000004
 
-struct tms_fibersection_hdr
-{
+struct tms_fibersection_hdr {
 	char fiber_id[20];
 	uint32_t count;
 };
-struct tms_fibersection_val
-{
+struct tms_fibersection_val {
 	uint32_t pipe_num;
 	uint32_t fiber_num;
 	char     fiber_route[64];
@@ -258,8 +256,7 @@ struct tms_fibersection_val
 	float    listen_level;
 };
 
-struct tms_otdr_param
-{
+struct tms_otdr_param {
 	char otdr_id[20];
 	uint32_t range;
 	uint32_t wl;
@@ -269,34 +266,29 @@ struct tms_otdr_param
 	float	end_threshold;
 	float	none_reflect_threshold;
 };
-struct tms_test_result
-{
+struct tms_test_result {
 	char result[20];
 	float range;
 	float loss;
 	float atten;
 	char time[20];
 };
-struct tms_hebei2_data_hdr
-{
+struct tms_hebei2_data_hdr {
 	int8_t  dpid[12];					///< 测试数据单元名称
 	int32_t count;					///< 数据点个数
 };
 
 // OTDR返回信息B部分
-struct tms_hebei2_data_val
-{
+struct tms_hebei2_data_val {
 	uint16_t data;
 };
 
-struct tms_hebei2_event_hdr
-{
+struct tms_hebei2_event_hdr {
 	int8_t eventid[12];
 	int32_t count;
 };
 
-struct tms_hebei2_event_val
-{
+struct tms_hebei2_event_val {
 	int32_t distance;		///< 该事件点距离
 	int32_t event_type;		///< 该事件点类型
 	float   att;			///< 该事件点两事件点与前事件点之间光纤衰减系数
@@ -305,8 +297,7 @@ struct tms_hebei2_event_val
 	float   link_loss;		///< 该事件点累计损耗
 };
 
-struct tms_fibersectioncfg
-{
+struct tms_fibersectioncfg {
 	struct tms_fibersection_hdr *fiber_hdr;
 	struct tms_fibersection_val *fiber_val;
 	struct tms_otdr_param       *otdr_param;
@@ -319,35 +310,29 @@ struct tms_fibersectioncfg
 // end 0x80000004
 
 // 0x80000005
-struct tms_cfgpip_status
-{
+struct tms_cfgpip_status {
 	uint32_t status;
 };
 
-struct tms_getcyctestcuv
-{
+struct tms_getcyctestcuv {
 	uint32_t pipe;
 };
 
-struct tms_getstatus_data
-{
+struct tms_getstatus_data {
 	uint32_t pipe;
 };
 
-struct tms_getstatus_data_hdr
-{
+struct tms_getstatus_data_hdr {
 	uint32_t count;
 };
-struct tms_getstatus_data_val
-{
+struct tms_getstatus_data_val {
 	uint32_t pipe;
 	uint32_t section_num;
 	char time[20];
 	float section_atten;
 };
 // 0x80000011
-struct tms_otdr_crc_hdr
-{
+struct tms_otdr_crc_hdr {
 	uint32_t crc;
 	char id[12];
 	char name[64];
@@ -356,8 +341,7 @@ struct tms_otdr_crc_hdr
 	char sf_ver[12];
 	uint32_t count;
 };
-struct tms_otdr_crc_val
-{
+struct tms_otdr_crc_val {
 	uint32_t pipe;
 	uint32_t wl;
 	uint32_t dr;
@@ -365,19 +349,16 @@ struct tms_otdr_crc_val
 	uint32_t reserved0;
 };
 
-struct tms_otdr_ch_status
-{
+struct tms_otdr_ch_status {
 	char id[12];
 	uint32_t ch_status;
 };
 
-struct tms_otdr_param_hdr
-{
+struct tms_otdr_param_hdr {
 	char id[20];
 	uint32_t count;
 };
-struct tms_otdr_param_val
-{
+struct tms_otdr_param_val {
 	uint32_t pipe;
 	uint32_t range;
 	uint32_t wl;
@@ -391,8 +372,7 @@ struct tms_otdr_param_val
 // extern struct tms_fibersection_hdr;
 // extern struct tms_fibersection_val;
 
-struct tms_otdrbaseinfo
-{
+struct tms_otdrbaseinfo {
 	struct tms_otdr_crc_hdr     *otdr_crc_hdr;
 	struct tms_otdr_crc_val     *otdr_crc_val;
 	struct tms_otdr_ch_status   *otdr_ch_status;
@@ -402,8 +382,7 @@ struct tms_otdrbaseinfo
 	struct tms_fibersection_val *fiber_val;
 };
 // end 0x80000011
-struct tms_get_otdrdata
-{
+struct tms_get_otdrdata {
 	uint32_t pipe;
 	uint32_t range;
 	uint32_t wl;
@@ -415,15 +394,51 @@ struct tms_get_otdrdata
 };
 
 
-struct tms_getstandardcurv
-{
+struct tms_getstandardcurv {
 	uint32_t pipe;
 };
 
+// 0x80000013
+struct tms_alarmlist_hdr {
+	uint32_t count;
+};
+struct tms_alarmlist_val {
+	uint32_t pipe;
+	uint32_t fiber;
+	uint32_t level;
+	uint32_t type;
+	char     time[20];
+	char     reserved0[20];
+	uint32_t location[3];
+	uint32_t reserved1;
+};
+
+struct tms_alarmline_hdr {
+	uint32_t count;
+};
+
+struct tms_alarmline_val {
+	uint32_t pipe;
+	uint32_t datalen; ///< 特别注意：曲线长度，Sizeof(Int32) + 曲线数据的长度
+
+	//  OTDR 曲线内容
+	struct tms_ret_otdrparam    *ret_otdrparam;
+	struct tms_test_result      *test_result;
+	struct tms_hebei2_data_hdr  *hebei2_data_hdr;
+	struct tms_hebei2_data_val  *hebei2_data_val;
+	struct tms_hebei2_event_hdr *hebei2_event_hdr;
+	struct tms_hebei2_event_val *hebei2_event_val;
+};
+
+struct tms_curalarm {
+	struct tms_alarmlist_hdr *alarmlist_hdr;
+	struct tms_alarmlist_val *alarmlist_val;
+	struct tms_alarmline_hdr *alarmline_hdr;
+	struct tms_alarmline_val *alarmline_val;
+};
 
 // 0x80000016 ~ 0x80000019
-struct tms_ret_otdrparam
-{
+struct tms_ret_otdrparam {
 	// uint32_t pipe;
 	uint32_t range;
 	uint32_t wl;
@@ -434,8 +449,7 @@ struct tms_ret_otdrparam
 	float	none_reflect_threshold;
 };
 
-struct tms_ret_otdrdata
-{
+struct tms_ret_otdrdata {
 	struct tms_ret_otdrparam    *ret_otdrparam;
 	struct tms_test_result      *test_result;
 	struct tms_hebei2_data_hdr  *hebei2_data_hdr;
@@ -444,8 +458,7 @@ struct tms_ret_otdrdata
 	struct tms_hebei2_event_val *hebei2_event_val;
 };
 // 20000000
-struct tms_setotdrfpgainfo
-{
+struct tms_setotdrfpgainfo {
 	uint32_t pipe;
 	uint32_t wl;
 	uint32_t dr;
@@ -453,45 +466,39 @@ struct tms_setotdrfpgainfo
 	uint32_t reserved0;
 };
 // 70000000
-struct tms_setocvmpara
-{
+struct tms_setocvmpara {
 	float 		cable_len;
 	uint32_t 	host_thr;
 	uint32_t 	slave_thr;
 	float 		amend;
 };
 
-struct tms_setocvmfpgainfo
-{
+struct tms_setocvmfpgainfo {
 	float 		max_cable_len;
 	char		wl[64];
 };
 // end hebei2
 
-struct pro_list
-{
+struct pro_list {
 	char name[52];
 	// int len;
 };
 
-struct tms_dev_update_hdr
-{
+struct tms_dev_update_hdr {
 	int32_t frame;
 	int32_t slot;
 	int32_t type;
 	uint8_t target[16];
 	int32_t flen;
 };
-struct tms_dev_md5
-{
+struct tms_dev_md5 {
 	uint8_t md5[32];
 };
 
 
 
 // // OTDR返回信息C部分
-struct tms_retotdr_event_val
-{
+struct tms_retotdr_event_val {
 	int32_t distance;		///< 该事件点距离
 	int32_t event_type;		///< 该事件点类型
 	float   att;			///< 该事件点两事件点与前事件点之间光纤衰减系数
@@ -501,9 +508,8 @@ struct tms_retotdr_event_val
 };
 
 
-//ID_CMD_ACK				31	
-struct tms_ack
-{
+//ID_CMD_ACK				31
+struct tms_ack {
 	int32_t errcode;
 	int32_t cmdid;
 	// int32_t reserve1;
@@ -511,7 +517,7 @@ struct tms_ack
 	// int32_t reserve3;
 	// int32_t reserve4;
 };
-// //ID_CMD_TICK				32	
+// //ID_CMD_TICK				32
 // struct tms_
 // {
 
@@ -522,8 +528,7 @@ struct tms_ack
 
 ///< 设备基本类型描述
 // 用于刷新设备连接状态图形界面，
-struct tms_devbase
-{
+struct tms_devbase {
 	int fd;
 	int32_t  frame;
 	int32_t  slot;
@@ -552,8 +557,7 @@ struct tms_devbase
 ///< 设备上下文描述
 // 主要处理心跳计数，用与当设备长时间断开连接后能快速响应
 // 应用层“刷新”命令读取tick，如果tick一直不变表示死链接
-struct tms_context
-{
+struct tms_context {
 	int fd;          ///<socket描述符
 	struct glink_base *pgb;
 	uint32_t frame;  ///<机框号
@@ -571,8 +575,7 @@ struct tms_context
 
 #include "bipbuffer.h"
 ///< 应用程序
-struct tmsxx_app
-{
+struct tmsxx_app {
 	// int    fd;                   ///<socket fd
 	int    morebyte;             ///<为防止bipbuffer环形缓存浪费
 	struct bipbuffer bb;         ///<glink接收环形缓存，长度初始化后永远不变
@@ -585,9 +588,8 @@ struct tmsxx_app
 
 };
 
-struct tms_callback
-{
-	int32_t (*pf_OnCopy2Use)(char *data, int32_t datalen, int msec, void* fd);
+struct tms_callback {
+	int32_t (*pf_OnCopy2Use)(char *data, int32_t datalen, int msec, void *fd);
 
 	// hebei2
 	// 80000000
@@ -597,8 +599,8 @@ struct tms_callback
 	int32_t (*pf_OnNameAndAddress)(struct tms_context *pcontext);
 	int32_t (*pf_OnFiberSectionCfg)(struct tms_context *pcontext, struct tms_fibersectioncfg *pval);
 	int32_t (*pf_OnConfigPipeState)(struct tms_context *pcontext, struct tms_cfgpip_status *pval);
-	int32_t (*pf_OnGetCycleTestCuv)(struct tms_context *pcontext,struct tms_getcyctestcuv *pval);
-	int32_t (*pf_OnGetStatusData)(struct tms_context *pcontext,struct tms_getstatus_data *pval);
+	int32_t (*pf_OnGetCycleTestCuv)(struct tms_context *pcontext, struct tms_getcyctestcuv *pval);
+	int32_t (*pf_OnGetStatusData)(struct tms_context *pcontext, struct tms_getstatus_data *pval);
 	int32_t (*pf_OnStatusData)(struct tms_context *pcontext);
 	int32_t (*pf_OnCRCCheckout)(struct tms_context *pcontext);
 
@@ -615,14 +617,13 @@ struct tms_callback
 	// 70000000
 	int32_t (*pf_OnSetOCVMPara)(struct tms_context *pcontext, struct tms_setocvmpara *pval);
 	int32_t (*pf_OnSetOCVMFPGAInfo)(struct tms_context *pcontext, struct tms_setocvmfpgainfo *pval);
-	
+
 
 };
 
 
 ///< 回调函数列表结构，采用函数指针方法，避免多个if、switch的低效率
-struct tms_analyse_array
-{
+struct tms_analyse_array {
 	int (*ptrfun)(struct tms_context *pcontext, int8_t *pdata, int32_t len);
 	int dowhat;
 };
@@ -633,33 +634,33 @@ struct tms_analyse_array
 // Section 6 MCU与业务板通信接口
 void tms_Init();
 int32_t tms_Analyse(struct tms_context *pcontext, int8_t *pdata, int32_t len);
-int32_t tms_Tick(int fd,struct glink_addr *paddr);
+int32_t tms_Tick(int fd, struct glink_addr *paddr);
 int32_t tms_Update(
-		int fd,	
-		struct glink_addr *paddr,
-		int32_t frame, 
-		int32_t slot,
-		int32_t type,
-		uint8_t (*target)[16],
-		int32_t flen,
-		uint8_t *pdata);
-void tms_Trace(struct glink_addr *paddr,char *strout, int32_t len, int level);
+    int fd,
+    struct glink_addr *paddr,
+    int32_t frame,
+    int32_t slot,
+    int32_t type,
+    uint8_t (*target)[16],
+    int32_t flen,
+    uint8_t *pdata);
+void tms_Trace(struct glink_addr *paddr, char *strout, int32_t len, int level);
 
 int32_t tms_AckEx(
-	int fd, 
-	struct glink_addr *paddr, 
-	struct tms_ack *pACK);
+    int fd,
+    struct glink_addr *paddr,
+    struct tms_ack *pACK);
 
 void tms_SaveOTDRData(
-			struct tms_retotdr_test_hdr   *ptest_hdr,
-			struct tms_retotdr_test_param *ptest_param,
-			struct tms_retotdr_data_hdr   *pdata_hdr,
-			struct tms_retotdr_data_val   *pdata_val,
-			struct tms_retotdr_event_hdr  *pevent_hdr,
-			struct tms_retotdr_event_val  *pevent_val,
-			struct tms_retotdr_chain      *pchain,
-			char *path,
-			int32_t flag);
+    struct tms_retotdr_test_hdr   *ptest_hdr,
+    struct tms_retotdr_test_param *ptest_param,
+    struct tms_retotdr_data_hdr   *pdata_hdr,
+    struct tms_retotdr_data_val   *pdata_val,
+    struct tms_retotdr_event_hdr  *pevent_hdr,
+    struct tms_retotdr_event_val  *pevent_val,
+    struct tms_retotdr_chain      *pchain,
+    char *path,
+    int32_t flag);
 // hebei2
 int32_t tms_RetNodeTime(
     struct tms_context *pcontext,
