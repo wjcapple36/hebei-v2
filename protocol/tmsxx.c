@@ -26,7 +26,7 @@ TODO：详细描述
 extern "C" {
 #endif
 
-
+int g_manger = 0, g_node_manger = 0;
 
 #ifdef USE_INLINE
 inline int unuse_echo(const char *__restrict __format, ...)
@@ -1094,7 +1094,13 @@ static int32_t tms_AnalyseGetBasicInfo(struct tms_context *pcontext, int8_t *pda
 	if (pcontext->ptcb->pf_OnGetBasicInfo) {
 		pcontext->ptcb->pf_OnGetBasicInfo(pcontext);
 	}
+	// TODO 如果之前已经有网管连接，则断开
+	// 但之前好保证识别网管与节点管理器之间不会冲突
+	if (g_node_manger != 0) {
+		// close(g_node_manger);
 
+	}
+	g_node_manger = pcontext->fd;
 	// struct tms_context con;
 	// int ret = tms_SelectContextByFD(6,&con);
 	// printf("ret = %d %d\n", ret, con.fd);
@@ -1543,9 +1549,9 @@ int32_t tms_CurAlarm(
 	alarmline_hdr.count = htonl(alarmline_hdr.count);
 
 	// conver otdr val
-	tms_OTDRConv_tms_get_otdrdata(
-	    (struct tms_get_otdrdata *)&ret_otdrparam,
-	    (struct tms_get_otdrdata *)&ret_otdrparam);
+	tms_OTDRConv_tms_ret_otdrparam(
+	    (struct tms_ret_otdrparam *)&ret_otdrparam,
+	    (struct tms_ret_otdrparam *)&ret_otdrparam);
 
 	tms_OTDRConv_tms_test_result(&test_result, &test_result);
 
@@ -2242,7 +2248,7 @@ void tms_SetDoWhat(int cmdh, int count, int *arr)
 
 // }
 
-int g_manger = 0, g_node_manger = 0;
+
 
 #include <epollserver.h>
 #include <assert.h>
@@ -2309,6 +2315,17 @@ int32_t tms_SelectNodeMangerContext(struct tms_context *context)
 		return 1;
 	}
 	return 0;
+}
+
+// 在远方断开连接后调用该函数，判断是否是网管
+void tms_RemoveAnyMangerContext(int fd)
+{
+	if (fd == g_manger) {
+		g_manger = 0;
+	}
+	else if (fd == g_node_manger){
+		g_node_manger = 0;
+	}
 }
 
 #ifdef __cplusplus
