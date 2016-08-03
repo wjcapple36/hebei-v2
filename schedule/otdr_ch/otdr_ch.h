@@ -52,6 +52,7 @@ extern "C" {
 #define OTDR_CH_ON		1	//通道可操作
 #define OTDR_CH_OFF		0	//通道不可操作
 //描述通道控制参数
+#define CHCTRL_FIXED_BYTES	12	//初始化的时候，前面多少个字节不能设置成0，是根据配置命令
 struct _tagCHCtrl
 {
 	int32_t enable;		//是否启用
@@ -62,6 +63,7 @@ struct _tagCHCtrl
 	int32_t on_ff;		//1, on, 0 ff, 串行工作模式，如果处于off状态则意味这不可操作
 	int32_t send_num;	//发送测量参数次数
 	int32_t accum_ms;	//实际累加的时间，如果超过测量时间，那么意味着失败
+	int32_t one_time_ms;	//一次累加时间
 	int32_t accum_num;	//累加次数0，表示本通道累加结束
 	int32_t hp_num;		//高功率次数
 	int32_t lp_num;		//低功率次数

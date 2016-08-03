@@ -353,6 +353,7 @@ void OtdrStateInit_r(OtdrStateVariable_t  *pOtdrState)
 	}
 	else    pOtdrState->MinNoiseAmp = -5;
 
+	/*
 	if(pOtdrState->MeasureParam.MeasureLength_m == 100000)   
 		pOtdrState->MeasureLengthPoint = DATA_LEN - NOISE_LEN;
 	else
@@ -360,6 +361,9 @@ void OtdrStateInit_r(OtdrStateVariable_t  *pOtdrState)
 		pOtdrState->MeasureLengthPoint = (int32_t)(pOtdrState->MeasureParam.MeasureLength_m * pOtdrState->Points_1m);
 		pOtdrState->MeasureLengthPoint = MIN(pOtdrState->MeasureLengthPoint, DATA_LEN-NOISE_LEN);
 	}
+	*/
+	//上传固定长度，16000 - 1000
+	pOtdrState->MeasureLengthPoint = DATA_LEN - NOISE_LEN;
 	pOtdrState->CurveStartPoint = OtdrParam.OtdrStartPoint[i];
 }
 int32_t PulseWidthInSampleNum_r (uint32_t pl_ns, uint32_t sample_hz)
@@ -600,6 +604,7 @@ int32_t pre_measure(int32_t ch, struct _tagOtdrDev *potdrDev,struct _tagCHPara *
 				__FUNCTION__,__LINE__,ret);
 		return ret;
 	}
+	pCHCtrl->accum_num = pCHCtrl->hp_num + pCHCtrl->lp_num;
 	return ret;
 }
 
@@ -609,24 +614,28 @@ int32_t pre_measure(int32_t ch, struct _tagOtdrDev *potdrDev,struct _tagCHPara *
  *
  * @param time_s
  *
+ *@		2016-08-02 修改 入口参数修改为ms，每次休眠0.5秒
  * @returns   0, 超时退出，-1中断测量退出 
  */
 /* ----------------------------------------------------------------------------*/
-int32_t usr_delay(int32_t ch, int32_t time_s)
+int32_t usr_delay(int32_t ch, int32_t time_ms)
 {
-	int32_t ret,count, sleep_time;
-	ret = OP_OK;
-	count = time_s;
+	int32_t ret, count, sleep_time;
 
-	while(count > 1)
+	sleep_time = 500;
+	ret = OP_OK;
+	count = time_ms / sleep_time;
+
+
+	while(count > 0)
 	{
 		if(usrOtdrTest.state == USR_OTDR_TEST_WAIT){
 			ret = -1;
 			break;
 		}
-		ret = sleep(1);
+		ret = usleep(500000);
 		//返回值为剩余的时间，如果其他原因返回了继续睡觉
-		if(ret == 0)
+		if(!errno)
 			count--;
 	}
 

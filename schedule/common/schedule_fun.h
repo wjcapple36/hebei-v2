@@ -58,7 +58,7 @@ extern "C" {
 	int32_t pre_measure(int32_t ch, struct _tagOtdrDev *potdrDev,
 			struct _tagCHPara *pUsrPara);
 	//延时
-	int32_t usr_delay(int32_t ch, int32_t time_s);
+	int32_t usr_delay(int32_t ch, int32_t time_ms);
 	//将点名测量的参数赋值到本地
 	int32_t get_usr_otdr_test_para(struct _tagCHPara *pusr_para, 
 		const struct _tagUsrOtdrTest *pnet_para);

@@ -521,10 +521,12 @@ Int32 EventPointsFilter(OTDR_ChannelData_t *OtdrData, Event_t *EventTemp, const 
 
 	// 2016-05-02 17:44:31
 	if(TotalEventNum < 1){
-		FinalEventNum = 0;
+		FinalEventNum = 1;
 		FinalEvent[0] = 0;
 		FinalEventEnd[0] = 0;
-		EventType[0] = EVENT_TYPE_REFLECT;
+		EventType[0] = EVENT_TYPE_START ;
+		EventTemp->FinalEventNum = 1;
+		EventTemp->TotalEventNum = 1;
 		return FinalEventNum;
 	}
 
