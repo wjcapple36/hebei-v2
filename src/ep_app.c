@@ -448,6 +448,7 @@ int epFUI_OnRemoveClose(struct ep_t *pep, struct ep_con_t *pnode)
 
 	epapp_cb.pf_RemoteClose(pnode->sockfd);
 	NotifyCU(pnode->sockfd);
+	tms_RemoveAnyMangerContext(pnode->sockfd);
 	// tms_DelManage(pnode->sockfd);
 	return 0;
 
@@ -459,6 +460,7 @@ int epFUI_OnClose(struct ep_t *pep, struct ep_con_t *pnode)
 	// pnode->sockfd);
 	PrintConnectRemoveInf(pnode, PINF_FLAG_CLOSE);
 	NotifyCU(pnode->sockfd);
+	tms_RemoveAnyMangerContext(pnode->sockfd);
 	// tms_RemoveDev(pnode->sockfd);
 
 	return 0;
