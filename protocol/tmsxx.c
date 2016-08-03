@@ -1676,9 +1676,9 @@ int32_t tms_RetOTDRData(
 
 
 
-	tms_OTDRConv_tms_get_otdrdata(
-	    (struct tms_get_otdrdata *)&ret_otdrparam,
-	    (struct tms_get_otdrdata *)&ret_otdrparam);
+	tms_OTDRConv_tms_ret_otdrparam(
+	    (struct tms_ret_otdrparam *)&ret_otdrparam,
+	    (struct tms_ret_otdrparam *)&ret_otdrparam);
 
 	tms_OTDRConv_tms_test_result(&test_result, &test_result);
 
