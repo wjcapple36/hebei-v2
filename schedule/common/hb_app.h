@@ -37,9 +37,9 @@ int32_t read_ch_fpga_info(const struct _tagCHInfo *pch_fpga_info,int32_t ch_num)
 int32_t creat_folder(const char folder_path[]);
 //为光纤段分配缓冲
 int32_t alloc_fiber_sec_buf(struct _tagFiberSecHead secHead,
-		struct _tagFiberSecCfg *pFiberSecCfg);
+		struct _tagCHFiberSec *pch_fiber_sec);
 //释放光纤段存储区
-int32_t free_fiber_sec_buf(struct _tagFiberSecCfg *pFiberSecCfg);
+int32_t free_fiber_sec_buf(struct _tagCHFiberSec *pch_fiber_sec);
 //初始化otdr模块
 int32_t initialize_otdr_dev(struct _tagOtdrDev *pOtdrDev,
 		int32_t ch_num);
@@ -71,7 +71,8 @@ int32_t send_otdr_data_host(OTDR_UploadAllData_t *pResult, struct _tagAlgroCHInf
 int32_t get_test_para_from_algro(struct tms_ret_otdrparam *pHost,const OTDR_UploadAllData_t *pAlgro);
 int32_t get_test_result_from_algro(struct tms_test_result *pHost,const OTDR_UploadAllData_t *pAlgro);
 int32_t get_test_event_from_algro(struct tms_hebei2_event_val *pHost,const OTDR_UploadAllData_t *pAlgro, int32_t count);
-
+//自我了断
+int32_t exit_self(int32_t err_code, char function[], int32_t line, char msg[]);
 
 
 

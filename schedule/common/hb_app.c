@@ -75,6 +75,8 @@ int32_t initialize_fiber_sec_cfg()
 		pthread_mutex_init(&chFiberSec[i].lock,NULL);
 #endif
 		memset(&chFiberSec[i].para,0, sizeof(struct _tagFiberSecCfg));		
+		memset(&chFiberSec[i].alarm,0, sizeof(struct _tagSecFiberAlarm));		
+		memset(&chFiberSec[i].statis,0, sizeof(struct _tagFiberStatisData));		
 		read_fiber_sec_para(i,&chFiberSec[i]);
 	}
 
@@ -298,6 +300,11 @@ int32_t read_fiber_sec_para(int ch, struct _tagCHFiberSec *pch_fiber_sec)
 	FILE *fp;
 	struct _tagFiberSecHead secHead;
 	struct _tagFiberSecCfg	*pfiber_sec;
+	struct _tagSecFiberAlarm *pAlarm;
+	//统计数据，光线段数目有关系
+	struct _tagFiberStatisData *pStatis;
+	pAlarm = &pch_fiber_sec->alarm;
+	pStatis = &pch_fiber_sec->statis;
 
 	is_free = 0;
 	is_lock	= 0;
@@ -305,7 +312,7 @@ int32_t read_fiber_sec_para(int ch, struct _tagCHFiberSec *pch_fiber_sec)
 	snprintf(file_path,FILE_PATH_LEN , "%s%s_%d.cfg",cfg_path, file_fiber_sec,ch);
 	fp = NULL;
 	ret = OP_OK;
-	//获取日志名字
+	//打开文件
 	fp = fopen(file_path,"rb");
 	if(fp == NULL){
 		ret = errno;
@@ -320,7 +327,7 @@ int32_t read_fiber_sec_para(int ch, struct _tagCHFiberSec *pch_fiber_sec)
 	quick_lock(&pch_fiber_sec->lock);
 	is_lock = 1;
 	//为光纤段，数据段，时间点等位置分配空间
-	ret = alloc_fiber_sec_buf(secHead, pfiber_sec);
+	ret = alloc_fiber_sec_buf(secHead, pch_fiber_sec);
 	if(ret != OP_OK)
 		goto usr_exit;
 	is_free = 1;
@@ -395,12 +402,20 @@ int32_t read_fiber_sec_para(int ch, struct _tagCHFiberSec *pch_fiber_sec)
 	ret = OP_OK;
 	fclose(fp);
 	fp = NULL;
+	pAlarm->ch = ch;
+	pAlarm->sec_num = secHead.sec_num;
+	pAlarm->alarm_num = 0;
+	pStatis->sec_num = secHead.sec_num;
+	pStatis->counts = 0;
+	pStatis->state = 0;
 
 usr_exit:
 	if(is_lock)
 		quick_unlock(&pch_fiber_sec->lock);
 	if(fp != NULL)
 		fclose(fp);
+	if(ret != OP_OK)
+		free_fiber_sec_buf(pch_fiber_sec);
 	printf("%s():%d: read fiber sec para ch %d ret %d .\n",\
 			__FUNCTION__, __LINE__, ch, ret);
 	return ret;
@@ -410,19 +425,29 @@ usr_exit:
 /**
  * @synopsis  alloca_fiber_sec_buf 分配光纤段缓冲区,如果缓冲区已经存在，并且请求的
  *		小于已经存在的缓冲区，则不分配直接使用原来的
- * @param secHead 数据点数目，光纤段数目，事件点数目
- * @param pFiberSecCfg
+ * @param secHead	 数据点数目，光纤段数目，事件点数目
+ * @param pCHFiberSec	
  *
  * @returns   
  */
 /* ----------------------------------------------------------------------------*/
-int32_t alloc_fiber_sec_buf(struct _tagFiberSecHead secHead, struct _tagFiberSecCfg *pFiberSecCfg)
+int32_t alloc_fiber_sec_buf(struct _tagFiberSecHead secHead, struct _tagCHFiberSec *pCHFiberSec)
 {
 	int32_t ret, count;
 	char log[NUM_CHAR_LOG_MSG] = {0};
 	ret = OP_OK;
-	count = secHead.sec_num;
+	//光线段，曲线，告警门限
+	struct _tagFiberSecCfg *pFiberSecCfg;
+	//告警，和光线段数目有关系
+	struct _tagSecFiberAlarm *pAlarm;
+	//统计数据，光线段数目有关系
+	struct _tagFiberStatisData *pStatis;
 
+	pFiberSecCfg = &pCHFiberSec->para;
+	pAlarm = &pCHFiberSec->alarm;
+	pStatis = &pCHFiberSec->statis;
+	
+	count = secHead.sec_num;
 	//分配存储空间，如果存储空间已经存在并且需要的存储空间小于已分配的，则不再分配
 	if(pFiberSecCfg->fiber_val == NULL)
 		pFiberSecCfg->fiber_val = (struct tms_fibersection*)\
@@ -432,7 +457,21 @@ int32_t alloc_fiber_sec_buf(struct _tagFiberSecHead secHead, struct _tagFiberSec
 		pFiberSecCfg->fiber_val =  (struct tms_fibersection*)\
 			malloc(sizeof(struct tms_fibersection_val)*count);
 	}
-
+	//分配告警存储空间
+	if(pAlarm->buf == NULL)
+		pAlarm->buf = malloc(sizeof(struct _tagSecFiberAlarm)*count);
+	else if(count > pFiberSecCfg->fiber_hdr.count){
+		free(pAlarm->buf);
+		pAlarm->buf = malloc(sizeof(struct _tagSecFiberAlarm)*count);
+	}
+	//分配统计数据存储空间
+	if(pStatis->buf == NULL)
+		pStatis->buf = malloc(sizeof(struct _tagSecFiberAlarm)*count);
+	else if(count > pFiberSecCfg->fiber_hdr.count){
+		free(pStatis->buf);
+		pStatis->buf = malloc(sizeof(struct _tagSecFiberAlarm)*count);
+	}
+	//分配采样点数存储空间
 	count = secHead.data_num;
 	if(pFiberSecCfg->otdr_val == NULL)
 		pFiberSecCfg->otdr_val = (struct tms_hebei2_data_val *)\
@@ -443,7 +482,7 @@ int32_t alloc_fiber_sec_buf(struct _tagFiberSecHead secHead, struct _tagFiberSec
 			malloc(count * sizeof(struct tms_hebei2_data_val));
 
 	}
-
+	//分配事件点存储空间
 	count = secHead.event_num;
 	if(pFiberSecCfg->event_val == NULL)
 		pFiberSecCfg->event_val = (struct tms_hebei2_event_val *)\
@@ -453,12 +492,13 @@ int32_t alloc_fiber_sec_buf(struct _tagFiberSecHead secHead, struct _tagFiberSec
 		pFiberSecCfg->event_val = (struct tms_hebei2_event_val *)\
 			malloc(count * sizeof(struct tms_hebei2_event_val));
 	}
-	if(!pFiberSecCfg->fiber_val||!pFiberSecCfg->otdr_val || !pFiberSecCfg->event_val){
+	//检查分配结果是否正确
+	if(!pFiberSecCfg->fiber_val||!pFiberSecCfg->otdr_val || !pFiberSecCfg->event_val\
+			|| !pAlarm->buf || !pStatis->buf)
+	{
 		free_fiber_sec_buf(pFiberSecCfg);
 		ret = NEW_BUF_FAIL;
-		snprintf(log, NUM_CHAR_LOG_MSG,"new buf fail !");
-		LOGW(__FUNCTION__, __LINE__,LOG_LEV_FATAL_ERRO, log);
-		//是否应该自杀，再活下去也没有意思了吧,接下去，程序运行到哪里就不知道了
+		exit_self(errno,__FUNCTION__, __LINE__,"new buf fail\0");
 	}
 	else{
 		pFiberSecCfg->is_initialize = 1;
@@ -468,15 +508,26 @@ int32_t alloc_fiber_sec_buf(struct _tagFiberSecHead secHead, struct _tagFiberSec
 }
 /* --------------------------------------------------------------------------*/
 /**
- * @synopsis  free_fiber_sec_buf 释放光纤段配置的缓冲区
+ * @synopsis  free_fiber_sec_buf 释放包括光线段参数，告警缓冲区，统计缓冲区
  *
- * @param pFiberSecCfg 指向光纤段存储区
+ * @param pCHFiberSec
  *
- * @returns   0
+ * @returns   
  */
 /* ----------------------------------------------------------------------------*/
-int32_t free_fiber_sec_buf(struct _tagFiberSecCfg *pFiberSecCfg)
+int32_t free_fiber_sec_buf(struct _tagCHFiberSec *pCHFiberSec)
 {
+	//光线段，曲线，告警门限
+	struct _tagFiberSecCfg *pFiberSecCfg;
+	//告警，和光线段数目有关系
+	struct _tagSecFiberAlarm *pAlarm;
+	//统计数据，光线段数目有关系
+	struct _tagFiberStatisData *pStatis;
+
+	pFiberSecCfg = &pCHFiberSec->para;
+	pAlarm = &pCHFiberSec->alarm;
+	pStatis = &pCHFiberSec->statis;
+
 	int32_t ret;
 	ret = OP_OK;
 	//删除光纤段
@@ -494,6 +545,17 @@ int32_t free_fiber_sec_buf(struct _tagFiberSecCfg *pFiberSecCfg)
 		free(pFiberSecCfg->event_val);
 		pFiberSecCfg->event_val = NULL;
 	}
+	//告警缓冲区
+	if(pAlarm->buf != NULL){
+		free(pAlarm->buf);
+		pAlarm->buf = NULL;
+	}
+	//释放统计数据缓冲区
+	if(pStatis->buf != NULL){
+		free(pStatis);
+		pAlarm->buf = NULL;
+	}
+
 	//初始化标志设为0
 	pFiberSecCfg->is_initialize = 0;
 	pFiberSecCfg->error_num = 0;
@@ -786,26 +848,18 @@ int32_t create_usr_tsk()
 {
 	
 	int32_t ret;
-	uint8_t log[NUM_CHAR_LOG_MSG] = {0};
 	ret = 0; 
 	pthread_mutex_init(&mutex_otdr, NULL);
 	ret = pthread_create(&tsk_schedule_info.tidp, NULL,\
 		       	tsk_schedule,(void *)(&tsk_schedule_info));
 	if(ret != 0){
-
-		snprintf(log, NUM_CHAR_LOG_MSG,"creat tsk schedule failed %d!",errno);
-		LOGW(__FUNCTION__, __LINE__,LOG_LEV_FATAL_ERRO, log);
-		system("sync");
-		exit(0);
+		exit_self(errno, __FUNCTION__, __LINE__, "creat tsk schedule erro\0");
 	}
 	
 	ret = pthread_create(&tsk_otdr_info.tidp, NULL,\
 		tsk_OtdrAlgo,(void *)(&tsk_otdr_info));
 	if(ret != 0){
-		snprintf(log, NUM_CHAR_LOG_MSG,"creat tsk otdr failed %d!",errno);
-		LOGW(__FUNCTION__, __LINE__,LOG_LEV_FATAL_ERRO, log);
-		system("sync");
-		exit(0);
+		exit_self(errno, __FUNCTION__, __LINE__, "creat tsk schedule erro\0");
 	}
 	return 0;
 }
@@ -822,7 +876,7 @@ int32_t create_usr_tsk()
 int32_t get_context_by_dst(int32_t dst, struct tms_context *pcontext)
 {
 	int ret;
-	ret = 1;
+	ret = 2;
 	switch(dst)
 	{
 		case ADDR_HOST_NODE:
@@ -832,8 +886,11 @@ int32_t get_context_by_dst(int32_t dst, struct tms_context *pcontext)
 		       ret = tms_SelectMangerContext(pcontext);
 		       break;
 		default:
-		       ret = 1;
+		       break;
 	}
+	//大部分函数返回0，代表成功，此处有意外，上述两个调用返回1代表成功
+	if(ret == 1)
+		ret = 0;
 	return ret;
 }
 /* --------------------------------------------------------------------------*/
@@ -870,9 +927,7 @@ int32_t read_slot()
 		ch_offset = CH_NUM;
 usr_exit:
 	if(ret != OP_OK){
-		snprintf(log, NUM_CHAR_LOG_MSG,"get slot error %d",ret);
-		LOGW(__FUNCTION__, __LINE__,LOG_LEV_FATAL_ERRO, log);
-		exit(0);
+		exit_self(errno, __FUNCTION__, __LINE__, "get slot error\0");
 	}
 	return ret;
 
@@ -885,9 +940,7 @@ int32_t read_net_flag()
 	ret = get_net_flag(&spiDev, &slot);
 usr_exit:
 	if(ret != OP_OK){
-		snprintf(log, NUM_CHAR_LOG_MSG,"get net flag error %d",ret);
-		LOGW(__FUNCTION__, __LINE__,LOG_LEV_FATAL_ERRO, log);
-		exit(0);
+		exit_self(errno, __FUNCTION__, __LINE__, "get net flag error\0");
 	}
 	return ret;
 
@@ -1014,7 +1067,7 @@ int32_t send_otdr_data_host(OTDR_UploadAllData_t *pResult, struct _tagAlgroCHInf
 		if(!pevent_buf){
 			printf("%s %s() %d, alloc error, event_num %d \n", __FILENAME__, __FUNCTION__,\
 					__LINE__, event_count);
-			exit(1);
+			exit_self(errno, __FUNCTION__, __LINE__, "alloc event buf error\0");
 		}
 	}
 	else
@@ -1040,6 +1093,27 @@ usr_exit:
 					__LINE__, event_count);
 
 	return ret;
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  exit_self 自我了断， 发现严重错误，那就死吧
+ *
+ * @param err_code 	错误码
+ * @param function[] 	哪个函数把程序搞死了
+ * @param line		哪一行出现了问题
+ * @param msg[] 	死之前的遗言
+ *
+ * @returns		无所谓了吧
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t exit_self(int32_t err_code, char function[], int32_t line,  char msg[])
+{
+	char log[NUM_CHAR_LOG_MSG] = {0};
+	snprintf(log, NUM_CHAR_LOG_MSG,"%s %d : errno %d!msg %s",function, line, err_code,msg);
+	LOGW(__FUNCTION__, __LINE__,LOG_LEV_FATAL_ERRO, log);
+	printf("%s \n", log);
+	exit(err_code);
+	return 0;
 }
 //按照C风格编译
 #ifdef __cplusplus

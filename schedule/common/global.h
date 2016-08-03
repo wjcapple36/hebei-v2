@@ -33,33 +33,35 @@ extern "C" {
 //定义一些其他关键变量
 #define MAX_RANG_M	180000
 
-	//通道的基数，从fpga中获取到，通道号+该基数为对外使用的通道号
-	extern volatile int32_t ch_offset; 
-	//通道的光纤段参数
-	extern struct _tagCHFiberSec chFiberSec[CH_NUM];
-	//定义otdr通道资源
-	extern struct _tagOtdrDev otdrDev[CH_NUM];
-	//通道缓冲区，存放高低功率累加数据
-	extern struct _tagCHBuf chBuf[CH_BUF_NUM];
-	//spi设备
-	extern struct _tagSpiDev spiDev;
-	//用户点名测量
-	extern struct _tagUsrOtdrTest usrOtdrTest;
-	//周期性测量曲线存储区
-	extern struct _tagCycCurv cycCrve[CH_NUM];
-	//统计数据存储区
-	extern struct _tagFiberStatisData statisDataBuf[CH_NUM];
-	//通道状态
-	extern struct tms_cfgpip_status ch_state;
-	extern struct _tagDevMisc devMisc;
-	//调度任务信息
-	extern struct _tagThreadInfo tsk_schedule_info;
-	//otdr 算法线程
-	extern struct _tagThreadInfo tsk_otdr_info;
-	//otdr线程锁
-	extern pthread_mutex_t mutex_otdr;
-	extern struct _tagCHInfo chFpgaInfo[CH_NUM];
-	extern struct _tagAlgroCHInfo algroCHInfo;
+//通道的基数，从fpga中获取到，通道号+该基数为对外使用的通道号
+extern volatile int32_t ch_offset; 
+//通道的光纤段参数
+extern struct _tagCHFiberSec chFiberSec[CH_NUM];
+//定义otdr通道资源
+extern struct _tagOtdrDev otdrDev[CH_NUM];
+//通道缓冲区，存放高低功率累加数据
+extern struct _tagCHBuf chBuf[CH_BUF_NUM];
+//spi设备
+extern struct _tagSpiDev spiDev;
+//用户点名测量
+extern struct _tagUsrOtdrTest usrOtdrTest;
+//周期性测量曲线存储区
+extern struct _tagCycCurv cycCrve[CH_NUM];
+//统计数据存储区
+extern struct _tagFiberStatisData statisDataBuf[CH_NUM];
+//通道状态
+extern struct tms_cfgpip_status ch_state;
+extern struct _tagDevMisc devMisc;
+//调度任务信息
+extern struct _tagThreadInfo tsk_schedule_info;
+//otdr 算法线程
+extern struct _tagThreadInfo tsk_otdr_info;
+//otdr线程锁
+extern pthread_mutex_t mutex_otdr;
+//fpga信息
+extern struct _tagCHInfo chFpgaInfo[CH_NUM];
+//算法线程计算时的通道信息
+extern struct _tagAlgroCHInfo algroCHInfo;
 
 #ifdef __cplusplus
 }

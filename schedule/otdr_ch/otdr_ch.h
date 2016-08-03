@@ -135,12 +135,47 @@ struct _tagOtdrDev
 //算法运行的时候一些指示信息
 struct _tagAlgroCHInfo
 {
-	int32_t cmd;
+	int32_t cmd;	//命令码
 	int32_t state;	//0 空闲，1正忙
 	int32_t ch;	//通道号
 	int32_t resource_id;	//资源id
 	int32_t mod;	//测试方式 点名测量，轮询
 	int32_t src_addr; //如果是点名测量，用来指示数据发向哪里
+};
+struct _tagAlarm
+{
+	int32_t ch;	//通道号
+	int32_t sec;	//光线段号
+	int32_t lev;	//级别
+	int32_t type;	//告警类型
+	char time[20];	//时间
+	char reserv_ch[20];	//保留项
+	int32_t pos[3];	//位置
+	int32_t reserv;	//保留项
+};
+//光线段告警
+struct _tagSecFiberAlarm
+{
+	int32_t ch;
+	int32_t alarm_num;
+	int32_t sec_num;
+	struct _tagAlarm *buf;
+};
+struct _tagSecStatisData
+{
+	int32_t ch;
+	int32_t sec;
+	char date[20];
+	float attu;
+};
+//光纤段统计数据,在读取文件的时候分配
+struct _tagFiberStatisData
+{
+	int32_t state;		/*状态，0，ok，其他出现错误*/
+	int32_t counts;		/*计数，当前数据是第几次更新*/
+	int32_t ch;		/*通道号*/
+	int32_t sec_num;	/*段的数目*/
+	struct _tagSecStatisData *buf;
 };
 
 
@@ -163,6 +198,8 @@ struct _tagCHFiberSec
 {
 	QUICK_LOCK lock;
 	struct _tagFiberSecCfg para;
+	struct _tagFiberStatisData statis;
+	struct _tagSecFiberAlarm alarm;
 };
 //上报时使用的otdr参数,下面配置的时候会多20个字节的标志，sb
 struct _tagUpOtdrPara
@@ -246,22 +283,6 @@ struct _tagUsrOtdrTest
 	float	end_th;
 	float	none_ref_th;
 
-};
-struct _tagSecStatisData
-{
-	int32_t ch_no;
-	int32_t sec_no;
-	char date[20];
-	float attu_vale;
-};
-//光纤段统计数据,在读取文件的时候分配
-struct _tagFiberStatisData
-{
-	int32_t state;		/*状态，0，ok，其他出现错误*/
-	int32_t counts;		/*计数，当前数据是第几次更新*/
-	int32_t ch;		/*通道号*/
-	int32_t sec_num;	/*段的数目*/
-	struct _tagSecStatisData *buf;
 };
 //通道相关的信息，包括激光器波长，动态范围等相关硬件信息
 struct _tagFpgaPara
