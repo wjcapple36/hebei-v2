@@ -339,9 +339,10 @@ usr_exit:
 	}
 	if(is_lock)
 		pthread_mutex_unlock(&dev->mutex);
-	if(ret != SPI_RET_OP_OK)
-		printf("%s() %d: ret %d %s \n",\
-				__FUNCTION__, __LINE__, ret, spi_msg[ret]);
+	if(ret != SPI_RET_OP_OK){
+		printf("%s() %d: ch %d  ret %d %s \n",\
+				__FUNCTION__, __LINE__,ch, ret, spi_msg[ret]);
+	}
 	return ret;
 
 

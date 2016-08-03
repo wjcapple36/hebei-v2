@@ -59,7 +59,7 @@ extern "C" {
 	//otdr线程锁
 	extern pthread_mutex_t mutex_otdr;
 	extern struct _tagCHInfo chFpgaInfo[CH_NUM];
-
+	extern struct _tagAlgroCHInfo algroCHInfo;
 
 #ifdef __cplusplus
 }

@@ -25,7 +25,7 @@ struct _tagFiberStatisData statisDataBuf[CH_NUM];
 //算法运行时当前的通道信息,开始测量的时候赋值，算法运行完毕清空
 struct _tagAlgroCHInfo algroCHInfo;
 //spi 读取数据的缓冲区 spi 数据格式： fe 4B 2B fe 4B 2B
-#define SPI_OP_SPACE_MS		3000 //spi设备的操作间隔  
+#define SPI_OP_SPACE_MS		1000 //spi设备的操作间隔  
 
 /*
  *本任务负责根据通道参数更新OtdrCtrl,OtdrState，
@@ -239,8 +239,6 @@ static int32_t get_test_ch(int32_t ch, int32_t step)
 /* ----------------------------------------------------------------------------*/
 //保存调度线程参数
 struct _tagThreadInfo tsk_schedule_info;
-//系统管理otdr线程的参数
-struct _tagOtdrAlgroPara OtdrAlgroPara;
 #define RET_SWITCH_CH   0x80000036
 #define OTDR_MOD_SERRI
 int32_t process_every_ch(
@@ -275,6 +273,8 @@ int32_t tsk_schedule(void *arg)
 	int32_t working_ch;
 	const int32_t sleep_time = 3;
 	struct _tagThreadInfo *ptsk_info;
+	//系统管理otdr线程的参数
+	struct _tagOtdrAlgroPara OtdrAlgroPara;
 	ptsk_info = (struct _tagThreadInfo *)arg;
 	//htop 命令显示的就是下面这个东西
 	ptsk_info->htop_id = (long int)syscall(224);
@@ -316,7 +316,7 @@ int32_t tsk_schedule(void *arg)
 #endif
 		}
 		//该函数每1s休眠一次，如果有otdr点名测试，则及时返回
-		usr_delay(0, SPI_OP_SPACE_MS/1000);
+		usr_delay(0, SPI_OP_SPACE_MS);
 	}
 
 }
@@ -419,7 +419,9 @@ usr_exit:
 		hb_Ret_Ack(pUsrTest->src_addr, ack);
 		ret = RET_SWITCH_CH;
 	}
-
+	printf("%s %s() %d ,start test, ch %d accum_num %d hp_num %d lp_num %d ret %d \n",\
+			__FILENAME__, __FUNCTION__, __LINE__, ch,
+			pCHCtrl->accum_num,pCHCtrl->hp_num, pCHCtrl->lp_num,ret);
 	return ret;
 }
 int32_t agin_process(
@@ -430,6 +432,7 @@ int32_t agin_process(
 		struct _tagOtdrAlgroPara *pAlgroPara)
 {
 	int32_t ret, is_ack;
+	int32_t test_time_ms;
 	struct _tagCHCtrl *pCHCtrl;
 	struct _tagCHPara *pCHPara;
 	struct _tagCHState *pCHState;
@@ -446,40 +449,67 @@ int32_t agin_process(
 	pOtdrCtl = &pOtdrDev->otdr_ctrl;
 	ret = OP_OK;
 	is_ack = 1;
-
-	ret = read_otdr_data(ch, pspi_dev,pCHPara, &pOtdrDev->laser_para,pspi_dev->buf, pspi_dev->len);
+	
+	pCHCtrl->accum_ms += SPI_OP_SPACE_MS;
+	pCHCtrl->one_time_ms += SPI_OP_SPACE_MS;
+	//只有差不多累积到时间才开始读取数据
+	if(pCHCtrl->one_time_ms >= MEASURE_TIME_MIN_MS )
+		ret = read_otdr_data(ch, pspi_dev,pCHPara, &pOtdrDev->laser_para,pspi_dev->buf, pspi_dev->len);
+	else {
+		ret = OP_OK;
+		goto usr_exit;
+	}
 	if(ret == SPI_RET_RCV_ERROR){
 		ret = RET_SWITCH_CH;
 		goto usr_exit;
 	}
 	//接收数据失败，如果累积时间达到测量时间之后，判定为失败
 	if(ret){
-		pCHCtrl->accum_ms += SPI_OP_SPACE_MS;
-		if(pCHCtrl->accum_ms > ( pCHPara->MeasureTime_ms + 7000)){
+		if(pCHCtrl->mod == OTDR_TEST_MOD_USR)
+			test_time_ms = pUsrTest->time*1000 + 7000;
+		else
+			test_time_ms = pCHPara->MeasureTime_ms + 7000;
+		if(pCHCtrl->accum_ms > test_time_ms){
 			is_ack = 0;
 			ret = RET_SWITCH_CH;
+			printf("%s %s() %d ,over time, ch %d accum_time %d current circl time %d \n",\
+			__FILENAME__, __FUNCTION__, __LINE__, ch,pCHCtrl->accum_ms, pCHCtrl->one_time_ms);
 			goto usr_exit;
 		}
 		else{
 			ret = OP_OK;
 			goto usr_exit;
 		}
+	
 	}
+	//本次接收到数据，那么将fpga累加时间清零
+	printf("%s %s() %d ,rcv data, ch %d accum_time %d current circl time %d \n",\
+			__FILENAME__, __FUNCTION__, __LINE__, ch,pCHCtrl->accum_ms, pCHCtrl->one_time_ms);
+	pCHCtrl->one_time_ms = 0;
 	ret =  get_data_from_spi_buf(pCHBuf->hp_buf, DATA_LEN, pspi_dev->buf,pspi_dev->len,1);
 	if(ret){
 		ret = RET_SWITCH_CH;
 		goto usr_exit;
 	}
+
 	//第一次收到数据，要判断是否拼接
 	if(pCHCtrl->send_num == 1){
 		EstimateCurveConnect_r(pCHBuf->hp_buf,pOtdrCtl, pOtdrState);
 		pCHCtrl->curv_cat = pOtdrCtl->CurveConcat;
+		//如果不用拼接，那么全部使用高功率测试
 		if(!pOtdrCtl->CurveConcat){
 			pCHCtrl->hp_num = pCHCtrl->accum_num;
 			pCHCtrl->lp_num = 0;
 		}
 
+
 	}
+	//读到数据之后，累加次数，高低功率次数相应的--
+	pCHCtrl->accum_num--;
+	if(pCHCtrl->hp_num > 0)
+		pCHCtrl->hp_num--;
+	else if(pCHCtrl->lp_num > 0)
+		pCHCtrl->lp_num--;
 	//测量完成，启动算法进程
 	if(pCHCtrl->accum_num <= 0){
 		is_ack = 0; 
@@ -490,7 +520,7 @@ int32_t agin_process(
 
 	if(pCHCtrl->hp_num > 0)
 		ret = start_otdr_test(ch, pspi_dev, pCHPara,&pOtdrDev->laser_para);
-	else{
+	else if(pCHCtrl->lp_num > 0){
 		if(pCHCtrl->hp_num == 0){
 			pCHCtrl->hp_num--;
 			get_laser_ctrl_para(pCHPara->MeasureLength_m,
@@ -501,6 +531,9 @@ int32_t agin_process(
 		}
 		ret = start_otdr_test(ch, pspi_dev, pCHPara,&pOtdrDev->laser_para);
 	}
+	else
+		printf("%s %s() %d : accum_num %d hp_num %d lp_num %d \n", __FILENAME__, __FUNCTION__, __LINE__,\
+				pCHCtrl->accum_num, pCHCtrl->hp_num, pCHCtrl->lp_num);
 
 usr_exit:
 	if(pCHCtrl->mod == OTDR_TEST_MOD_USR && is_ack && ret != OP_OK){
@@ -519,15 +552,7 @@ int32_t initial_otdr_dev(struct _tagOtdrDev *dev)
 	pCHCtrl = &dev->ch_ctrl;
 	pCHState = &dev->ch_state;
 
-	pCHCtrl->mod = 0;		//0,轮询，1点名测量
-	pCHCtrl->on_ff = OTDR_CH_OFF;		//1, on, 0 ff, 串行工作模式，如果处于off状态则意味这不可操作
-	pCHCtrl->send_num = 0;	//发送测量参数次数
-	pCHCtrl->accum_num = 0;	//累加次数0，表示本通道累加结束
-	pCHCtrl->hp_num = 0;		//高功率次数
-	pCHCtrl->lp_num = 0;		//低功率次数
-	pCHCtrl->cur_pw_mod = 0;	//当前测量的是高功率还是低功率
-	pCHCtrl->curv_cat = 0;	//曲线拼接标志
-	pCHCtrl->accum_ms = 0;
+	memset(pCHCtrl,0, sizeof(struct _tagCHCtrl) - CHCTRL_FIXED_BYTES);
 	memset(&dev->ch_buf.hp_buf, 0, sizeof(dev->ch_buf.hp_buf));
 	memset(&dev->ch_buf.lp_buf, 0, sizeof(dev->ch_buf.lp_buf));
 

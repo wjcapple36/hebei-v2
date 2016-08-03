@@ -61,9 +61,16 @@ int32_t create_usr_tsk();
 int32_t get_context_by_dst(int32_t dst, struct tms_context *pcontext0);
 //回应
 int32_t hb_Ret_Ack(int32_t dst, struct tms_ack ack);
+//读取槽位号
 int32_t read_slot();
+//读取网络标志号
 int32_t read_net_flag();
-
+//向主机发送曲线数据
+int32_t send_otdr_data_host(OTDR_UploadAllData_t *pResult, struct _tagAlgroCHInfo *pCHInfo );
+//算法测量参数转换到hebei2协议中来
+int32_t get_test_para_from_algro(struct tms_ret_otdrparam *pHost,const OTDR_UploadAllData_t *pAlgro);
+int32_t get_test_result_from_algro(struct tms_test_result *pHost,const OTDR_UploadAllData_t *pAlgro);
+int32_t get_test_event_from_algro(struct tms_hebei2_event_val *pHost,const OTDR_UploadAllData_t *pAlgro, int32_t count);
 
 
 

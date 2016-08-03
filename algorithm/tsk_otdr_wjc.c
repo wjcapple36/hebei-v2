@@ -8,11 +8,12 @@
 #include <stdio.h>
 #include <math.h>
 
-#include "algorithm/Otdr.h"
+#include "Otdr.h"
 #include "prototypes.h"
 #include "sys/ioctl.h"
 #include "../schedule/otdr_ch/otdr_ch.h"
 #include "../schedule/common/global.h"
+#include "../schedule/common/hb_app.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -39,28 +40,29 @@ int32_t tsk_OtdrAlgo(void * arg)
 	for(;;)
 	{
 		OtdrCtrl.OtdrAlgoBusyNow   = 0;
-        
+
 		while(ALGO_READY_FLAG_START_NEW != OtdrCtrl.OtdrAlgoReadyFlag)
 		{
 			usleep(sleep_time);      // NOT ready
 		}
 
 		if(USER_ACTION_CANCEL == OtdrCtrl.UserAction)    continue;      
-		
-		OtdrCtrl.OtdrAlgoBusyNow = 1;
-		
-        pthread_mutex_lock(&mutex_otdr);
-        if((OTDR_MODE_AVG == OtdrCtrl.OtdrMode) || (OTDR_MODE_REALTIME == OtdrCtrl.OtdrMode))
-        {
-            if(OtdrCtrl.FindEvent == 0)    
-		    ProcessRefreshData(OtdrState.RefreshCount);
-            else                           
-		    ProcessFinalData(MEASURE_PURPOSE_OTDR);
-        }
 
-        OtdrCtrl.OtdrAlgoBusyNow = 0;
-        OtdrCtrl.OtdrAlgoReadyFlag = ALGO_READY_FLAG_ALL_DONE;
-        pthread_mutex_unlock(&mutex_otdr);
+		OtdrCtrl.OtdrAlgoBusyNow = 1;
+
+		pthread_mutex_lock(&mutex_otdr);
+		if((OTDR_MODE_AVG == OtdrCtrl.OtdrMode) || (OTDR_MODE_REALTIME == OtdrCtrl.OtdrMode))
+		{
+			if(OtdrCtrl.FindEvent == 0)    
+				ProcessRefreshData(OtdrState.RefreshCount);
+			else                           
+				ProcessFinalData(MEASURE_PURPOSE_OTDR);
+		}
+		if(OtdrCtrl.FindEvent)
+			send_otdr_data_host(&MeasureResult, &algroCHInfo);
+		OtdrCtrl.OtdrAlgoBusyNow = 0;
+		OtdrCtrl.OtdrAlgoReadyFlag = ALGO_READY_FLAG_ALL_DONE;
+		pthread_mutex_unlock(&mutex_otdr);
 	}
 }
 

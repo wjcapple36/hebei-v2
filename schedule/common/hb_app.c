@@ -892,9 +892,154 @@ usr_exit:
 	return ret;
 
 }
-int32_t otdr_test_finish()
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  get_test_para_from_algro 将算法模块的测量参数转换成hebei2协议格式
+ *
+ * @param pHost 指向hebei2协议格式测量参数
+ * @param pAlgro 指向算法模块协议格式
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t get_test_para_from_algro(struct tms_ret_otdrparam *pHost,const OTDR_UploadAllData_t *pAlgro)
 {
-	return 0;
+	int32_t ret;
+	ret = OP_OK;
+	pHost->end_threshold = pAlgro->MeasureParam.EndThreshold;
+	pHost->wl = pAlgro->MeasureParam.Lambda_nm;
+	pHost->range = pAlgro->MeasureParam.MeasureLength_m;
+	pHost->time = pAlgro->MeasureParam.MeasureTime_ms / 1000;
+	pHost->none_reflect_threshold = pAlgro->MeasureParam.NonRelectThreshold;
+	pHost->pw = pAlgro->MeasureParam.PulseWidth_ns;
+	pHost->gi = pAlgro->MeasureParam.n;
+	return ret;
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  get_test_result_from_algro 将算法模块的测量结果转换成hebei2协议格式
+ *
+ * @param pHost hebei2协议格式的测量结果
+ * @param pAlgro 算法模块的测量结果
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t get_test_result_from_algro(struct tms_test_result *pHost,const OTDR_UploadAllData_t *pAlgro)
+{
+	int ret ;
+	ret = OP_OK;
+	pHost->atten = pAlgro->MeasureParam.FiberAttenCoef;
+	pHost->loss = pAlgro->MeasureParam.FiberLoss;
+	pHost->range = pAlgro->MeasureParam.FiberLength;
+	
+	return ret;
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  get_test_event_from_algro 将事件点格式从算法模块转换到hebei2协议
+ *
+ * @param pHost 指向hebei2协议格式的事件点
+ * @param pAlgro 指向算法模块全部数据格式
+ * @param count 事件个数
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t get_test_event_from_algro(struct tms_hebei2_event_val *pHost,const OTDR_UploadAllData_t *pAlgro, int32_t count)
+{
+	int32_t ret, i;
+	ret = OP_OK;
+	for(i = 0; i < count; i++)
+	{
+		pHost[i].att = pAlgro->Event.EventPoint[i].AttenCoef ;
+		pHost[i].distance = pAlgro->Event.EventPoint[i].EventXlabel;
+		pHost[i].event_type = pAlgro->Event.EventPoint[i].EventType;
+		pHost[i].link_loss= pAlgro->Event.EventPoint[i].EventInsertLoss ;
+		pHost[i].loss = pAlgro->Event.EventPoint[i].EventTotalLoss;
+		pHost[i].reflect = pAlgro->Event.EventPoint[i].EventReflectLoss;
+	}
+	return ret;
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  send_otdr_data_host 算法线程完成算法运算后，将数据发送到主机，
+ *		适合用户点名测量，配置测量，发送告警的时候发送曲线部分
+ * @param pResult 由算法模块完成填充
+ * @param pCHInfo 指明了请求点名测量的源地址，cmd命令码等相关信息
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t send_otdr_data_host(OTDR_UploadAllData_t *pResult, struct _tagAlgroCHInfo *pCHInfo )
+{
+	int32_t ret, offset, event_count;
+	OTDR_UploadAllData_t *AllEvent;
+	char	*NextAddr;
+	ret = OP_OK;
+	struct tms_ret_otdrdata hebei2_otdrdata;
+	struct tms_ret_otdrparam    ret_otdrparam;
+	struct tms_test_result      test_result;
+	struct tms_hebei2_data_hdr  hebei2_data_hdr;
+	struct tms_hebei2_data_val *hebei2_data_val;
+	struct tms_hebei2_event_hdr hebei2_event_hdr;
+	struct tms_hebei2_event_val hebei2_event_val[10];
+	struct tms_hebei2_event_val *pevent_buf;
+	struct tms_context contxt;
+
+
+
+	event_count = 0;
+	ret = get_context_by_dst(pCHInfo->src_addr, &contxt);
+	if(ret){
+		printf("%s %d, ask context error \n", __FUNCTION__, __LINE__);
+		goto usr_exit;
+	}
+
+	pevent_buf = NULL;
+	get_test_para_from_algro(&ret_otdrparam, pResult);
+	get_test_result_from_algro(&test_result, pResult);
+	hebei2_data_hdr.count = pResult->OtdrData.DataNum;
+	hebei2_data_val = (struct tms_hebei2_data_val *)pResult->OtdrData.dB_x1000;
+
+	offset = 8 + sizeof(pResult->MeasureParam) + \
+		 sizeof(pResult->OtdrData.DataNum)*sizeof(int16_t) + 4;
+	NextAddr = (char *)pResult + offset;
+	AllEvent = (OTDR_UploadAllData_t*)(NextAddr - 8 - sizeof(AllEvent->MeasureParam) - sizeof(AllEvent->OtdrData));
+	event_count = AllEvent->Event.EventNum;
+
+	if(event_count > 10){
+		pevent_buf = malloc(sizeof( struct tms_hebei2_event_val)*event_count);
+		if(!pevent_buf){
+			printf("%s %s() %d, alloc error, event_num %d \n", __FILENAME__, __FUNCTION__,\
+					__LINE__, event_count);
+			exit(1);
+		}
+	}
+	else
+		pevent_buf = hebei2_event_val;
+	get_test_event_from_algro(pevent_buf, AllEvent,event_count);
+	strcpy(hebei2_data_hdr.dpid,"OTDRData\0");
+	strcpy(test_result.result, "OTDRTestResultInfo\0");
+	strcpy(hebei2_event_hdr.eventid, "KeyEvents\0");
+	hebei2_otdrdata.hebei2_data_hdr = &hebei2_data_hdr;
+	hebei2_otdrdata.hebei2_data_val = hebei2_data_val;
+	hebei2_otdrdata.hebei2_event_hdr = &hebei2_event_hdr;
+	hebei2_otdrdata.hebei2_event_val = pevent_buf;
+	hebei2_otdrdata.ret_otdrparam = &ret_otdrparam;
+	hebei2_otdrdata.test_result = &test_result;
+	hebei2_event_hdr.count = event_count;
+	tms_RetOTDRData(contxt.fd, NULL, &hebei2_otdrdata, pCHInfo->cmd);		
+
+
+	if(event_count> 10)
+		free(pevent_buf);
+usr_exit:
+	printf("%s %s() %d, event_num %d \n", __FILENAME__, __FUNCTION__,\
+					__LINE__, event_count);
+
+	return ret;
 }
 //按照C风格编译
 #ifdef __cplusplus
