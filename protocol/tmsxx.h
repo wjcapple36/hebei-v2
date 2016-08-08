@@ -698,6 +698,15 @@ int32_t tms_RetOTDRData(
     struct glink_addr *paddr,
     struct tms_ret_otdrdata *val,
     unsigned long cmdid);
+
+
+void tms_Print_tms_fibersection_hdr(struct tms_fibersection_hdr *pval);
+void tms_Print_tms_fibersection_val(struct tms_fibersection_val *pval);
+void tms_Print_tms_otdr_param(struct tms_otdr_param *pval);
+void tms_Print_tms_test_result(struct tms_test_result *pval);
+void tms_Print_tms_hebei2_event(struct tms_hebei2_event_hdr *pevent_hdr, struct tms_hebei2_event_val *pevent_val);
+
+
 int32_t tms_Transmit2Dev(struct tms_context *pcontext, int8_t *pdata, int32_t len);
 int32_t tms_Transmit2Manager(struct tms_context *pcontext, int8_t *pdata, int32_t len);
 int32_t tms_SelectMangerContext(struct tms_context *context);

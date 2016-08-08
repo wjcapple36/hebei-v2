@@ -1177,14 +1177,6 @@ static int32_t tms_AnalyseFiberSectionCfg(struct tms_context *pcontext, int8_t *
 	struct tms_hebei2_event_hdr *event_hdr;
 	struct tms_hebei2_event_val *event_val;
 
-	val.fiber_hdr   = fiber_hdr;
-	val.fiber_val   = fiber_val;
-	val.otdr_param  = otdr_param;
-	val.test_result = test_result;
-	val.otdr_hdr    = otdr_hdr;
-	val.otdr_val    = otdr_val;
-	val.event_hdr   = event_hdr;
-	val.event_val   = event_val;
 
 	fiber_hdr = (struct tms_fibersection_hdr *)(pdata + GLINK_OFFSET_DATA);
 	if ( !CHECK_PTR(
@@ -1253,6 +1245,17 @@ static int32_t tms_AnalyseFiberSectionCfg(struct tms_context *pcontext, int8_t *
 	tms_Print_tms_test_result(test_result);
 	tms_Print_tms_hebei2_event(event_hdr, event_val);
 #endif
+
+
+	val.fiber_hdr   = fiber_hdr;
+	val.fiber_val   = fiber_val;
+	val.otdr_param  = otdr_param;
+	val.test_result = test_result;
+	val.otdr_hdr    = otdr_hdr;
+	val.otdr_val    = otdr_val;
+	val.event_hdr   = event_hdr;
+	val.event_val   = event_val;
+
 	if (pcontext->ptcb->pf_OnFiberSectionCfg) {
 		pcontext->ptcb->pf_OnFiberSectionCfg(pcontext, &val);
 	}
