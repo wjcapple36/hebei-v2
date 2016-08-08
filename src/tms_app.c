@@ -55,6 +55,30 @@ int32_t OnNameAndAddress(struct tms_context *pcontext)
 int32_t OnFiberSectionCfg(struct tms_context *pcontext, struct tms_fibersectioncfg *pval)
 {
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+
+#if 0
+	struct tms_fibersection_hdr *fiber_hdr;
+	struct tms_fibersection_val *fiber_val;
+	struct tms_otdr_param       *otdr_param;
+	struct tms_test_result      *test_result;
+	struct tms_hebei2_data_hdr  *otdr_hdr;
+	struct tms_hebei2_data_val  *otdr_val;
+	struct tms_hebei2_event_hdr *event_hdr;
+	struct tms_hebei2_event_val *event_val;
+
+	fiber_hdr = pval->fiber_hdr;
+	fiber_val = pval->fiber_val;
+	otdr_param = pval->otdr_param;
+	test_result = pval->test_result;
+	event_hdr = pval->event_hdr;
+	event_val = pval->event_val;
+
+	tms_Print_tms_fibersection_hdr(fiber_hdr);
+	tms_Print_tms_fibersection_val(fiber_val);
+	tms_Print_tms_otdr_param(otdr_param);
+	tms_Print_tms_test_result(test_result);
+	tms_Print_tms_hebei2_event(event_hdr, event_val);
+#endif
 	return 0;
 }
 int32_t OnConfigPipeState(struct tms_context *pcontext, struct tms_cfgpip_status *pval)
