@@ -106,16 +106,64 @@ struct _tagLaserCtrPara
 //通道缓存区，存放高低功率的累加数据
 struct _tagCHBuf
 {
-	QUICK_LOCK lock;		//资源锁
-	int32_t is_uesd;		//是否使用的标志
 	int32_t hp_buf[DATA_LEN];	//高功率曲线buf
 	int32_t lp_buf[DATA_LEN];	//低功率曲线buf
 };
-struct _tagCycCurvBuf
+//上报时使用的otdr参数,下面配置的时候会多20个字节的标志，sb
+struct _tagUpOtdrPara
 {
-	QUICK_LOCK lock;		//资源锁
-	int32_t is_empty;		//是否使用的标志
-	int32_t buf[DATA_LEN];	//高功率曲线buf
+	int32_t rang_m;	//量程
+	int32_t lamda_nm;	//波长
+	int32_t pl;	//脉宽
+	int32_t test_time_s;	//测试时间
+	float gi;	//折射率
+	float end_th;	//结束门限门限
+	float no_ref_th;//非反射门限
+
+};
+//测量结果
+struct _tagUpOtdrTestResult
+{
+	char id[20];	//标志
+	float chain;	//链长
+	float loss;	//链损耗
+	float attu;	//衰减
+	char date[20];	//日期
+};
+struct _tagOtdrEvent
+{
+	int32_t distance;
+	int32_t type;
+	float insert_loss;
+	float attu;
+	float total_loss;
+};
+struct _tagUpOtdrEvent
+{
+	char id[12];
+	struct _tagOtdrEvent buf[MAX_EVENT_NUM];
+};
+struct _tagUpOtdrData
+{
+	char id[12];
+	int32_t num;
+	int16_t buf[DATA_LEN];
+};
+
+//上传曲线结构
+struct _tagUpOtdrCurv
+{
+	struct _tagUpOtdrPara para;
+	struct _tagUpOtdrTestResult result;
+	struct _tagUpOtdrData data;
+	struct _tagUpOtdrEvent event;
+};
+
+//周期性测量曲线,每个测试完毕，就更新一次
+struct _tagCycCurv
+{
+	QUICK_LOCK lock;
+	struct _tagUpOtdrCurv curv;
 };
 
 //otdr设备，包含描述该设备的其他结构体变量
@@ -124,11 +172,12 @@ struct _tagOtdrDev
 	struct _tagCHCtrl ch_ctrl;		//通道控制状态
 	struct _tagCHState ch_state;		//通道状态
 	struct _tagCHPara ch_para;		//通道的参数
+	struct _tagCHPara appoint_para;		//点名测量参数
 	struct _tagLaserCtrPara laser_para;	//激光器参数
 	OtdrCtrlVariable_t otdr_ctrl;		//与otdr算法同类型全局变量匹配
 	OtdrStateVariable_t otdr_state;		//与otdr算法同类型全局变量匹配
 	struct _tagCHBuf ch_buf;		//存放高低功率数据
-	struct _tagCycCurvBuf curv_buf;		//周期性测量曲线buf	
+	struct _tagCycCurv curv;		//周期性测量曲线buf	
 
 
 };
@@ -200,61 +249,6 @@ struct _tagCHFiberSec
 	struct _tagFiberSecCfg para;
 	struct _tagFiberStatisData statis;
 	struct _tagSecFiberAlarm alarm;
-};
-//上报时使用的otdr参数,下面配置的时候会多20个字节的标志，sb
-struct _tagUpOtdrPara
-{
-	int32_t rang_m;	//量程
-	int32_t lamda_nm;	//波长
-	int32_t pl;	//脉宽
-	int32_t test_time_s;	//测试时间
-	float gi;	//折射率
-	float end_th;	//结束门限门限
-	float no_ref_th;//非反射门限
-
-};
-//测量结果
-struct _tagUpOtdrTestResult
-{
-	char id[20];	//标志
-	float chain;	//链长
-	float loss;	//链损耗
-	float attu;	//衰减
-	char date[20];	//日期
-};
-struct _tagOtdrEvent
-{
-	int32_t distance;
-	int32_t type;
-	float insert_loss;
-	float attu;
-	float total_loss;
-};
-struct _tagUpOtdrEvent
-{
-	char id[12];
-	struct _tagOtdrEvent buf[MAX_EVENT_NUM];
-};
-struct _tagUpOtdrData
-{
-	char id[12];
-	int32_t num;
-	int16_t buf[DATA_LEN];
-};
-//上传曲线结构
-struct _tagUpOtdrCurv
-{
-	struct _tagUpOtdrPara para;
-	struct _tagUpOtdrTestResult result;
-	struct _tagUpOtdrData data;
-	struct _tagUpOtdrEvent event;
-};
-
-//周期性测量曲线,每个测试完毕，就更新一次
-struct _tagCycCurv
-{
-	QUICK_LOCK lock;
-	struct _tagUpOtdrCurv curv;
 };
 //设备状态
 struct _tagDevState

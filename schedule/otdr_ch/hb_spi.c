@@ -603,10 +603,11 @@ int32_t get_data_from_spi_buf(
 		}
 	}
 	else{
-		for(i = 1; i < spi_data_num;i++)
+		for(i = 1; i < spi_data_num;i = i + 7)
 		{
 			data_buf[j] = ((spi_buf[i]<<24) + (spi_buf[i+1]<<16) +
 			       	(spi_buf[i+2]<<8)  + spi_buf[i+3] );
+			j++;
 
 
 		}

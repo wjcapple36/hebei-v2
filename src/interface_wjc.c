@@ -129,6 +129,8 @@ int32_t OnConfigPipeState(struct tms_context *pcontext, struct tms_cfgpip_status
 	ret = save_node_name_address(&devMisc);
 	if(ret != CMD_RET_OK){
 		ret = CMD_RET_CANT_SAVE;
+		printf("%s %d can't save para, ret %d \n", __FUNCTION__, __LINE__,ret);
+		ret = CMD_RET_OK;
 	}
 	ack.errcode = ret;
 	tms_AckEx(pcontext->fd, NULL, &ack);
@@ -227,6 +229,7 @@ int32_t OnGetOTDRData(struct tms_context *pcontext,struct tms_get_otdrdata *pget
 	}
 	//给点名测量传递参数
 	memcpy(&usrOtdrTest.ch, &pget_otdr_data->pipe, sizeof(struct _tagUsrOtdrTest) - 8);
+	usrOtdrTest.ch--;
 	usrOtdrTest.cmd = ack.cmdid;
 	usrOtdrTest.src_addr = pcontext->pgb->src;
 	usrOtdrTest.state = USR_OTDR_TEST_WAIT;

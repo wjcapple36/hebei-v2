@@ -596,8 +596,8 @@ int32_t pre_measure(int32_t ch, struct _tagOtdrDev *potdrDev,struct _tagCHPara *
 		return ret;
 	}
 	//获取累加次数
-	ret = get_accum_counts(pCHPara->MeasureTime_ms,&(pCHCtrl->hp_num),\
-			&(pCHCtrl->lp_num));	
+	ret = get_accum_counts(pCHPara->MeasureTime_ms,&(pCHCtrl->lp_num),\
+			&(pCHCtrl->hp_num));	
 	if(ret != OP_OK)
 	{
 		printf("%s():%d: ch %d get accum counts error,ret %d.\n",\

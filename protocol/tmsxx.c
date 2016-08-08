@@ -1675,10 +1675,10 @@ int32_t tms_RetOTDRData(
 	memcpy(hebei2_event_val, val->hebei2_event_val, sizeof(struct tms_hebei2_event_val) * val->hebei2_event_hdr->count);
 
 
-
-	tms_OTDRConv_tms_get_otdrdata(
-	    (struct tms_get_otdrdata *)&ret_otdrparam,
-	    (struct tms_get_otdrdata *)&ret_otdrparam);
+	tms_Conv_Nx4Byte(
+	    &ret_otdrparam,
+	    &ret_otdrparam,
+	    sizeof(struct tms_ret_otdrparam));
 
 	tms_OTDRConv_tms_test_result(&test_result, &test_result);
 

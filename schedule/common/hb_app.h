@@ -14,13 +14,45 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-	//记录光纤段可变信息，此数据保存在文件头部
+
+/*
+ *下面定义的结构体在读取保存光纤段配置的时候使用，作为文件头信息
+*/
+
+//记录光纤段可变信息，此数据保存在文件头部
 struct _tagFiberSecHead
 {
 	int32_t data_num;
 	int32_t sec_num;
 	int32_t event_num;
 };
+
+/*
+ *下面定义的结构体是在找告警位置的时候使用
+*/
+
+//描述光纤段起始位置
+struct _tagFiberSecCoord
+{
+	int32_t start;
+	int32_t end;
+};
+//通过事件找到的告警点
+struct _tagEventAlarmData
+{
+	int32_t index;
+	int32_t pos;
+	int32_t lev;
+	float	diff;
+};
+struct _tagEventAlarm
+{
+	struct _tagEventAlarmData first;
+	struct _tagEventAlarmData highest;
+};
+
+/*********************************************************/
+
 //初始化光纤段，节点名称等相关参数
 int32_t initialize_sys_para();
 //创建文件夹
@@ -73,6 +105,48 @@ int32_t get_test_result_from_algro(struct tms_test_result *pHost,const OTDR_Uplo
 int32_t get_test_event_from_algro(struct tms_hebei2_event_val *pHost,const OTDR_UploadAllData_t *pAlgro, int32_t count);
 //自我了断
 int32_t exit_self(int32_t err_code, char function[], int32_t line, char msg[]);
+//根据输的命令码返回对应曲线的CMD
+int32_t get_ret_curv_cmd(int32_t in_cmd, int32_t *ret_cmd);
+//获取曲线起始点
+int32_t get_curv_start_point(int32_t Sigma,
+		OTDR_ChannelData_t *pOtdrData,
+	       	OtdrCtrlVariable_t *pOtdrCtrl,
+		OtdrStateVariable_t *pOtdrState);
+//通过事件点比较获取光纤段之间的告警
+int32_t get_fiber_alarm_from_event(
+		struct _tagFiberSecCoord *pSecCoord,
+		struct tms_hebei2_event_hdr *pstd_event_hdr,
+		struct tms_hebei2_event_val *pstd_event_val,
+		OTDR_UploadAllData_t  *AllEvent,
+		OtdrStateVariable_t *pOtdrState,
+		struct tms_fibersection_val* pstd_fiber_val,
+		struct _tagEventAlarm *pEventAlarm
+		);
+//获取告警级别
+int32_t get_alarm_lev(
+		float loss,
+		struct tms_fibersection_val *pfiber_sec
+		);
+//获取插损的差值
+int32_t get_inser_loss_diff(
+		float cur_loss,
+		float std_loss,
+		float *diff_loss
+		);
+//测量结束，将测量结果放入填入周期性测量曲线
+int32_t refresh_cyc_curv_after_test(
+		int32_t ch,
+		OTDR_UploadAllData_t *pResult, 
+		struct _tagCycCurv *pCycCurv);
+
+
+
+
+
+
+
+
+
 
 
 

@@ -775,6 +775,11 @@ void ProcessRefreshData(uint32_t RefreshCount)
  *  日期版本： 2012-12-28  17:22:23  v1.0
  **************************************************************************************************
 */
+extern int32_t get_curv_start_point(int32_t Sigma,
+		OTDR_ChannelData_t *pOtdrData,
+	       	OtdrCtrlVariable_t *pOtdrCtrl,
+		OtdrStateVariable_t *pOtdrState);
+
 void ProcessFinalData(uint32_t AlgoPurpose)
 {
 	int32_t   m, i, sigma, FindSmallEvent = 0;
@@ -822,6 +827,8 @@ void ProcessFinalData(uint32_t AlgoPurpose)
     ratio = ENLARGE_FACTOR(OtdrState.TotalMeasureTime);
     ratio = MAX(ratio, 1);   // 放大因子至少为1
     EnlargeData(An, DATA_LEN, ratio);
+    sigma = RootMeanSquare(An, DATA_LEN, NOISE_LEN-OtdrState.M);
+    OtdrState.CurveStartPoint = get_curv_start_point(sigma, &OtdrData, &OtdrCtrl, &OtdrState);
     AdjustCurve(An, DATA_LEN);
 // DATA_ZERO_MOVE
     if((OtdrCtrl.RawDataLevel == DATA_ZERO_MOVE) && OtdrCtrl.FindEvent)
@@ -837,7 +844,7 @@ void ProcessFinalData(uint32_t AlgoPurpose)
     GetCurveSaturatePoint(&OtdrData, DATA_LEN);
 
     // 原始数据去除基线后的噪声均方根值
-	sigma = RootMeanSquare(An, DATA_LEN, NOISE_LEN-OtdrState.M);
+    sigma = RootMeanSquare(An, DATA_LEN, NOISE_LEN-OtdrState.M);
 	
     // 将太低的负值取绝对值
     AbsTooLowData(An, DATA_LEN, sigma);
