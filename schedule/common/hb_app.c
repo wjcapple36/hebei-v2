@@ -42,6 +42,10 @@ int32_t initialize_sys_para()
 {
 	int32_t ret, slot;
 	ret = OP_OK;
+	//如果配置文件不存在则创建
+	creat_folder(cfg_path);
+	//如果日志文件不存在则创建
+	init_log_dir();
 	initialize_fiber_sec_cfg(CH_NUM);
 	initialize_otdr_dev(otdrDev,CH_NUM);
 	memset(&usrOtdrTest, 0, sizeof(struct _tagUsrOtdrTest));
@@ -67,16 +71,15 @@ int32_t initialize_fiber_sec_cfg()
 {
 	int32_t ret, i;
 	ret = OP_OK;
+	struct _tagSecFiberAlarm *palarm;
+
 	for(i = 0; i < CH_NUM;i++)
 	{
-#ifdef LOCK_TYPE_SPIN
-		pthread_spin_init(&chFiberSec[i].lock, 0);
-#else
-		pthread_mutex_init(&chFiberSec[i].lock,NULL);
-#endif
+		quick_lock_init(&chFiberSec[i].lock);
 		memset(&chFiberSec[i].para,0, sizeof(struct _tagFiberSecCfg));		
 		memset(&chFiberSec[i].alarm,0, sizeof(struct _tagSecFiberAlarm));		
-		memset(&chFiberSec[i].statis,0, sizeof(struct _tagFiberStatisData));		
+		memset(&chFiberSec[i].statis,0, sizeof(struct _tagFiberStatisData));
+		memset(&chFiberSec[i].alarm, 0, sizeof(struct _tagSecFiberAlarm));		
 		read_fiber_sec_para(i,&chFiberSec[i]);
 	}
 
@@ -98,12 +101,19 @@ int32_t initialize_otdr_dev(struct _tagOtdrDev *pOtdrDev,
 {
 	int ret, i;
 	struct _tagFiberSecCfg *pFiberSec;
+	int32_t offset;
+	struct _tagCycCurv *pcurv;
 
 	ret = OP_OK;
-	memset(pOtdrDev,0,sizeof(struct _tagOtdrDev)*ch_num);
+	offset = sizeof(struct _tagCHCtrl) + sizeof(struct _tagCHState) + sizeof( struct _tagCHPara)*2\
+		 + sizeof(struct _tagLaserCtrPara) + sizeof(OtdrCtrlVariable_t) + sizeof(OtdrStateVariable_t) + \
+		 sizeof(struct _tagCHBuf);
 	for(i = 0; i < ch_num;i++)
 	{
-
+		memset(&pOtdrDev[i], 0, offset);
+		pcurv = &pOtdrDev[i].curv;
+		quick_lock_init(&pcurv->lock);
+		memset(&pcurv->curv, 0, sizeof(struct _tagUpOtdrCurv));
 		if(chFiberSec[i].para.is_initialize)
 		{
 			get_ch_para_from_fiber_sec(&pOtdrDev[i].ch_para,&chFiberSec[i]);
@@ -195,11 +205,19 @@ int32_t save_fiber_sec_para(int ch, struct tms_fibersectioncfg *pfiber_sec)
 	secHead.sec_num = pfiber_sec->fiber_hdr->count;
 	secHead.data_num = pfiber_sec->otdr_hdr->count;
 	secHead.event_num = pfiber_sec->event_hdr->count;
-
-
-
+	ret = OP_OK;
 
 	snprintf(file_path,FILE_PATH_LEN , "%s%s_%d.cfg",cfg_path, file_fiber_sec,ch);
+	//如果段数目为0，那么就是清空该光线段为的配置信息
+	if(!secHead.sec_num )
+	{
+		ret = remove(file_path);
+		quick_lock(&chFiberSec[ch].lock);
+		free_fiber_sec_buf(&chFiberSec[ch]);
+		quick_unlock(&chFiberSec[ch].lock);
+		return ret;
+	}
+
 	fp = NULL;
 	ret = OP_OK;
 	//获取日志名字
@@ -562,7 +580,24 @@ int32_t free_fiber_sec_buf(struct _tagCHFiberSec *pCHFiberSec)
 	return ret;
 
 }
-
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  quick_lock_init 根据宏定义初始化锁函数
+ *
+ * @param plock
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t quick_lock_init(QUICK_LOCK *plock)
+{
+#ifdef LOCK_TYPE_SPIN
+	pthread_spin_init(plock, 0);
+#else
+	pthread_mutex_init(plock,NULL);
+#endif
+	return;
+}
 /* --------------------------------------------------------------------------*/
 /**
  * @synopsis  quick_lock 自定义快速锁的上锁函数
@@ -805,7 +840,8 @@ int32_t check_fiber_sec_para(const struct tms_fibersectioncfg *pfiber_sec_cfg)
 	ret = CMD_RET_OK;
 	
 	tmp = pfiber_sec_cfg->fiber_hdr->count;
-	if(tmp <= 0){
+	//如果count等于0，表示要清空光线段
+	if(tmp < 0){
 		ret = CMD_RET_PARA_INVLADE;
 		printf("%s() %d : sec num error %d ch_offset %d\n",\
 				       	__FUNCTION__ ,__LINE__, tmp, ch_offset);
@@ -1533,6 +1569,7 @@ int32_t refresh_cyc_curv_after_test(
 	
 	//获取事件点
 	pevent = pCycCurv->curv.event.buf;
+	pCycCurv->curv.event.num = event_count;
 	get_test_event_from_algro(pevent, AllEvent,event_count);
 
 	strcpy(pCycCurv->curv.data.id,"OTDRData\0");

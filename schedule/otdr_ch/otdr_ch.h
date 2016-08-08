@@ -141,6 +141,7 @@ struct _tagOtdrEvent
 struct _tagUpOtdrEvent
 {
 	char id[12];
+	int32_t num;
 	struct _tagOtdrEvent buf[MAX_EVENT_NUM];
 };
 struct _tagUpOtdrData

@@ -81,6 +81,7 @@ int32_t initialize_fiber_sec_cfg();
 int32_t get_ch_para_from_fiber_sec(struct _tagCHPara *pCHPara, 
 		const struct _tagCHFiberSec *FiberSec);
 //自定义快速锁操作函数
+int32_t quick_lock_init(QUICK_LOCK *plock);
 int32_t quick_lock( QUICK_LOCK *plock);
 int32_t quick_unlock( QUICK_LOCK *plock);
 //检查用户点名测量参数
