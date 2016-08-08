@@ -12,16 +12,10 @@
 #include "../common/global.h"
 //定义otdr通道资源
 struct _tagOtdrDev otdrDev[CH_NUM];
-//通道缓冲区，存放高低功率累加数据
-struct _tagCHBuf chBuf[CH_BUF_NUM];
 //spi设备
 struct _tagSpiDev spiDev;
 //用户点名测量，配置测量
 struct _tagUsrOtdrTest usrOtdrTest;
-//周期性测量存储区,每个通道一个存储区，网管查询时立马返回
-struct _tagCycCurv cycCurvBuf[CH_NUM];
-//光纤段统计数据
-struct _tagFiberStatisData statisDataBuf[CH_NUM];
 //算法运行时当前的通道信息,开始测量的时候赋值，算法运行完毕清空
 struct _tagAlgroCHInfo algroCHInfo;
 //spi 读取数据的缓冲区 spi 数据格式： fe 4B 2B fe 4B 2B
@@ -391,8 +385,9 @@ int32_t first_process(
 
 	ret = OP_OK;
 	if( pCHCtrl->mod == OTDR_TEST_MOD_USR){
-		get_usr_otdr_test_para(&appoint_para,pUsrTest);
-		ret = pre_measure(ch, pOtdrDev,&appoint_para);
+		pCHPara = &pOtdrDev->appoint_para;
+		get_usr_otdr_test_para(pCHPara,pUsrTest);
+		ret = pre_measure(ch, pOtdrDev,pCHPara);
 	}
 	else
 		ret = pre_measure(ch, pOtdrDev, NULL);
@@ -449,6 +444,8 @@ int32_t agin_process(
 	pOtdrCtl = &pOtdrDev->otdr_ctrl;
 	ret = OP_OK;
 	is_ack = 1;
+	if( pCHCtrl->mod == OTDR_TEST_MOD_USR)
+		pCHPara = &pOtdrDev->appoint_para;
 	
 	pCHCtrl->accum_ms += SPI_OP_SPACE_MS;
 	pCHCtrl->one_time_ms += SPI_OP_SPACE_MS;
@@ -486,7 +483,11 @@ int32_t agin_process(
 	printf("%s %s() %d ,rcv data, ch %d accum_time %d current circl time %d \n",\
 			__FILENAME__, __FUNCTION__, __LINE__, ch,pCHCtrl->accum_ms, pCHCtrl->one_time_ms);
 	pCHCtrl->one_time_ms = 0;
-	ret =  get_data_from_spi_buf(pCHBuf->hp_buf, DATA_LEN, pspi_dev->buf,pspi_dev->len,1);
+	if(pCHCtrl->send_num > 1)
+		ret =  get_data_from_spi_buf(pCHBuf->hp_buf, DATA_LEN, pspi_dev->buf,pspi_dev->len,1);
+	else
+		ret =  get_data_from_spi_buf(pCHBuf->hp_buf, DATA_LEN, pspi_dev->buf,pspi_dev->len,0);
+
 	if(ret){
 		ret = RET_SWITCH_CH;
 		goto usr_exit;
@@ -506,10 +507,14 @@ int32_t agin_process(
 	}
 	//读到数据之后，累加次数，高低功率次数相应的--
 	pCHCtrl->accum_num--;
-	if(pCHCtrl->hp_num > 0)
+	if(pCHCtrl->hp_num > 0){
 		pCHCtrl->hp_num--;
-	else if(pCHCtrl->lp_num > 0)
+		pOtdrState->HighPowerTime += MEASURE_TIME_MIN_MS ;
+	}
+	else if(pCHCtrl->lp_num > 0){
 		pCHCtrl->lp_num--;
+		pOtdrState->LowPowerTime += MEASURE_TIME_MIN_MS;
+	}
 	//测量完成，启动算法进程
 	if(pCHCtrl->accum_num <= 0){
 		is_ack = 0; 
@@ -549,12 +554,19 @@ int32_t initial_otdr_dev(struct _tagOtdrDev *dev)
 	struct _tagCHCtrl *pCHCtrl;
 	struct _tagCHState *pCHState;
 
+	OtdrCtrlVariable_t *pOtdrCtl;	
+	OtdrStateVariable_t *pOtdrState;
+
+	pOtdrState = &dev->otdr_state;
+	pOtdrCtl = &dev->otdr_ctrl;
 	pCHCtrl = &dev->ch_ctrl;
 	pCHState = &dev->ch_state;
 
 	memset(pCHCtrl,0, sizeof(struct _tagCHCtrl) - CHCTRL_FIXED_BYTES);
 	memset(&dev->ch_buf.hp_buf, 0, sizeof(dev->ch_buf.hp_buf));
 	memset(&dev->ch_buf.lp_buf, 0, sizeof(dev->ch_buf.lp_buf));
+	memset(pOtdrCtl, 0, sizeof(OtdrCtrlVariable_t));
+	memset(pOtdrState, 0, sizeof(OtdrStateVariable_t));
 
 	return OP_OK;
 }
@@ -564,7 +576,7 @@ int32_t start_otdr_algro(
 		struct _tagUsrOtdrTest *pUsrTest,
 		struct _tagOtdrAlgroPara *pAlgroPara)
 {
-	int32_t ret;
+	int32_t ret, counts, sigma;
 	struct _tagCHCtrl *pCHCtrl;
 	struct _tagCHPara *pCHPara;
 	struct _tagCHState *pCHState;
@@ -593,10 +605,21 @@ int32_t start_otdr_algro(
 	memset(pAlgroPara->pCHInfo, 0, sizeof(struct _tagAlgroCHInfo));
 	memcpy(pAlgroPara->pCtrl, pOtdrCtl,sizeof(OtdrCtrl));
 	memcpy(pAlgroPara->pState,pOtdrState, sizeof(OtdrState));
-	memcpy(pAlgroPara->pOtdrData->ChanData, &pOtdrDev->ch_buf.hp_buf,DATA_LEN); 
-	memcpy(pAlgroPara->pOtdrData->LowPowerData,& pOtdrDev->ch_buf.lp_buf,DATA_LEN); 
+	counts = DATA_LEN - NOISE_LEN;
+	/*	
+	memcpy(&pAlgroPara->pOtdrData->ChanData[0], &pOtdrDev->ch_buf.hp_buf[0],DATA_LEN*sizeof(int32_t)); 
+	memcpy(&pAlgroPara->pOtdrData->LowPowerData[0],& pOtdrDev->ch_buf.lp_buf[0],DATA_LEN*sizeof(int32_t));
+	*/
+       	
+	//高功率曲线，前面1000个点为噪声
+	memcpy(&pAlgroPara->pOtdrData->ChanData[0], &pOtdrDev->ch_buf.hp_buf[NOISE_LEN] ,counts * sizeof(int32_t)); 
+	memcpy(&pAlgroPara->pOtdrData->ChanData[counts], &pOtdrDev->ch_buf.hp_buf[counts] ,NOISE_LEN * sizeof(int32_t)); 
+	//低功率曲线，前面1000个点为噪声
+	memcpy(&pAlgroPara->pOtdrData->LowPowerData[0], &pOtdrDev->ch_buf.lp_buf[NOISE_LEN], counts*sizeof(int32_t)); 
+	memcpy(&pAlgroPara->pOtdrData->LowPowerData[counts] ,&pOtdrDev->ch_buf.lp_buf[counts] , NOISE_LEN*sizeof(int32_t)); 
 	pAlgroPara->pCtrl->OtdrMode = OTDR_MODE_AVG;
 	pAlgroPara->pCtrl->FindEvent = 1;
+	pAlgroPara->pCtrl->NonReflectThreMode = NR_MODE_AUTO;
 	//保存算法运行期间的通道信息
 	pAlgroCHInfo->ch = ch;
 	pAlgroCHInfo->mod = pCHCtrl->mod;

@@ -783,7 +783,7 @@ int32_t check_usr_otdr_test_para(struct tms_get_otdrdata *pget_otdrdata)
 {
 	int32_t ret;
 	ret = CMD_RET_OK;
-	if(pget_otdrdata->pipe < ch_offset || \
+	if((pget_otdrdata->pipe - 1) < ch_offset || \
 			pget_otdrdata->pipe > (ch_offset + CH_NUM)){
 		ret = CMD_RET_PARA_INVLADE;
 		goto usr_exit;
@@ -1030,6 +1030,7 @@ int32_t send_otdr_data_host(OTDR_UploadAllData_t *pResult, struct _tagAlgroCHInf
 	int32_t ret, offset, event_count;
 	OTDR_UploadAllData_t *AllEvent;
 	char	*NextAddr;
+	int32_t ret_cmd;
 	ret = OP_OK;
 	struct tms_ret_otdrdata hebei2_otdrdata;
 	struct tms_ret_otdrparam    ret_otdrparam;
@@ -1049,16 +1050,20 @@ int32_t send_otdr_data_host(OTDR_UploadAllData_t *pResult, struct _tagAlgroCHInf
 		printf("%s %d, ask context error \n", __FUNCTION__, __LINE__);
 		goto usr_exit;
 	}
+	ret = get_ret_curv_cmd(pCHInfo->cmd, &ret_cmd);
+	if(ret){
+		printf("%s %d,requre curv cmd error cmd %d ret %d  \n", __FUNCTION__, __LINE__,\
+				pCHInfo->cmd,ret);
+		goto usr_exit;
+	}
 
 	pevent_buf = NULL;
 	get_test_para_from_algro(&ret_otdrparam, pResult);
 	get_test_result_from_algro(&test_result, pResult);
 	hebei2_data_hdr.count = pResult->OtdrData.DataNum;
 	hebei2_data_val = (struct tms_hebei2_data_val *)pResult->OtdrData.dB_x1000;
-
-	offset = 8 + sizeof(pResult->MeasureParam) + \
-		 sizeof(pResult->OtdrData.DataNum)*sizeof(int16_t) + 4;
-	NextAddr = (char *)pResult + offset;
+	offset = pResult->OtdrData.DataNum;
+	NextAddr = (char *)(&pResult->OtdrData.dB_x1000[offset]);
 	AllEvent = (OTDR_UploadAllData_t*)(NextAddr - 8 - sizeof(AllEvent->MeasureParam) - sizeof(AllEvent->OtdrData));
 	event_count = AllEvent->Event.EventNum;
 
@@ -1083,7 +1088,7 @@ int32_t send_otdr_data_host(OTDR_UploadAllData_t *pResult, struct _tagAlgroCHInf
 	hebei2_otdrdata.ret_otdrparam = &ret_otdrparam;
 	hebei2_otdrdata.test_result = &test_result;
 	hebei2_event_hdr.count = event_count;
-	tms_RetOTDRData(contxt.fd, NULL, &hebei2_otdrdata, pCHInfo->cmd);		
+	tms_RetOTDRData(contxt.fd, NULL, &hebei2_otdrdata, ret_cmd);		
 
 
 	if(event_count> 10)
@@ -1093,6 +1098,7 @@ usr_exit:
 					__LINE__, event_count);
 
 	return ret;
+
 }
 /* --------------------------------------------------------------------------*/
 /**
@@ -1113,6 +1119,427 @@ int32_t exit_self(int32_t err_code, char function[], int32_t line,  char msg[])
 	LOGW(__FUNCTION__, __LINE__,LOG_LEV_FATAL_ERRO, log);
 	printf("%s \n", log);
 	exit(err_code);
+	return 0;
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  get_ret_curv_cmd 根据输入曲线的ID获取返回曲线的ID
+ *
+ * @param in_cmd	输入曲线id
+ * @param ret_cmd	返回曲线id
+ *
+ * @returns   0 成功，其他没有对应的id
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t get_ret_curv_cmd(int32_t in_cmd, int32_t *ret_cmd)
+{
+	int32_t ret;
+	ret = 0;
+	switch(in_cmd)
+	{
+		case ID_GETOTDRDATA_14:
+			*ret_cmd = ID_RETOTDRDATA_16;
+			break;
+		case ID_GETOTDRDATA_15:
+			*ret_cmd = ID_RETOTDRDATA_17;
+			break;
+		case ID_GETSTANDARDCURV:
+			*ret_cmd = ID_RETOTDRDATA_18;
+			break;
+		case ID_GETCYCLETESTCUV:
+			*ret_cmd = ID_RETOTDRDATA_19;
+			break;
+
+		default:
+			ret = 1;
+			break;
+	}
+
+	return ret;
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  get_start_point 获取曲线的起始点, dsp算法里采用的固定值，hebei
+ *		项目里面需要修订一下
+ * @param sigma
+ * @param pOtdrData
+ * @param pOtdrCtrl
+ * @param OtdrStateVariable_t
+ * @param pOtdrState
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t get_curv_start_point(int32_t Sigma,
+		OTDR_ChannelData_t *pOtdrData,
+	       	OtdrCtrlVariable_t *pOtdrCtrl,
+		OtdrStateVariable_t *pOtdrState)
+{
+	int iPointDis, i;
+	int iMaxValue = 0;
+	int iThredhold = 0;
+	int32_t iDataLen;
+	
+	iDataLen = 200;
+	iPointDis = 0;
+	i = 0;
+	
+	if(pOtdrState->MeasureParam.MeasureLength_m > 10000)
+	{
+		iDataLen = 100;
+	}
+	
+	for(int i = 0; i < iDataLen; i++)
+	{
+		if(pOtdrData->ChanData[i] > iMaxValue)
+		{
+			iMaxValue = pOtdrData->ChanData[i]; 
+		}
+	}
+
+	iMaxValue = iMaxValue/2;
+	if(iMaxValue > 10 * Sigma )
+	{
+		iThredhold = iMaxValue;
+	}
+	else
+	{
+		iThredhold = 10 * Sigma;
+	}
+	iThredhold = 5*Sigma;
+	for(i = 0; i < iDataLen; i++)
+	{
+		if (pOtdrData->ChanData[i] > iThredhold)
+		{
+			iPointDis = i;
+			break;
+		}
+	}
+
+    return iPointDis;
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  get_fiber_alarm_from_event 比较当前事件和标准曲线事件以获取
+ *					 告警
+ * @param pSecCoord		光纤段起始点
+ * @param pstd_event_hdr	标准事件头，含事件数码
+ * @param pstd_event_val	标准事件
+ * @param AllEvent		当前曲线的事件点
+ * @param pOtdrState		当前曲线状态变量
+ * @param 			事件告警，含第一个告警和最严重告警
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t get_fiber_alarm_from_event(
+		struct _tagFiberSecCoord *pSecCoord,
+		struct tms_hebei2_event_hdr *pstd_event_hdr,
+		struct tms_hebei2_event_val *pstd_event_val,
+		OTDR_UploadAllData_t  *AllEvent,
+		OtdrStateVariable_t *pOtdrState,
+		struct tms_fibersection_val* pstd_fiber_val,
+		struct _tagEventAlarm *pEventAlarm
+		)
+{
+	int32_t std_xlable, cur_xlable, space;
+	int32_t alarm_num, i, j;
+	int32_t cur_event_num, std_event_num, limit_pt;
+	int32_t alarm_lev, ret, is_find_event;
+	float cur_inloss, std_inloss, diff_loss;
+
+	limit_pt = pOtdrState->M;
+	std_event_num = pstd_event_hdr->count;
+	cur_event_num = AllEvent->Event.EventNum;
+
+	//将当前事件点和标准事件点配对，即找到同一个事件点对应的序号
+	alarm_num = 0;
+	for(i = 0; i < cur_event_num;i++)
+	{
+		cur_xlable = AllEvent->Event.EventPoint[i].EventXlabel;
+		//如果不在本事件段内直接返回 ？
+		if(!(cur_xlable >= pSecCoord->start && cur_xlable < pSecCoord->end ))
+			continue;
+		alarm_lev = 0;	
+		for(j = 0; j < std_event_num;j++)
+		{
+			std_xlable = pstd_event_val[j].distance;
+			space = abs(cur_xlable - std_xlable);
+			if(space <= limit_pt)
+				break;
+		}
+		//找到相同事件，然后根据插损判别插损差值，如果当前事件的插损不存在，
+		//则本函数的处理算法不会返回相关结果	
+		if(j < std_event_num)
+		{
+			std_inloss = pstd_event_val[j].loss;
+			cur_inloss = AllEvent->Event.EventPoint[i].EventInsertLoss;
+			ret  = get_inser_loss_diff(cur_inloss,std_inloss,&diff_loss);
+			if(!ret)
+				alarm_lev = get_alarm_lev(diff_loss, pstd_fiber_val);
+			if(alarm_lev > FIBER_ALARM_LEV0)
+			{
+				if(alarm_num == 0)
+				{
+					pEventAlarm->first.diff = diff_loss;
+					pEventAlarm->first.index = i;
+					pEventAlarm->first.pos = cur_xlable;
+					pEventAlarm->first.lev = alarm_lev;
+					memcpy(&pEventAlarm->highest, &pEventAlarm->first,\
+							sizeof(struct _tagEventAlarmData));
+				}
+				else if(alarm_lev < pEventAlarm->highest.lev)
+				{
+					pEventAlarm->highest.diff = diff_loss;
+					pEventAlarm->highest.index = i;
+					pEventAlarm->highest.pos = cur_xlable;
+					pEventAlarm->highest.lev = alarm_lev;
+
+				}
+				alarm_num++;
+			}
+
+		}
+
+	}
+	return alarm_num;
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  get_inser_loss_diff 获取两个事件点插损差值。如果插损值都存在那么是
+ *				  两者差值，如果只有当前值存在，那么就以差值返回
+ *				  如果当前事件点没有插损值，则返回失败
+ * @param cur_loss	 	当前事件的插损
+ * @param std_loss		标准事件插损
+ * @param 			返回的插损值
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t get_inser_loss_diff(
+		float cur_loss,
+		float std_loss,
+		float *diff_loss
+		)
+{
+	int32_t ret;
+	float loss;
+	ret = OP_OK;
+	if(cur_loss < RSVD_FLOAT && std_loss < RSVD_FLOAT)
+		loss = fabs(cur_loss - std_loss);
+	else if(cur_loss < RSVD_FLOAT)
+		loss = cur_loss;
+	else
+		ret = 1;
+
+	return ret;
+}
+int32_t get_alarm_lev(
+		float loss,
+		struct tms_fibersection_val *pfiber_sec
+		)
+{
+	int lev;
+	//告警级别为0 代表无告警
+	lev = 0;
+
+	if(loss >= pfiber_sec->level1)
+		lev = 1;
+	else if(loss >= pfiber_sec->level2)
+		lev = 2;
+	else if(loss >= pfiber_sec->listen_level)
+		lev = 3;
+
+	return lev;
+}
+
+
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  find_alarm_on_fiber 测量结束，查找告警，比较事件点，衰减初始值
+ *
+ * @param ch		通道
+ * @param pResult	测试曲线
+ * @param pOtdrCtl	otdr控制变量
+ * @param pOtdrState	otdr状态变量
+ * @param 		本通道光纤段配置参数
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t find_alarm_on_fiber(int32_t ch,
+	       	OTDR_UploadAllData_t *pResult,
+		OtdrCtrlVariable_t *pOtdrCtl,
+		OtdrStateVariable_t *pOtdrState,
+		struct _tagCHFiberSec *pFibersec
+	       	)
+{
+	struct _tagFiberSecCfg  *ppara;
+	struct _tagFiberStatisData *pstatis;
+	struct _tagSecFiberAlarm *palarm;
+	
+	struct tms_fibersection_hdr *pstd_fiber_hdr; //光纤段头
+	struct tms_fibersection_val *pstd_fiber_val;//光纤段信息
+	struct tms_hebei2_data_hdr  *pstd_otdr_hdr;//采样点数据头
+	struct tms_hebei2_data_val  *pstd_otdr_val;//otdr数据部分
+	struct tms_hebei2_event_hdr *pstd_event_hdr;//事件点头
+	struct tms_hebei2_event_val *pstd_event_val;//事件缓冲区
+
+	//包含两组告警位置 一个是最严重的告警，一个是第一个告警位置
+	struct _tagEventAlarm fiber_alarm, event_alarm;
+	struct _tagFiberSecCoord sec_coord;
+
+	int32_t match_num, offset;
+	OTDR_UploadAllData_t *AllEvent;
+	char *NextAddr;
+
+	float loss_sec, loss_sec_diff; 
+	int32_t loss_sec_lev;
+	int32_t ret, i, j, sec_start, sec_end;
+	int32_t alarm_num, cur_alarm_num;
+	char cur_time[20] ={0};
+	const char* pFormatTime = "%Y-%m-%d %H:%M:%S";
+
+        //获取当前时间
+        get_sys_time(cur_time, 0, pFormatTime);
+	//指针初始化	
+	ppara = &pFibersec->para;
+	palarm = &pFibersec->alarm;
+	pstatis = &pFibersec->statis;
+	pstd_fiber_hdr = &pFibersec->para.fiber_hdr;
+	pstd_fiber_val = pFibersec->para.fiber_val;
+	pstd_otdr_hdr = &pFibersec->para.otdr_hdr;
+	pstd_otdr_val = pFibersec->para.otdr_val;
+	pstd_event_hdr = &pFibersec->para.event_hdr;
+	pstd_event_val = pFibersec->para.event_val;
+
+	//指针转换，获取事件点的指针，如果想知道为什么，去问彭怀敏^_^
+	offset = pResult->OtdrData.DataNum;
+	NextAddr = (char *)(&pResult->OtdrData.dB_x1000[offset]);
+	AllEvent = (OTDR_UploadAllData_t*)(NextAddr - 8 - \
+			sizeof(AllEvent->MeasureParam) - sizeof(AllEvent->OtdrData));
+	
+	quick_unlock(&pFibersec->lock);
+	if(!pFibersec->para.is_initialize)
+		goto usr_exit;
+	//开始查找事件点
+	alarm_num = 0;
+	pstatis->state = 1;
+	pstatis->ch = ch + 1;
+	pstatis->sec_num = pstd_fiber_hdr->count;
+	pstatis->counts++;
+	for(i = 0; i < pstd_fiber_hdr->count;i++)
+	{
+		sec_coord.start = pstd_fiber_val[i].start_coor;
+		sec_coord.end = pstd_fiber_val[i].end_coor;
+		loss_sec = fabs(pResult->OtdrData.dB_x1000[sec_start]- \
+				pResult->OtdrData.dB_x1000[sec_end]);
+		loss_sec_diff = fabs(loss_sec - pstd_fiber_val[i].fibe_atten_init);
+		//光纤段统计信息
+		pstatis->buf[i].attu = loss_sec;
+		memcpy(pstatis->buf[i].date, cur_time, sizeof(cur_time));
+		pstatis->buf[i].sec = ch + 1;
+		//光纤段衰减值产生的告警级别,如果通过事件找不到告警，则判断此值
+		loss_sec_lev = get_alarm_lev(loss_sec_diff,&pstd_fiber_val[i]);
+		cur_alarm_num = get_fiber_alarm_from_event(
+				&sec_coord,
+				pstd_event_hdr,
+				pstd_event_val,
+				AllEvent,
+				pOtdrState,
+				&pstd_fiber_val[i],
+				&event_alarm
+				);
+		/*
+		 * 如果是第一次发现告警，那么全部拷贝，其他的情况下只拷贝最严重的告警
+		 * 保存了我们需要的最严重的告警和最先发现的告警
+		*/
+		if(!alarm_num && cur_alarm_num)
+			memcpy(&fiber_alarm, &event_alarm, sizeof(struct _tagEventAlarm));
+		else if(cur_alarm_num && event_alarm.highest.lev < fiber_alarm.highest.lev)
+			memcpy(&fiber_alarm.highest, &event_alarm.highest,\
+				       	sizeof(struct _tagEventAlarmData));
+		else if(!cur_alarm_num && alarm_num && loss_sec_lev < fiber_alarm.highest.lev)
+		{
+			//通过事件找不到告警比较loss_sec_lev与当前最严重的告警
+			cur_alarm_num = 1;
+			fiber_alarm.highest.diff = loss_sec;
+			fiber_alarm.highest.index = -1;
+			fiber_alarm.highest.lev = loss_sec_lev;
+			fiber_alarm.highest.pos = sec_coord.start;
+		}
+		else if(!cur_alarm_num && !alarm_num && loss_sec_lev < FIBER_ALARM_LEV0)
+		{
+			//事件告警为0，总的告警数目为0，且loss_secc_lev有告警
+			cur_alarm_num = 1;
+			fiber_alarm.highest.diff = loss_sec;
+			fiber_alarm.highest.index = -1;
+			fiber_alarm.highest.lev = loss_sec_lev;
+			fiber_alarm.highest.pos = sec_coord.start;
+			memcpy(&fiber_alarm.first, &fiber_alarm.highest,\
+				       	sizeof(struct _tagEventAlarmData));
+		}
+		alarm_num += cur_alarm_num;
+
+	}
+
+
+
+	ret = OP_OK;
+usr_exit:
+	quick_unlock(&pFibersec->lock);
+	return ret;
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  refresh_cyc_curv_after_test 将测量结果填入周期性测量缓冲区
+ *
+ * @param ch		通道
+ * @param pResult	测量结果
+ * @param pCycCurv	周期性策略曲线缓冲
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t refresh_cyc_curv_after_test(
+		int32_t ch,
+		OTDR_UploadAllData_t *pResult, 
+		struct _tagCycCurv *pCycCurv)
+{
+	int32_t ret, offset, event_count;
+	OTDR_UploadAllData_t *AllEvent;
+	char	*NextAddr;
+	int32_t ret_cmd;
+	ret = OP_OK;
+	struct tms_ret_otdrparam    *pret_otdr_para;
+	struct tms_test_result      *ptest_result;
+	struct tms_hebei2_event_val *pevent;
+	pret_otdr_para = (struct tms_ret_otdrparam *) (&pCycCurv->curv.para);
+	event_count = 0;
+	offset = pResult->OtdrData.DataNum;
+	quick_lock(&pCycCurv->lock);
+	//获取测量参数和测量结果
+	get_test_para_from_algro(pret_otdr_para, pResult);
+	get_test_result_from_algro(ptest_result, pResult);
+	//数据点
+	pCycCurv->curv.data.num = pResult->OtdrData.DataNum;
+	memcpy(pCycCurv->curv.data.buf, pResult->OtdrData.dB_x1000, offset*sizeof(int16_t));
+	NextAddr = (char *)(&pResult->OtdrData.dB_x1000[offset]);
+
+	AllEvent = (OTDR_UploadAllData_t*)(NextAddr - 8 - sizeof(AllEvent->MeasureParam)\
+		       	- sizeof(AllEvent->OtdrData));
+	event_count = AllEvent->Event.EventNum;
+	
+	//获取事件点
+	pevent = pCycCurv->curv.event.buf;
+	get_test_event_from_algro(pevent, AllEvent,event_count);
+
+	strcpy(pCycCurv->curv.data.id,"OTDRData\0");
+	strcpy(pCycCurv->curv.result.id, "OTDRTestResultInfo\0");
+	strcpy(pCycCurv->curv.event.id, "KeyEvents\0");
+	quick_unlock(&pCycCurv->lock);
+
 	return 0;
 }
 //按照C风格编译

@@ -32,6 +32,11 @@ extern "C" {
 #define ADDR_HOST_SERVER		0x0000003e
 //定义一些其他关键变量
 #define MAX_RANG_M	180000
+//光纤告警级别	
+#define FIBER_ALARM_LEV0	0
+#define FIBER_ALARM_LEV1	1
+#define FIBER_ALARM_LEV2	2
+#define FIBER_ALARM_LEV3	3
 
 //通道的基数，从fpga中获取到，通道号+该基数为对外使用的通道号
 extern volatile int32_t ch_offset; 
@@ -39,16 +44,10 @@ extern volatile int32_t ch_offset;
 extern struct _tagCHFiberSec chFiberSec[CH_NUM];
 //定义otdr通道资源
 extern struct _tagOtdrDev otdrDev[CH_NUM];
-//通道缓冲区，存放高低功率累加数据
-extern struct _tagCHBuf chBuf[CH_BUF_NUM];
 //spi设备
 extern struct _tagSpiDev spiDev;
 //用户点名测量
 extern struct _tagUsrOtdrTest usrOtdrTest;
-//周期性测量曲线存储区
-extern struct _tagCycCurv cycCrve[CH_NUM];
-//统计数据存储区
-extern struct _tagFiberStatisData statisDataBuf[CH_NUM];
 //通道状态
 extern struct tms_cfgpip_status ch_state;
 extern struct _tagDevMisc devMisc;

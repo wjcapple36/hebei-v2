@@ -58,8 +58,25 @@ int32_t tsk_OtdrAlgo(void * arg)
 			else                           
 				ProcessFinalData(MEASURE_PURPOSE_OTDR);
 		}
-		if(OtdrCtrl.FindEvent)
+		if(OtdrCtrl.FindEvent){
+			ch = algroCHInfo.ch;
 			send_otdr_data_host(&MeasureResult, &algroCHInfo);
+			refresh_cyc_curv_after_test(
+					 ch,
+					&MeasureResult, 
+					&otdrDev[ch].curv
+					);
+			 find_alarm_on_fiber(
+					 ch,
+					&MeasureResult,
+					&OtdrCtrl,
+					&OtdrState,
+					&chFiberSec[ch]
+					);
+
+		}
+
+
 		OtdrCtrl.OtdrAlgoBusyNow = 0;
 		OtdrCtrl.OtdrAlgoReadyFlag = ALGO_READY_FLAG_ALL_DONE;
 		pthread_mutex_unlock(&mutex_otdr);
