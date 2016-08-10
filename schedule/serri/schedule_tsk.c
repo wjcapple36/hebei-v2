@@ -279,6 +279,8 @@ int32_t tsk_schedule(void *arg)
 	OtdrAlgroPara.pCtrl = &OtdrCtrl;
 	OtdrAlgroPara.pState = &OtdrState;
 	OtdrAlgroPara.pOtdrData = &OtdrData;
+	//做为启动
+	otdrDev[0].ch_ctrl.on_ff = OTDR_CH_ON;
 	while(1)
 	{
 		for(ch = 0; ch < CH_NUM; ch++)
@@ -562,7 +564,7 @@ int32_t initial_otdr_dev(struct _tagOtdrDev *dev)
 	pCHCtrl = &dev->ch_ctrl;
 	pCHState = &dev->ch_state;
 
-	memset(pCHCtrl,0, sizeof(struct _tagCHCtrl) - CHCTRL_FIXED_BYTES);
+	memset(&pCHCtrl->mod,0, sizeof(struct _tagCHCtrl) - CHCTRL_FIXED_BYTES);
 	memset(&dev->ch_buf.hp_buf, 0, sizeof(dev->ch_buf.hp_buf));
 	memset(&dev->ch_buf.lp_buf, 0, sizeof(dev->ch_buf.lp_buf));
 	memset(pOtdrCtl, 0, sizeof(OtdrCtrlVariable_t));

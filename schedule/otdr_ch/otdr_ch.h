@@ -178,7 +178,7 @@ struct _tagOtdrDev
 	OtdrCtrlVariable_t otdr_ctrl;		//与otdr算法同类型全局变量匹配
 	OtdrStateVariable_t otdr_state;		//与otdr算法同类型全局变量匹配
 	struct _tagCHBuf ch_buf;		//存放高低功率数据
-	struct _tagCycCurv curv;		//周期性测量曲线buf	
+	struct _tagCycCurv curv;		//周期性测量曲线buf
 
 
 };

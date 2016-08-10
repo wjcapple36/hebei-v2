@@ -60,7 +60,11 @@ int32_t initialize_sys_para();
 int32_t save_node_name_address(const struct _tagDevMisc *pdev_misc);
 int32_t read_node_name_address(struct _tagDevMisc *pdev_misc);
 //协议0x80000004内容，光纤段内容对应和保存
-int32_t save_fiber_sec_para(int ch, struct tms_fibersectioncfg *pfiber_sec);
+int32_t save_fiber_sec_para(int ch,
+	       	struct tms_fibersectioncfg *pfiber_sec,
+	       	struct _tagCHFiberSec *pch_fiber_sec,
+		struct _tagOtdrDev *potdr_dev
+	       	);
 int32_t read_fiber_sec_para(int ch, struct _tagCHFiberSec *pch_fiber_sec);
 //保存或者读取otdr fpga相关信息
 int32_t read_ch_fpga_info(const struct _tagCHInfo *pch_fpga_info,int32_t ch_num);

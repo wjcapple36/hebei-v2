@@ -72,7 +72,7 @@ int32_t initialize_fiber_sec_cfg()
 	int32_t ret, i;
 	ret = OP_OK;
 	struct _tagSecFiberAlarm *palarm;
-
+	
 	for(i = 0; i < CH_NUM;i++)
 	{
 		quick_lock_init(&chFiberSec[i].lock);
@@ -188,19 +188,25 @@ usr_exit:
 /* --------------------------------------------------------------------------*/
 /**
  * @synopsis  save_fiber_sec_para 用户配置光纤段参数，需要保存文件，同时通知
- *		对应的通道更新参数使用文件锁加锁
- * @param ch
- * @param pfiber_sec
+ *		对应的通道更新参数使用文件锁加锁,并在此更新对应通道的光线段
+ *		参数,光纤段参数的释放在此处理，赋值在读取配置通道时，更新在此
+ * @param ch		通道 从0开始，从0开始，从0开始，重要的事情说三遍
+ * @param pfiber_sec	光线段参数
  *
  * @returns   
  */
 /* ----------------------------------------------------------------------------*/
-int32_t save_fiber_sec_para(int ch, struct tms_fibersectioncfg *pfiber_sec)
+int32_t save_fiber_sec_para(int ch,
+	       	struct tms_fibersectioncfg *pfiber_sec,
+	       	struct _tagCHFiberSec *pch_fiber_sec,
+		struct _tagOtdrDev *potdr_dev
+	       	)
 {
 	int ret, counts, tmp;
 	char file_path[FILE_PATH_LEN] = {0};
 	FILE *fp;
 	struct _tagFiberSecHead secHead;
+	struct _tagFiberSecCfg *psec_cfg;
 
 	secHead.sec_num = pfiber_sec->fiber_hdr->count;
 	secHead.data_num = pfiber_sec->otdr_hdr->count;
@@ -212,9 +218,10 @@ int32_t save_fiber_sec_para(int ch, struct tms_fibersectioncfg *pfiber_sec)
 	if(!secHead.sec_num )
 	{
 		ret = remove(file_path);
-		quick_lock(&chFiberSec[ch].lock);
-		free_fiber_sec_buf(&chFiberSec[ch]);
-		quick_unlock(&chFiberSec[ch].lock);
+		quick_lock(&pch_fiber_sec->lock);
+		free_fiber_sec_buf(pch_fiber_sec);
+		potdr_dev->ch_ctrl.is_cfged = 0;
+		quick_unlock(&pch_fiber_sec->lock);
 		return ret;
 	}
 
@@ -289,6 +296,29 @@ int32_t save_fiber_sec_para(int ch, struct tms_fibersectioncfg *pfiber_sec)
 	ret = OP_OK;
 	fclose(fp);
 	fp = NULL;
+	//更新光线段参数
+	quick_lock(&pch_fiber_sec->lock);
+	ret = alloc_fiber_sec_buf(secHead, pch_fiber_sec);
+	
+	psec_cfg = &pch_fiber_sec->para;
+	if(!ret)
+	{
+		memcpy(&psec_cfg->event_hdr, pfiber_sec->event_hdr, sizeof(struct tms_hebei2_event_hdr));
+		memcpy(psec_cfg->event_val, pfiber_sec->event_val, sizeof(struct tms_hebei2_event_val)*secHead.event_num);
+		memcpy(&psec_cfg->fiber_hdr, pfiber_sec->fiber_hdr, sizeof(struct tms_fibersection_hdr));
+		memcpy(psec_cfg->fiber_val, pfiber_sec->fiber_val, sizeof(struct tms_fibersection_val)*secHead.sec_num);
+
+		memcpy(&psec_cfg->otdr_hdr, pfiber_sec->otdr_hdr, sizeof(struct tms_hebei2_data_hdr));
+		memcpy(psec_cfg->otdr_val, pfiber_sec->otdr_val, sizeof(struct tms_hebei2_data_val)*secHead.data_num);
+
+		memcpy(&psec_cfg->otdr_param, pfiber_sec->otdr_param, sizeof(struct tms_otdr_param));
+		memcpy(&psec_cfg->test_result, pfiber_sec->test_result, sizeof(struct tms_test_result));
+		psec_cfg->is_initialize = 1;
+		psec_cfg->error_num = 0;
+		potdr_dev->ch_ctrl.is_cfged = 1;
+	}
+		
+	quick_unlock(&pch_fiber_sec->lock);
 
 usr_exit:
 	if(fp != NULL)
@@ -420,12 +450,14 @@ int32_t read_fiber_sec_para(int ch, struct _tagCHFiberSec *pch_fiber_sec)
 	ret = OP_OK;
 	fclose(fp);
 	fp = NULL;
-	pAlarm->ch = ch;
+	pAlarm->ch = ch + 1;
 	pAlarm->sec_num = secHead.sec_num;
 	pAlarm->alarm_num = 0;
 	pStatis->sec_num = secHead.sec_num;
 	pStatis->counts = 0;
 	pStatis->state = 0;
+	pfiber_sec->is_initialize = 1;
+	pfiber_sec->error_num = 0;
 
 usr_exit:
 	if(is_lock)
@@ -519,7 +551,8 @@ int32_t alloc_fiber_sec_buf(struct _tagFiberSecHead secHead, struct _tagCHFiberS
 		exit_self(errno,__FUNCTION__, __LINE__,"new buf fail\0");
 	}
 	else{
-		pFiberSecCfg->is_initialize = 1;
+		pFiberSecCfg->is_initialize = 0;
+		pFiberSecCfg->error_num = 0;
 	}
 
 	return ret;
@@ -848,10 +881,10 @@ int32_t check_fiber_sec_para(const struct tms_fibersectioncfg *pfiber_sec_cfg)
 		goto usr_exit;
 	}
 
-	//检查通道号
+	//检查通道号,host通道号从1开始
 	for(i = 0; i < tmp; i++)
 	{
-		ch = pfiber_sec_cfg->fiber_val[i].pipe_num; 
+		ch = pfiber_sec_cfg->fiber_val[i].pipe_num - 1; 
 		if(ch < ch_offset || ch > (ch_offset + CH_NUM)){
 			ret = CMD_RET_PARA_INVLADE;
 			printf("%s() %d : ch error %d ch_offset %d\n",\
@@ -1076,8 +1109,12 @@ int32_t send_otdr_data_host(OTDR_UploadAllData_t *pResult, struct _tagAlgroCHInf
 	struct tms_hebei2_event_hdr hebei2_event_hdr;
 	struct tms_hebei2_event_val hebei2_event_val[10];
 	struct tms_hebei2_event_val *pevent_buf;
-	struct tms_context contxt;
+	struct tms_context contxt; 
+	int8_t cur_time[TIME_STR_LEN] = {0};
+	const char* pFormatTime = "%Y-%m-%d %H:%M:%S";
 
+        //获取当前时间
+        get_sys_time(cur_time, 0, pFormatTime);
 
 
 	event_count = 0;
@@ -1096,8 +1133,11 @@ int32_t send_otdr_data_host(OTDR_UploadAllData_t *pResult, struct _tagAlgroCHInf
 	pevent_buf = NULL;
 	get_test_para_from_algro(&ret_otdrparam, pResult);
 	get_test_result_from_algro(&test_result, pResult);
+	memcpy(test_result.time, cur_time, TIME_STR_LEN);
+
 	hebei2_data_hdr.count = pResult->OtdrData.DataNum;
 	hebei2_data_val = (struct tms_hebei2_data_val *)pResult->OtdrData.dB_x1000;
+
 	offset = pResult->OtdrData.DataNum;
 	NextAddr = (char *)(&pResult->OtdrData.dB_x1000[offset]);
 	AllEvent = (OTDR_UploadAllData_t*)(NextAddr - 8 - sizeof(AllEvent->MeasureParam) - sizeof(AllEvent->OtdrData));
@@ -1432,7 +1472,7 @@ int32_t find_alarm_on_fiber(int32_t ch,
 
 	float loss_sec, loss_sec_diff; 
 	int32_t loss_sec_lev;
-	int32_t ret, i, j, sec_start, sec_end;
+	int32_t ret, i, j;
 	int32_t alarm_num, cur_alarm_num;
 	char cur_time[20] ={0};
 	const char* pFormatTime = "%Y-%m-%d %H:%M:%S";
@@ -1469,8 +1509,9 @@ int32_t find_alarm_on_fiber(int32_t ch,
 	{
 		sec_coord.start = pstd_fiber_val[i].start_coor;
 		sec_coord.end = pstd_fiber_val[i].end_coor;
-		loss_sec = fabs(pResult->OtdrData.dB_x1000[sec_start]- \
-				pResult->OtdrData.dB_x1000[sec_end]);
+		loss_sec = fabs(pResult->OtdrData.dB_x1000[sec_coord.start]- \
+				pResult->OtdrData.dB_x1000[sec_coord.end]);
+		loss_sec = loss_sec /1000.0;
 		loss_sec_diff = fabs(loss_sec - pstd_fiber_val[i].fibe_atten_init);
 		//光纤段统计信息
 		pstatis->buf[i].attu = loss_sec;
@@ -1551,13 +1592,22 @@ int32_t refresh_cyc_curv_after_test(
 	struct tms_ret_otdrparam    *pret_otdr_para;
 	struct tms_test_result      *ptest_result;
 	struct tms_hebei2_event_val *pevent;
+	char cur_time[TIME_STR_LEN] = {0};
+	const char* pFormatTime = "%Y-%m-%d %H:%M:%S";
+
+        //获取当前时间
+        get_sys_time(cur_time, 0, pFormatTime);
+
+
 	pret_otdr_para = (struct tms_ret_otdrparam *) (&pCycCurv->curv.para);
+	ptest_result = (struct tms_test_result *)(&pCycCurv->curv.result);
 	event_count = 0;
 	offset = pResult->OtdrData.DataNum;
 	quick_lock(&pCycCurv->lock);
 	//获取测量参数和测量结果
 	get_test_para_from_algro(pret_otdr_para, pResult);
 	get_test_result_from_algro(ptest_result, pResult);
+	memcpy(ptest_result->time, cur_time, TIME_STR_LEN);
 	//数据点
 	pCycCurv->curv.data.num = pResult->OtdrData.DataNum;
 	memcpy(pCycCurv->curv.data.buf, pResult->OtdrData.dB_x1000, offset*sizeof(int16_t));

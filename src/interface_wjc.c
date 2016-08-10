@@ -98,9 +98,9 @@ int32_t OnFiberSectionCfg(struct tms_context *pcontext,struct tms_fibersectioncf
 
 	if(ret != CMD_RET_OK)
 		goto usr_exit;
-
-	ch = pval->fiber_val[0].pipe_num;
-	ret = save_fiber_sec_para(ch, pval);
+	//host的通道是从1开始计数
+	ch = pval->fiber_val[0].pipe_num - 1;
+	ret = save_fiber_sec_para(ch, pval,&chFiberSec[ch],&otdrDev[ch] );
 	if(ret != CMD_RET_OK)
 		ret = CMD_RET_CANT_SAVE;
 usr_exit:
