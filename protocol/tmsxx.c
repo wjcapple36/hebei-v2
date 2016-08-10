@@ -1318,21 +1318,23 @@ int32_t tms_RetStatusData(struct tms_context *pcontext,
                           int32_t ilen)
 {
 	struct tms_getstatus_data_hdr data_hdr;
-	struct tms_getstatus_data_val data_val[8], *ptdata;
+	struct tms_getstatus_data_val *ptdata , *pmem_data_val;//data_val[8],
 	int len;
 
-	if (ilen >= 8) {
-		ilen = 8;
-	}
+	pmem_data_val = (struct tms_getstatus_data_val*)malloc(sizeof(struct tms_getstatus_data_val) * hdr->count);
+	// if (ilen >= 8) {
+	// 	ilen = 8;
+	// }
 	memcpy(&data_hdr, hdr, sizeof(struct tms_getstatus_data_hdr));
-	memcpy(data_val, val, sizeof(struct tms_getstatus_data_val) * ilen);
+	memcpy(pmem_data_val, val, sizeof(struct tms_getstatus_data_val) * ilen);
+
 
 	len = sizeof(struct tms_getstatus_data_hdr) +
 	      sizeof(struct tms_getstatus_data_val) * ilen;
 
 	data_hdr.count = htonl(data_hdr.count);
 
-	ptdata = &data_val[0];
+	ptdata = &pmem_data_val[0];
 	for (int i = 0; i < ilen; i++) {
 		ptdata->pipe = htonl(ptdata->pipe);
 		ptdata->section_num = htonl(ptdata->section_num);
@@ -1347,9 +1349,11 @@ int32_t tms_RetStatusData(struct tms_context *pcontext,
 	pthread_mutex_lock(&pcontext->mutex);
 	glink_SendHead(pcontext->fd, &base_hdr);
 	glink_SendSerial(pcontext->fd, (uint8_t *)&data_hdr,   sizeof(struct tms_getstatus_data_hdr));
-	glink_SendSerial(pcontext->fd, (uint8_t *)data_val, sizeof(struct tms_getstatus_data_val) * ilen);
+	glink_SendSerial(pcontext->fd, (uint8_t *)pmem_data_val, sizeof(struct tms_getstatus_data_val) * ilen);
 	glink_SendTail(pcontext->fd);
 	pthread_mutex_unlock(&pcontext->mutex);
+	free(pmem_data_val);
+	return 0;
 }
 static int32_t tms_AnalyseStatusData(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
@@ -1675,42 +1679,50 @@ int32_t tms_RetOTDRData(
     struct tms_ret_otdrdata *val,
     unsigned long cmdid)
 {
-	struct tms_ret_otdrparam    ret_otdrparam;
-	struct tms_test_result      test_result;
-	struct tms_hebei2_data_hdr  hebei2_data_hdr;
-	struct tms_hebei2_data_val  hebei2_data_val[1024 * 32];
-	struct tms_hebei2_event_hdr hebei2_event_hdr;
-	struct tms_hebei2_event_val hebei2_event_val[128];
+	struct tms_ret_otdrparam     *pmem_ret_otdrparam;/*ret_otdrparam,*/
+	struct tms_test_result      *pmem_test_result;/*test_result,*/ 
+	struct tms_hebei2_data_hdr   *pmem_hebei2_data_hdr;/*hebei2_data_hdr,*/
+	struct tms_hebei2_data_val  *pmem_hebei2_data_val; /*hebei2_data_val[1024 * 32],//理论上应该有1024 * 32以上个点  */ 
+	struct tms_hebei2_event_hdr  *pmem_hebei2_event_hdr;/*hebei2_event_hdr,*/
+	struct tms_hebei2_event_val *pmem_hebei2_event_val; /*hebei2_event_val[128],*/
 
-	memcpy(&ret_otdrparam, val->ret_otdrparam, sizeof(struct tms_ret_otdrparam));
-	memcpy(&test_result, val->test_result, sizeof(struct tms_test_result));
-	memcpy(&hebei2_data_hdr, val->hebei2_data_hdr, sizeof(struct tms_hebei2_data_hdr));
-	if (val->hebei2_data_hdr->count >= sizeof(hebei2_data_val) / sizeof(struct tms_hebei2_data_val)) {
-		return -1;
-	}
-	memcpy(hebei2_data_val, val->hebei2_data_val, sizeof(struct tms_hebei2_data_val) * val->hebei2_data_hdr->count);
-	memcpy(&hebei2_event_hdr, val->hebei2_event_hdr, sizeof(struct tms_hebei2_event_hdr));
-	if (val->hebei2_event_hdr->count >= sizeof(hebei2_event_val) / sizeof(struct tms_hebei2_event_val)) {
-		return -1;
-	}
-	memcpy(hebei2_event_val, val->hebei2_event_val, sizeof(struct tms_hebei2_event_val) * val->hebei2_event_hdr->count);
+	pmem_ret_otdrparam	= (struct tms_ret_otdrparam*)malloc(sizeof(struct tms_ret_otdrparam));
+	pmem_test_result	= (struct tms_test_result*)malloc(sizeof(struct tms_test_result));
+	pmem_hebei2_data_hdr	= (struct tms_hebei2_data_hdr*)malloc(sizeof(struct tms_hebei2_data_hdr));
+	pmem_hebei2_data_val	= (struct tms_hebei2_data_val*)malloc(sizeof(struct tms_hebei2_data_val) * val->hebei2_data_hdr->count);
+	pmem_hebei2_event_hdr	= (struct tms_hebei2_event_hdr*)malloc(sizeof(struct tms_hebei2_event_hdr));
+	pmem_hebei2_event_val	= (struct tms_hebei2_event_val*)malloc(sizeof(struct tms_hebei2_event_val) * val->hebei2_event_hdr->count);
+
+
+	memcpy(pmem_ret_otdrparam, val->ret_otdrparam, sizeof(struct tms_ret_otdrparam));
+	memcpy(pmem_test_result, val->test_result, sizeof(struct tms_test_result));
+	memcpy(pmem_hebei2_data_hdr, val->hebei2_data_hdr, sizeof(struct tms_hebei2_data_hdr));
+	// if (val->hebei2_data_hdr->count >= sizeof(hebei2_data_val) / sizeof(struct tms_hebei2_data_val)) {
+		// return -1;
+	// }
+	memcpy(pmem_hebei2_data_val, val->hebei2_data_val, sizeof(struct tms_hebei2_data_val) * val->hebei2_data_hdr->count);
+	memcpy(pmem_hebei2_event_hdr, val->hebei2_event_hdr, sizeof(struct tms_hebei2_event_hdr));
+	// if (val->hebei2_event_hdr->count >= sizeof(hebei2_event_val) / sizeof(struct tms_hebei2_event_val)) {
+		// return -1;
+	// }
+	memcpy(pmem_hebei2_event_val, val->hebei2_event_val, sizeof(struct tms_hebei2_event_val) * val->hebei2_event_hdr->count);
 
 
 
 	tms_OTDRConv_tms_ret_otdrparam(
-	    (struct tms_ret_otdrparam *)&ret_otdrparam,
-	    (struct tms_ret_otdrparam *)&ret_otdrparam);
+	    (struct tms_ret_otdrparam *)pmem_ret_otdrparam,
+	    (struct tms_ret_otdrparam *)pmem_ret_otdrparam);
 
-	tms_OTDRConv_tms_test_result(&test_result, &test_result);
+	tms_OTDRConv_tms_test_result(pmem_test_result, pmem_test_result);
 
 
-	tms_OTDRConv_tms_hebei2_data_hdr(&hebei2_data_hdr, &hebei2_data_hdr);
+	tms_OTDRConv_tms_hebei2_data_hdr(pmem_hebei2_data_hdr, pmem_hebei2_data_hdr);
 
-	tms_OTDRConv_tms_hebei2_data_val(&hebei2_data_val[0], &hebei2_data_val[0], val->hebei2_data_hdr);
+	tms_OTDRConv_tms_hebei2_data_val(&pmem_hebei2_data_val[0], &pmem_hebei2_data_val[0], val->hebei2_data_hdr);
 
-	tms_OTDRConv_tms_hebei2_event_hdr(&hebei2_event_hdr, &hebei2_event_hdr);
+	tms_OTDRConv_tms_hebei2_event_hdr(pmem_hebei2_event_hdr, pmem_hebei2_event_hdr);
 
-	tms_OTDRConv_tms_hebei2_event_val(&hebei2_event_val[0], &hebei2_event_val[0], val->hebei2_event_hdr);
+	tms_OTDRConv_tms_hebei2_event_val(&pmem_hebei2_event_val[0], &pmem_hebei2_event_val[0], val->hebei2_event_hdr);
 
 
 	int len;
@@ -1728,13 +1740,20 @@ int32_t tms_RetOTDRData(
 
 	glink_Build(&base_hdr, cmdid, len);
 	glink_SendHead(fd, &base_hdr);
-	glink_SendSerial(fd, (uint8_t *)&ret_otdrparam, sizeof(struct tms_ret_otdrparam) );
-	glink_SendSerial(fd, (uint8_t *)&test_result, sizeof(struct tms_test_result) );
-	glink_SendSerial(fd, (uint8_t *)&hebei2_data_hdr, sizeof(struct tms_hebei2_data_hdr) );
-	glink_SendSerial(fd, (uint8_t *)hebei2_data_val, sizeof(struct tms_hebei2_data_val) * val->hebei2_data_hdr->count );
-	glink_SendSerial(fd, (uint8_t *)&hebei2_event_hdr, sizeof(struct tms_hebei2_event_hdr) );
-	glink_SendSerial(fd, (uint8_t *)hebei2_event_val, sizeof(struct tms_hebei2_event_val) * val->hebei2_event_hdr->count);
+	glink_SendSerial(fd, (uint8_t *)pmem_ret_otdrparam, sizeof(struct tms_ret_otdrparam) );
+	glink_SendSerial(fd, (uint8_t *)pmem_test_result, sizeof(struct tms_test_result) );
+	glink_SendSerial(fd, (uint8_t *)pmem_hebei2_data_hdr, sizeof(struct tms_hebei2_data_hdr) );
+	glink_SendSerial(fd, (uint8_t *)pmem_hebei2_data_val, sizeof(struct tms_hebei2_data_val) * val->hebei2_data_hdr->count );
+	glink_SendSerial(fd, (uint8_t *)pmem_hebei2_event_hdr, sizeof(struct tms_hebei2_event_hdr) );
+	glink_SendSerial(fd, (uint8_t *)pmem_hebei2_event_val, sizeof(struct tms_hebei2_event_val) * val->hebei2_event_hdr->count);
 	glink_SendTail(fd);
+
+	free(pmem_ret_otdrparam);
+	free(pmem_test_result);
+	free(pmem_hebei2_data_hdr);
+	free(pmem_hebei2_data_val);
+	free(pmem_hebei2_event_hdr);
+	free(pmem_hebei2_event_val);
 	return 0;
 }
 

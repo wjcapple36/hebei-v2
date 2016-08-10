@@ -698,7 +698,11 @@ int32_t tms_RetOTDRData(
     struct glink_addr *paddr,
     struct tms_ret_otdrdata *val,
     unsigned long cmdid);
-
+int32_t tms_RetStatusData(struct tms_context *pcontext,
+                          struct glink_addr *paddr,
+                          struct tms_getstatus_data_hdr *hdr,
+                          struct tms_getstatus_data_val *val,
+                          int32_t ilen);
 
 void tms_Print_tms_fibersection_hdr(struct tms_fibersection_hdr *pval);
 void tms_Print_tms_fibersection_val(struct tms_fibersection_val *pval);
