@@ -718,6 +718,10 @@ int32_t tms_OTDRBasicInfo(
     struct glink_addr *paddr,
     struct tms_otdrbaseinfo *pval);
 void tms_RemoveAnyMangerContext(int fd);
+int32_t tms_CurAlarm(
+    int fd,
+    struct glink_addr *paddr,
+    struct tms_curalarm *val);
 #ifdef __cplusplus
 }
 #endif
