@@ -610,7 +610,7 @@ static void tms_OTDRConv_tms_ret_otdrparam(
 #ifdef HEBEI2_DBG
 void tms_Print_tms_fibersection_hdr(struct tms_fibersection_hdr *pval)
 {
-	hb2_dbg("fiber_id %s  count %d\n", pval->fiber_id, pval->count);
+	hb2_dbg("fiber_id %s  count %d\n", pval->id, pval->count);
 }
 void tms_Print_tms_fibersection_val(struct tms_fibersection_val *pval)
 {
@@ -1400,19 +1400,19 @@ int32_t tms_OTDRBasicInfo(
     struct tms_otdrbaseinfo *pval)
 {
 	struct tms_otdr_crc_hdr     otdr_crc_hdr,      *potdr_crc_hdr;
-	struct tms_otdr_crc_val     otdr_crc_val[8],   *potdr_crc_val;
+	struct tms_otdr_crc_val     otdr_crc_val[32],   *potdr_crc_val;
 	struct tms_otdr_ch_status   otdr_ch_status,    *potdr_ch_status;
 	struct tms_otdr_param_hdr   otdr_param_hdr,    *potdr_param_hdr;
-	struct tms_otdr_param_val   otdr_param_val[8], *potdr_param_val;
+	struct tms_otdr_param_val   otdr_param_val[32], *potdr_param_val;
 	struct tms_fibersection_hdr fiber_hdr,         *pfiber_hdr;
-	struct tms_fibersection_val fiber_val[8],      *pfiber_val;
+	struct tms_fibersection_val fiber_val[32],      *pfiber_val;
 
 	potdr_crc_hdr = pval->otdr_crc_hdr;
 	potdr_param_hdr = pval->otdr_param_hdr;
 	pfiber_hdr = pval->fiber_hdr;
-	if (potdr_crc_hdr->count > 8 ||
-	    potdr_param_hdr->count > 8 ||
-	    pfiber_hdr->count > 8) {
+	if (potdr_crc_hdr->count > 32 ||
+	    potdr_param_hdr->count > 32 ||
+	    pfiber_hdr->count > 32) {
 
 		perror("param err\n");
 		return -1;
