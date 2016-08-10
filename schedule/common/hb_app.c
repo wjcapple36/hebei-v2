@@ -48,6 +48,8 @@ int32_t initialize_sys_para()
 	init_log_dir();
 	initialize_fiber_sec_cfg(CH_NUM);
 	initialize_otdr_dev(otdrDev,CH_NUM);
+	read_ch_fpga_info(&chFpgaInfo, CH_NUM);
+	read_node_name_address(&devMisc);
 	memset(&usrOtdrTest, 0, sizeof(struct _tagUsrOtdrTest));
 	//dev指针，设备地址，mod,bits,delay,speed
 	initial_spi_dev(&spiDev,"/dev/spidev1.0",0,8,0,20000000);
@@ -741,7 +743,7 @@ int32_t read_ch_fpga_info(const struct _tagCHInfo *pch_fpga_info,int32_t ch_num)
 		goto usr_exit;
 
 	}
-	//保存光纤段可变信息
+	//保存fpga信息
 	counts = fread(pch_fpga_info, ch_num*sizeof(struct _tagCHInfo),1,fp);
 	if(counts != 1){
 		ret = errno;
@@ -804,7 +806,7 @@ usr_exit:
  * @returns   0 成功，其他失败
  */
 /* ----------------------------------------------------------------------------*/
-int32_t reade_node_name_address(struct _tagDevMisc *pdev_misc)
+int32_t read_node_name_address(struct _tagDevMisc *pdev_misc)
 {
 
 	int32_t ret, counts, size;
