@@ -16,6 +16,66 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 {
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	trace_dbg("cmdid %x\n", pcontext->pgb->cmdid );
+
+	struct tms_otdrbaseinfo     val;
+	struct tms_otdr_crc_hdr     otdr_crc_hdr;
+	struct tms_otdr_crc_val     otdr_crc_val[8];
+	struct tms_otdr_ch_status   otdr_ch_status;
+	struct tms_otdr_param_hdr   otdr_param_hdr;
+	struct tms_otdr_param_val   otdr_param_val[8];
+	struct tms_fibersection_hdr fiber_hdr;
+	struct tms_fibersection_val fiber_val[8];
+
+	val.otdr_crc_hdr = &otdr_crc_hdr;
+	val.otdr_crc_val = &otdr_crc_val[0];
+	val.otdr_ch_status = &otdr_ch_status;
+	val.otdr_param_hdr = &otdr_param_hdr;
+	val.otdr_param_val = &otdr_param_val[0];
+	val.fiber_hdr = &fiber_hdr;
+	val.fiber_val = &fiber_val[0];
+
+
+	otdr_crc_hdr.count = 2;
+	strcpy(otdr_crc_hdr.id, "OTDRInfo");
+	strcpy(otdr_crc_hdr.name, "HelloKuGou");
+	strcpy(otdr_crc_hdr.addr, "192.168.1.251");
+	strcpy(otdr_crc_hdr.hw_ver, "1.2.3.4");
+	strcpy(otdr_crc_hdr.sf_ver, "4.3.2.1");
+
+	for (int i = 0; i < otdr_crc_hdr.count; i++) {
+		otdr_crc_val[i].pipe = i;
+		otdr_crc_val[i].wl = 1550;
+		otdr_crc_val[i].dr = 40;
+		strcpy(otdr_crc_val[i].wdm, "what?");
+	}
+
+	strcpy(otdr_ch_status.id, "PipeState");
+	otdr_ch_status.ch_status = 0x3;
+
+
+	otdr_param_hdr.count = 2;
+	strcpy(otdr_param_hdr.id, "OTDRTestParaConfig");
+
+
+	fiber_hdr.count = 2;
+	for (int i = 0; i < fiber_hdr.count; i++) {
+		fiber_val[i].pipe_num = 0;
+		fiber_val[i].fiber_num = 0;
+		strcpy(fiber_val[i].fiber_route,"route");
+		strcpy(fiber_val[i].fiber_name,"name");
+		fiber_val[i].start_coor = 0;
+		strcpy(fiber_val[i].start_inf,"start");
+		fiber_val[i].end_coor = 0;
+		strcpy(fiber_val[i].end_inf,"end");
+
+		
+		fiber_val[i].fibe_atten_init = 1.1;
+		fiber_val[i].level1 = 1.1;
+		fiber_val[i].level2 = 1.1;
+		fiber_val[i].listen_level = 1.1;
+	}
+
+	tms_OTDRBasicInfo(pcontext, NULL, &val);
 	return 0;
 }
 
@@ -176,7 +236,7 @@ int32_t OnGetOTDRData(struct tms_context *pcontext, struct tms_get_otdrdata *pva
 	test_result.atten = 2;
 	strcpy(test_result.time, "2016-03-02 22:11:31");
 
-	strcpy((char*)hebei2_data_hdr.dpid, "OTDRData");
+	strcpy((char *)hebei2_data_hdr.dpid, "OTDRData");
 	hebei2_data_hdr.count = 16000;
 	hebei2_data_hdr.count = 15000;
 
@@ -193,7 +253,7 @@ int32_t OnGetOTDRData(struct tms_context *pcontext, struct tms_get_otdrdata *pva
 		tmp_data_val->data = 40000 + i;
 		tmp_data_val++;
 	}
-	strcpy((char*)hebei2_event_hdr.eventid, "KeyEvents");
+	strcpy((char *)hebei2_event_hdr.eventid, "KeyEvents");
 	hebei2_event_hdr.count = 2;
 
 	hebei2_event_val[0].distance   = 10;
@@ -215,7 +275,7 @@ int32_t OnGetOTDRData(struct tms_context *pcontext, struct tms_get_otdrdata *pva
 	hb2_dbg("无法测试周期测量曲线，需要苏宁网管，发送周期测量，返回ID_RETOTDRDATA_19\n");
 #endif
 	if (pcontext->pgb->cmdid == ID_GETOTDRDATA_15) {
-		tms_RetOTDRData(pcontext->fd, NULL, &otdrdata, ID_RETOTDRDATA_17);	
+		tms_RetOTDRData(pcontext->fd, NULL, &otdrdata, ID_RETOTDRDATA_17);
 	}
 	else if (pcontext->pgb->cmdid == ID_GETOTDRDATA_14) {
 		tms_RetOTDRData(pcontext->fd, NULL, &otdrdata, ID_RETOTDRDATA_19);
@@ -223,7 +283,7 @@ int32_t OnGetOTDRData(struct tms_context *pcontext, struct tms_get_otdrdata *pva
 	else {
 		trace_dbg("unknow cmd\n");
 	}
-	
+
 	return 0;
 }
 int32_t OnGetStandardCurv(struct tms_context *pcontext, struct tms_getstandardcurv *pval)
@@ -264,7 +324,7 @@ int32_t OnGetStandardCurv(struct tms_context *pcontext, struct tms_getstandardcu
 	test_result.atten = 2;
 	strcpy(test_result.time, "2016-03-02 22:11:31");
 
-	strcpy((char*)hebei2_data_hdr.dpid, "OTDRData");
+	strcpy((char *)hebei2_data_hdr.dpid, "OTDRData");
 	hebei2_data_hdr.count = 16000;
 	hebei2_data_hdr.count = 15000;
 
@@ -281,7 +341,7 @@ int32_t OnGetStandardCurv(struct tms_context *pcontext, struct tms_getstandardcu
 		tmp_data_val->data = 40000 + i;
 		tmp_data_val++;
 	}
-	strcpy((char*)hebei2_event_hdr.eventid, "KeyEvents");
+	strcpy((char *)hebei2_event_hdr.eventid, "KeyEvents");
 	hebei2_event_hdr.count = 2;
 
 	hebei2_event_val[0].distance   = 10;
@@ -298,7 +358,7 @@ int32_t OnGetStandardCurv(struct tms_context *pcontext, struct tms_getstandardcu
 	hebei2_event_val[1].reflect    = 4;
 	hebei2_event_val[1].link_loss  = 4;
 
-	tms_RetOTDRData(pcontext->fd, NULL, &otdrdata, ID_RETOTDRDATA_18);	
+	tms_RetOTDRData(pcontext->fd, NULL, &otdrdata, ID_RETOTDRDATA_18);
 
 	return 0;
 }

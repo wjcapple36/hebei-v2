@@ -711,6 +711,12 @@ int32_t tms_Transmit2Dev(struct tms_context *pcontext, int8_t *pdata, int32_t le
 int32_t tms_Transmit2Manager(struct tms_context *pcontext, int8_t *pdata, int32_t len);
 int32_t tms_SelectMangerContext(struct tms_context *context);
 int32_t tms_SelectNodeMangerContext(struct tms_context *context);
+
+
+int32_t tms_OTDRBasicInfo(
+    struct tms_context *pcontext,
+    struct glink_addr *paddr,
+    struct tms_otdrbaseinfo *pval);
 void tms_RemoveAnyMangerContext(int fd);
 #ifdef __cplusplus
 }

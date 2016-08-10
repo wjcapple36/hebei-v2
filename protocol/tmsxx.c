@@ -1407,6 +1407,9 @@ int32_t tms_OTDRBasicInfo(
 	struct tms_fibersection_hdr fiber_hdr,         *pfiber_hdr;
 	struct tms_fibersection_val fiber_val[8],      *pfiber_val;
 
+	potdr_crc_hdr = pval->otdr_crc_hdr;
+	potdr_param_hdr = pval->otdr_param_hdr;
+	pfiber_hdr = pval->fiber_hdr;
 	if (potdr_crc_hdr->count > 8 ||
 	    potdr_param_hdr->count > 8 ||
 	    pfiber_hdr->count > 8) {
@@ -1423,14 +1426,20 @@ int32_t tms_OTDRBasicInfo(
 	pfiber_hdr      = pval->fiber_hdr;
 	pfiber_val      = pval->fiber_val;
 
+	printf("%d\n", __LINE__);
 	memcpy(&otdr_crc_hdr,      potdr_crc_hdr,   sizeof(struct tms_otdr_crc_hdr));
+	printf("%d\n", __LINE__);
 	memcpy(&otdr_crc_val[0],   potdr_crc_val,   sizeof(struct tms_otdr_crc_val)* potdr_crc_hdr->count);
+	printf("%d\n", __LINE__);
 	memcpy(&otdr_ch_status,    potdr_ch_status, sizeof(struct tms_otdr_ch_status));
+	printf("%d\n", __LINE__);
 	memcpy(&otdr_param_hdr,    potdr_param_hdr, sizeof(struct tms_otdr_param_hdr));
 	memcpy(&otdr_param_val[0], potdr_param_val, sizeof(struct tms_otdr_param_val) * potdr_param_hdr->count);
+	printf("%d\n", __LINE__);
 	memcpy(&fiber_hdr,         pfiber_hdr,      sizeof(struct tms_fibersection_hdr));
+	printf("%d\n", __LINE__);
 	memcpy(&fiber_val[0],      pfiber_val,      sizeof(struct tms_fibersection_val) * pfiber_hdr->count);
-
+	printf("%d\n", __LINE__);
 
 	// 转字节序
 	// todo CRC
@@ -1439,15 +1448,17 @@ int32_t tms_OTDRBasicInfo(
 	tms_OTDRConv_tms_otdr_crc_val(&otdr_crc_val[0], &otdr_crc_val[0], potdr_crc_hdr->count);
 	otdr_ch_status.ch_status = htonl(otdr_ch_status.ch_status);
 	otdr_param_hdr.count = htonl(otdr_param_hdr.count);
+	printf("%d\n", __LINE__);
 	for (int i = 0; i < potdr_param_hdr->count; i++) {
 		tms_OTDRConv_tms_get_otdrdata(
 		    (struct tms_get_otdrdata *)&otdr_param_val[i],
 		    (struct tms_get_otdrdata *)&otdr_param_val[i]);
 	}
+	printf("%d\n", __LINE__);
 	tms_OTDRConv_tms_fibersection_hdr(&fiber_hdr, &fiber_hdr);
-	tms_OTDRConv_tms_fibersection_val(&fiber_val[0], &fiber_val[0], &fiber_hdr);
+	tms_OTDRConv_tms_fibersection_val(&fiber_val[0], &fiber_val[0], pval->fiber_hdr);
 
-
+	printf("%d\n", __LINE__);
 	int len;
 	len = sizeof(struct tms_otdr_crc_hdr) +
 	      sizeof(struct tms_otdr_crc_val) * potdr_crc_hdr->count +
