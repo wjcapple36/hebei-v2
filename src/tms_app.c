@@ -16,7 +16,8 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 {
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	trace_dbg("cmdid %x\n", pcontext->pgb->cmdid );
-#define MAX_PIPE (32)
+// 当前节点管理器只支持最大16通道，多了报告信息存在乱码
+#define MAX_PIPE (16)
 	char strout[64];
 
 	struct tms_otdrbaseinfo     val;
@@ -33,6 +34,13 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	// 只需要修改active_pipe里的通道就可构造相应的数据包
 	int active_pipe[] = {2,3, 7,8};
 
+	trace_dbg("节点管理器存在缺陷，具体描述查看源码\n");
+	// 节点管理器存在缺陷
+	// int active_pipe[] = {1,2,3,4,8,9};// 能支持
+	// int active_pipe[] = {1,2,3,4,8,9,10};// 报告乱码
+	
+
+
 	val.otdr_crc_hdr = &otdr_crc_hdr;
 	val.otdr_crc_val = &otdr_crc_val[0];
 	val.otdr_ch_status = &otdr_ch_status;
@@ -42,7 +50,7 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	val.fiber_val = &fiber_val[0];
 
 
-	otdr_crc_hdr.count = 8;//sizeof(active_pipe) / sizeof(active_pipe[0]);
+	otdr_crc_hdr.count = MAX_PIPE;//sizeof(active_pipe) / sizeof(active_pipe[0]);
 	strcpy(otdr_crc_hdr.id, "OTDRInfo");
 	strcpy(otdr_crc_hdr.name, "HelloKuGou");
 	strcpy(otdr_crc_hdr.addr, "192.168.1.251");
