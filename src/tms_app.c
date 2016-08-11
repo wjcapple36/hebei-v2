@@ -17,7 +17,7 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	trace_dbg("cmdid %x\n", pcontext->pgb->cmdid );
 // 当前节点管理器只支持最大16通道，多了报告信息存在乱码
-#define MAX_PIPE (16)
+#define MAX_PIPE (8)
 	char strout[64];
 
 	struct tms_otdrbaseinfo     val;
@@ -53,7 +53,14 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	otdr_crc_hdr.count = MAX_PIPE;//sizeof(active_pipe) / sizeof(active_pipe[0]);
 	strcpy(otdr_crc_hdr.id, "OTDRInfo");
 	strcpy(otdr_crc_hdr.name, "HelloKuGou");
-	strcpy(otdr_crc_hdr.addr, "192.168.1.251");
+	
+	struct sockaddr addr;
+	socklen_t addrlen = sizeof(struct sockaddr);
+	getsockname(pcontext->fd, &addr, &addrlen);
+	struct sockaddr_in *addr_in;
+	addr_in = (struct sockaddr_in *)&addr;
+	snprintf(strout, 64,"%s",inet_ntoa(addr_in->sin_addr));
+	strcpy(otdr_crc_hdr.addr, strout);
 	strcpy(otdr_crc_hdr.hw_ver, "1.2.3.4");
 	strcpy(otdr_crc_hdr.sf_ver, "4.3.2.1");
 
@@ -77,7 +84,7 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	strcpy(otdr_param_hdr.id, "OTDRTestParaConfig");
 
 	for (int i = 0; i < sizeof(active_pipe) / sizeof(active_pipe[0]); i++) {
-		otdr_param_val[i].pipe = active_pipe[i] + 1;
+		otdr_param_val[i].pipe = active_pipe[i];
 		otdr_param_val[i].range = 10000;
 		otdr_param_val[i].wl = 1550;
 		otdr_param_val[i].pw = 40;
@@ -91,8 +98,8 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	fiber_hdr.count = sizeof(active_pipe) / sizeof(active_pipe[0]);
 	strcpy(fiber_hdr.id, "FiberSectionConfig");
 	for (int i = 0; i < fiber_hdr.count; i++) {
-		fiber_val[i].pipe_num = active_pipe[i] + 1;
-		fiber_val[i].fiber_num = active_pipe[i] + 1;
+		fiber_val[i].pipe_num = active_pipe[i];
+		fiber_val[i].fiber_num = active_pipe[i];
 		snprintf(strout, 64, "route %d", active_pipe[i] + 1);
 		strcpy(fiber_val[i].fiber_route, strout);
 		snprintf(strout, 64, "name %d", active_pipe[i] + 1);
