@@ -13,6 +13,7 @@
 #define CONFIG_CMD_FPGA                                         1
 #define CONFIG_SPI_1FRAME_1CS                                   1
 #define CONFIG_CMD_SERVER                                       1
+#define CONFIG_HEBEI2_DBG                                       1
 #define CONFIG_PROC_HEBEI2                                      1
 #define CONFIG_APP_HEBEI2                                       1
 #define CONFIG_RAMMAC                                           1
