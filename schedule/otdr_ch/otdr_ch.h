@@ -292,8 +292,8 @@ struct _tagFpgaPara
 //通道信息
 struct _tagCHInfo
 {
-	int32_t initial; //是否初始化标志 0，未初始化，1初始化
-	struct _tagFpgaPara para;
+	int32_t num; //是否初始化标志 0，未初始化，1初始化
+	struct _tagFpgaPara para[CH_NUM];
 };	
 //节点名称和地址
 struct _tagDevNameAddr
@@ -328,6 +328,14 @@ struct _tagOtdrAlgroPara
 	OTDR_ChannelData_t *pOtdrData;
 
 };
+struct _tagVersion
+{
+	char hw[12];
+	char soft[12];
+};
+
+
+
 
 //#pragma pack () /*恢复默认的对其方式*/
 #ifdef __cplusplus

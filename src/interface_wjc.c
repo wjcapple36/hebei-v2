@@ -130,7 +130,6 @@ int32_t OnConfigPipeState(struct tms_context *pcontext, struct tms_cfgpip_status
 	if(ret != CMD_RET_OK){
 		ret = CMD_RET_CANT_SAVE;
 		printf("%s %d can't save para, ret %d \n", __FUNCTION__, __LINE__,ret);
-		ret = CMD_RET_OK;
 	}
 	ack.errcode = ret;
 	tms_AckEx(pcontext->fd, NULL, &ack);
@@ -187,6 +186,7 @@ int32_t OnCheckoutResult(struct tms_context *pcontext)
 int32_t OnOTDRBasicInfo(struct tms_context *pcontext)
 {
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	ret_host_basic_info(pcontext,NULL);
 	return 0;
 }
 int32_t OnConfigNodeTime(struct tms_context *pcontext)
@@ -258,7 +258,7 @@ int32_t OnGetStandardCurv(struct tms_context *pcontext, struct tms_getstandardcu
 }
 int32_t OnSetOTDRFPGAInfo(struct tms_context *pcontext, struct tms_setotdrfpgainfo *pval)
 {
-	int32_t ret, ch;
+	int32_t ret, ch,i, is_same;
 	struct tms_ack ack;
 	ack.cmdid = pcontext->pgb->cmdid;
 
@@ -268,13 +268,28 @@ int32_t OnSetOTDRFPGAInfo(struct tms_context *pcontext, struct tms_setotdrfpgain
 	        pval->wl,
 	        pval->dr,
 	        pval->wdm);
-	if(pval->pipe < ch_offset || pval->pipe > (ch_offset + CH_NUM)){
+
+	ch = pval->pipe - 1;
+	if(ch < ch_offset || ch > (ch_offset + CH_NUM)){
 		ret = CMD_RET_PARA_INVLADE;
 		goto usr_exit;
 	}
-	ch = pval->pipe;
-	memcpy(&chFpgaInfo[ch].para, &pval->pipe, sizeof(struct _tagFpgaPara));
-	chFpgaInfo[ch].initial = 1;
+	//不分序号排序，首先如果在已经存在的段内找到相同的，那么替代，数目不变，否则最后面追加
+	is_same = 0;
+	for(i = 0; i < chFpgaInfo.num && i < CH_NUM; i++)
+	{
+		if(chFpgaInfo.para[i].ch == pval->pipe && chFpgaInfo.para[i].lamda)
+		{
+			is_same = 1;
+			memcpy(&chFpgaInfo.para[i], &pval->pipe, sizeof(struct _tagFpgaPara));
+		}
+	}
+	i = chFpgaInfo.num;
+	if(!is_same && i >= 0 && i < CH_NUM )
+	{
+		memcpy(&chFpgaInfo.para[i], &pval->pipe, sizeof(struct _tagFpgaPara));
+		chFpgaInfo.num ++;
+	}
 	ret = save_ch_fpga_info(&chFpgaInfo, CH_NUM);
 	if(ret != OP_OK)
 		ret = CMD_RET_CANT_SAVE;

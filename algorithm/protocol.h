@@ -138,7 +138,7 @@ typedef struct
 }OTDR_IP_t;
 
 // OTDR上传全部测试数据
-#define	MAX_EVENT_NUM		500
+#define	MAX_EVENT_NUM		100
 #define RSVD_FLOAT          8192.0      // 浮点数保留值，表明该值无法确定或无需确定
 typedef struct
 {

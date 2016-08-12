@@ -43,6 +43,7 @@ struct _tagEventAlarmData
 	int32_t index;
 	int32_t pos;
 	int32_t lev;
+	int32_t sec;
 	float	diff;
 };
 struct _tagEventAlarm
@@ -143,11 +144,22 @@ int32_t refresh_cyc_curv_after_test(
 		int32_t ch,
 		OTDR_UploadAllData_t *pResult, 
 		struct _tagCycCurv *pCycCurv);
-
-
-
-
-
+//返回节点基本信息
+int32_t ret_host_basic_info(
+		struct tms_context *pcontext,
+		struct glink_addr *paddr);
+//返回告警给主机
+int32_t ret_cur_alarm2host(
+		int32_t ch, 
+		int32_t count,
+	       	OTDR_UploadAllData_t *pResult,
+		struct _tagAlarm alarm_buf[]
+		);
+//将曲线从算法格式转换到协议格式
+int32_t get_host_curv_from_algro(
+	       	OTDR_UploadAllData_t *pResult,
+		struct tms_ret_otdrdata *hebei2_otdrdata
+		);
 
 
 

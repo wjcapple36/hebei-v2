@@ -58,9 +58,11 @@ extern struct _tagThreadInfo tsk_otdr_info;
 //otdr线程锁
 extern pthread_mutex_t mutex_otdr;
 //fpga信息
-extern struct _tagCHInfo chFpgaInfo[CH_NUM];
+extern struct _tagCHInfo chFpgaInfo;
 //算法线程计算时的通道信息
 extern struct _tagAlgroCHInfo algroCHInfo;
+//硬件软件版本号
+struct _tagVersion DevVersion;
 
 #ifdef __cplusplus
 }
