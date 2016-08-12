@@ -1588,7 +1588,8 @@ int32_t find_alarm_on_fiber(int32_t ch,
 		//一个通道只有一个告警
 		memset(palarm->buf, 0, sizeof(struct _tagAlarm)*palarm->sec_num);
 		palarm->buf[i].ch = ch + ch_offset;
-		//palarm->buf[i].lev = fiber_
+		palarm->buf[i].lev = fiber_alarm.first.lev;
+		//palarm->buf[i].sec = fiber_
 
 	}
 	ret_cur_alarm2host(ch, 1, pResult, &fiber_alarm.first);
