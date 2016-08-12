@@ -439,7 +439,21 @@ struct tms_curalarm {
 
 // 0x80000016 ~ 0x80000019
 struct tms_ret_otdrparam {
-	// uint32_t pipe;
+	uint32_t pipe;
+	uint32_t range;
+	uint32_t wl;
+	uint32_t pw;
+	uint32_t time;
+	float	gi;
+	float	end_threshold;
+	float	none_reflect_threshold;
+};
+
+struct tms_ret_otdrparam_p1 {
+	uint32_t pipe;
+};
+
+struct tms_ret_otdrparam_p2 {
 	uint32_t range;
 	uint32_t wl;
 	uint32_t pw;
