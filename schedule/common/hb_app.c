@@ -454,9 +454,9 @@ int32_t read_fiber_sec_para(int ch, struct _tagCHFiberSec *pch_fiber_sec)
 	ret = OP_OK;
 	fclose(fp);
 	fp = NULL;
-	pAlarm->ch = ch + 1;
+	pAlarm->ch = ch + ch_offset;
 	pAlarm->sec_num = secHead.sec_num;
-	pAlarm->alarm_num = 0;
+	pAlarm->chang = 0;
 	pStatis->sec_num = secHead.sec_num;
 	pStatis->counts = 0;
 	pStatis->state = 0;
@@ -478,7 +478,7 @@ usr_exit:
 /* --------------------------------------------------------------------------*/
 /**
  * @synopsis  alloca_fiber_sec_buf 分配光纤段缓冲区,如果缓冲区已经存在，并且请求的
- *		小于已经存在的缓冲区，则不分配直接使用原来的
+ *		小于已经存在的缓冲区，则不分配直接使用原来的,分配之后清空告警
  * @param secHead	 数据点数目，光纤段数目，事件点数目
  * @param pCHFiberSec	
  *
@@ -513,17 +513,17 @@ int32_t alloc_fiber_sec_buf(struct _tagFiberSecHead secHead, struct _tagCHFiberS
 	}
 	//分配告警存储空间
 	if(pAlarm->buf == NULL)
-		pAlarm->buf = malloc(sizeof(struct _tagSecFiberAlarm)*count);
+		pAlarm->buf = malloc(sizeof(struct _tagAlarm)*count);
 	else if(count > pFiberSecCfg->fiber_hdr.count){
 		free(pAlarm->buf);
-		pAlarm->buf = malloc(sizeof(struct _tagSecFiberAlarm)*count);
+		pAlarm->buf = malloc(sizeof(struct _tagAlarm)*count);
 	}
 	//分配统计数据存储空间
 	if(pStatis->buf == NULL)
-		pStatis->buf = malloc(sizeof(struct _tagSecFiberAlarm)*count);
+		pStatis->buf = malloc(sizeof( struct _tagSecStatisData)*count);
 	else if(count > pFiberSecCfg->fiber_hdr.count){
 		free(pStatis->buf);
-		pStatis->buf = malloc(sizeof(struct _tagSecFiberAlarm)*count);
+		pStatis->buf = malloc(sizeof(struct _tagSecStatisData)*count);
 	}
 	//分配采样点数存储空间
 	count = secHead.data_num;
@@ -557,6 +557,10 @@ int32_t alloc_fiber_sec_buf(struct _tagFiberSecHead secHead, struct _tagCHFiberS
 	else{
 		pFiberSecCfg->is_initialize = 0;
 		pFiberSecCfg->error_num = 0;
+		count = secHead.sec_num;
+		memset(pAlarm->buf, 0,sizeof(struct _tagAlarm)*count);
+		memset(pStatis->buf, 0,sizeof(struct _tagSecStatisData)*count);
+
 	}
 
 	return ret;
@@ -1483,7 +1487,7 @@ int32_t find_alarm_on_fiber(int32_t ch,
 	char *NextAddr;
 
 	float loss_sec, loss_sec_diff; 
-	int32_t loss_sec_lev;
+	int32_t loss_sec_lev, distance_space;
 	int32_t ret, i, j;
 	int32_t alarm_num, cur_alarm_num;
 	char cur_time[20] ={0};
@@ -1518,6 +1522,8 @@ int32_t find_alarm_on_fiber(int32_t ch,
 	pstatis->sec_num = pstd_fiber_hdr->count;
 	pstatis->counts++;
 	memset(&fiber_alarm, 0, sizeof(struct _tagEventAlarm));
+	//首先设定本段光纤告警不发生变化
+	palarm->chang = 0;
 	for(i = 0; i < pstd_fiber_hdr->count;i++)
 	{
 		sec_coord.start = pstd_fiber_val[i].start_coor;
@@ -1543,64 +1549,39 @@ int32_t find_alarm_on_fiber(int32_t ch,
 				&event_alarm
 				);
 		event_alarm.first.sec = i;
-		event_alarm.highest.sec = i;
-		/*
-		 * 如果是第一次发现告警，那么全部拷贝，其他的情况下只拷贝最严重的告警
-		 * 保存了我们需要的最严重的告警和最先发现的告警
-		*/
-		if(!alarm_num && cur_alarm_num)
-			memcpy(&fiber_alarm, &event_alarm, sizeof(struct _tagEventAlarm));
-		else if(cur_alarm_num && event_alarm.highest.lev < fiber_alarm.highest.lev)
-			memcpy(&fiber_alarm.highest, &event_alarm.highest,\
-				       	sizeof(struct _tagEventAlarmData));
-		else if(!cur_alarm_num && alarm_num && loss_sec_lev < fiber_alarm.highest.lev)
+		//通过事件没有找到告警，但通过光纤段衰减值找到了告警
+		event_alarm.first.pos /= pOtdrState->Points_1m; 
+		if(!cur_alarm_num && loss_sec_lev > FIBER_ALARM_LEV0)
 		{
-			//通过事件找不到告警比较loss_sec_lev与当前最严重的告警
-			cur_alarm_num = 1;
-			fiber_alarm.highest.diff = loss_sec;
-			fiber_alarm.highest.index = -1;
-			fiber_alarm.highest.lev = loss_sec_lev;
-			fiber_alarm.highest.pos = sec_coord.start;
-			fiber_alarm.highest.sec = i;
+			event_alarm.first.diff = loss_sec;
+			event_alarm.first.index = i;
+			event_alarm.first.pos = sec_coord.start /  pOtdrState->Points_1m;
+			event_alarm.first.lev = loss_sec_lev;
+
 		}
-		else if(!cur_alarm_num && !alarm_num && loss_sec_lev < FIBER_ALARM_LEV0)
+		//第一段，pos都是0
+		if(!i)
+			event_alarm.first.pos = 0;
+		distance_space = abs(event_alarm.first.pos - palarm->buf[i].pos[0]);
+		//级别不相等或者距离相差超过300米判断为告警发生变化
+		if(event_alarm.first.lev != palarm->buf[i].pos || distance_space > 300)
 		{
-			//事件告警为0，总的告警数目为0，且loss_secc_lev有告警
-			cur_alarm_num = 1;
-			fiber_alarm.highest.diff = loss_sec;
-			fiber_alarm.highest.index = -1;
-			fiber_alarm.highest.lev = loss_sec_lev;
-			fiber_alarm.highest.pos = sec_coord.start;
-			fiber_alarm.highest.sec = i;
-			memcpy(&fiber_alarm.first, &fiber_alarm.highest,\
-				       	sizeof(struct _tagEventAlarmData));
+			palarm->chang = 1;
+			palarm->buf[i].ch = ch + ch_offset;
+			palarm->buf[i].lev = event_alarm.first.lev;
+			palarm->buf[i].pos[0] = event_alarm.first.pos;
+			palarm->buf[i].reserv = 1;
+			palarm->buf[i].sec = i;
+			palarm->buf[i].type = 1;
 		}
-		alarm_num += cur_alarm_num;
+
 
 	}
-
 	ret = OP_OK;
-	//要保证一个通道只有一个告警
-	i = fiber_alarm.first.sec;
-	if(fiber_alarm.first.lev != palarm->buf[i].lev ||\
-		       	fiber_alarm.first.pos != palarm->buf[i].pos[0] )
-	{
-		//一个通道只有一个告警
-		memset(palarm->buf, 0, sizeof(struct _tagAlarm)*palarm->sec_num);
-		palarm->buf[i].ch = ch + ch_offset;
-		palarm->buf[i].lev = fiber_alarm.first.lev;
-		//palarm->buf[i].sec = fiber_
-
-	}
 	ret_cur_alarm2host(ch, 1, pResult, &fiber_alarm.first);
 
 usr_exit:
 	quick_unlock(&pFibersec->lock);
-
-	int32_t tms_CurAlarm(
-    int fd,
-    struct glink_addr *paddr,
-    struct tms_curalarm *val);
 
 	return ret;
 }

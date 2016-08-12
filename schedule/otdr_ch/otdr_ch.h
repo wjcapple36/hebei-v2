@@ -207,7 +207,7 @@ struct _tagAlarm
 struct _tagSecFiberAlarm
 {
 	int32_t ch;
-	int32_t alarm_num;
+	int32_t chang;
 	int32_t sec_num;
 	struct _tagAlarm *buf;
 };
