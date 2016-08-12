@@ -489,14 +489,16 @@ static void tms_OTDRConv_tms_hebei2_data_hdr(
 static void tms_OTDRConv_tms_hebei2_data_val(
     struct tms_hebei2_data_val *pout,
     struct tms_hebei2_data_val *pin,
-    struct tms_hebei2_data_hdr *pdata_hdr)
+    uint32_t count)
+// struct tms_hebei2_data_hdr *pdata_hdr)
 {
 	register uint16_t *p16s, *p16d;
 	register int loop;
 
 	// Part B.2
 	// loop = pdata_hdr->count >> 1;
-	loop = pdata_hdr->count ;
+	// loop = pdata_hdr->count ;
+	loop = count ;
 	p16d = (uint16_t *)pout;
 	p16s = (uint16_t *)pin;
 	for (register int i = 0; i < loop; i++) {
@@ -521,14 +523,15 @@ static void tms_OTDRConv_tms_hebei2_event_hdr(
 static void tms_OTDRConv_tms_hebei2_event_val(
     struct tms_hebei2_event_val *pout,
     struct tms_hebei2_event_val *pin,
-    struct tms_hebei2_event_hdr *pevent_hdr)
+    uint32_t count)
+// struct tms_hebei2_event_hdr *pevent_hdr)
 {
 	register int32_t *p32s, *p32d;
 	register int loop;
 
 
 
-	loop = pevent_hdr->count;
+	loop = count;//pevent_hdr->count;
 	loop = loop * sizeof (struct tms_hebei2_event_val) >> 2;	// 计算有多少个4Byte数据
 	// printf("loop %d\n", loop);
 	p32d = (int32_t *)pout;
@@ -586,6 +589,8 @@ static void tms_OTDRConv_tms_alarmlist_val(
 
 		memcpy(pout->time, pin->time, 20);
 		memcpy(pout->reserved0, pin->reserved0, 20);
+		pin++;
+		pout++;
 	}
 }
 
@@ -1231,10 +1236,10 @@ static int32_t tms_AnalyseFiberSectionCfg(struct tms_context *pcontext, int8_t *
 
 	tms_OTDRConv_tms_hebei2_data_hdr(otdr_hdr, otdr_hdr);
 	// printf("otdr data count %d\n", otdr_hdr->count);
-	tms_OTDRConv_tms_hebei2_data_val(otdr_val, otdr_val, otdr_hdr);
+	tms_OTDRConv_tms_hebei2_data_val(otdr_val, otdr_val, otdr_hdr->count);
 	tms_OTDRConv_tms_hebei2_event_hdr(event_hdr, event_hdr);
 	// printf("id %s count %d\n", event_hdr->eventid, event_hdr->count);
-	tms_OTDRConv_tms_hebei2_event_val(event_val, event_val, event_hdr);
+	tms_OTDRConv_tms_hebei2_event_val(event_val, event_val, event_hdr->count);
 
 
 #ifdef HEBEI2_DBG
@@ -1516,6 +1521,139 @@ static int32_t tms_AnalyseConfigNodeTime(struct tms_context *pcontext, int8_t *p
 
 // 0x80000013 ID_CURALARM
 // 数组嵌套太多，不做过多调试，建议告警曲线只能是一条，一条一条的发
+int32_t tms_CurAlarm_V2(
+    int fd,
+    struct glink_addr *paddr,
+    struct tms_curalarm *val)
+{
+	struct tms_alarmlist_hdr    *alarmlist_hdr = val->alarmlist_hdr;
+	struct tms_alarmlist_val    *alarmlist_val = val->alarmlist_val;
+	struct tms_alarmline_hdr    *alarmline_hdr = val->alarmline_hdr;
+	struct tms_alarmline_val    *alarmline_val = val->alarmline_val, *t_alarmline_val;
+#define otdr_val val->alarmline_val
+
+	// 如果要支持多条OTDR曲线，那么函数内部内存开销太大
+	struct tms_ret_otdrparam    *pret_otdrparam;
+	struct tms_test_result      *ptest_result;
+	struct tms_hebei2_data_hdr  *phebei2_data_hdr;
+	struct tms_hebei2_data_val  *phebei2_data_val;
+	struct tms_hebei2_event_hdr *phebei2_event_hdr;
+	struct tms_hebei2_event_val *phebei2_event_val;
+
+	uint32_t list_hdr_count;
+	uint32_t line_hdr_count;
+	uint32_t data_hdr_count;
+	uint32_t event_hdr_count;
+	int len, tlen;
+	struct glink_base  base_hdr;
+
+
+	// conver alarm struct
+	list_hdr_count = alarmlist_hdr->count;	// 保持原来的
+	alarmlist_hdr->count = htonl(alarmlist_hdr->count);
+	printf("count %x \n", alarmlist_hdr->count);
+	tms_OTDRConv_tms_alarmlist_val(alarmlist_val, alarmlist_val, list_hdr_count);
+	line_hdr_count	= alarmline_hdr->count;  // 保持原来的
+	alarmline_hdr->count = htonl(alarmline_hdr->count);
+
+
+
+	// conver otdr date
+	t_alarmline_val = alarmline_val;
+	for (int i = 0; i < line_hdr_count; i++) {
+		t_alarmline_val->pipe = htonl(t_alarmline_val->pipe);
+		t_alarmline_val->datalen = htonl(t_alarmline_val->datalen);
+
+
+		pret_otdrparam    = t_alarmline_val->ret_otdrparam;
+		ptest_result      = t_alarmline_val->test_result;
+		phebei2_data_hdr  = t_alarmline_val->hebei2_data_hdr;
+		phebei2_data_val  = t_alarmline_val->hebei2_data_val;
+		phebei2_event_hdr = t_alarmline_val->hebei2_event_hdr;
+		phebei2_event_val = t_alarmline_val->hebei2_event_val;
+
+
+		tms_OTDRConv_tms_ret_otdrparam(
+		    (struct tms_ret_otdrparam *)pret_otdrparam,
+		    (struct tms_ret_otdrparam *)pret_otdrparam);
+
+		tms_OTDRConv_tms_test_result(ptest_result, ptest_result);
+
+		data_hdr_count = phebei2_data_hdr->count;
+		tms_OTDRConv_tms_hebei2_data_hdr(phebei2_data_hdr, phebei2_data_hdr);
+		tms_OTDRConv_tms_hebei2_data_val(phebei2_data_val, phebei2_data_val, data_hdr_count);
+
+		event_hdr_count = phebei2_event_hdr->count;
+		tms_OTDRConv_tms_hebei2_event_hdr(phebei2_event_hdr, phebei2_event_hdr);
+		tms_OTDRConv_tms_hebei2_event_val(phebei2_event_val, phebei2_event_val, event_hdr_count);
+
+
+		t_alarmline_val++;
+	}
+
+	len =
+	    // 告警头长度
+	    sizeof(struct tms_alarmlist_hdr) +
+	    sizeof(struct tms_alarmlist_val) * list_hdr_count +
+	    // 每条告警曲线头
+
+	    sizeof(struct tms_alarmline_hdr);// +
+
+
+	// 计算各曲线长度
+	tlen = 0;
+	t_alarmline_val = alarmline_val;
+	for (int i = 0; i < line_hdr_count; i++) {
+		phebei2_data_hdr  = t_alarmline_val->hebei2_data_hdr;
+		phebei2_event_hdr = t_alarmline_val->hebei2_event_hdr;
+		tlen += sizeof(struct tms_ret_otdrparam) +
+		        sizeof(struct tms_test_result) +
+		        sizeof(struct tms_hebei2_data_hdr) +
+		        sizeof(struct tms_hebei2_data_val) * htonl(phebei2_data_hdr->count) +
+		        sizeof(struct tms_hebei2_event_hdr) +
+		        sizeof(struct tms_hebei2_event_val) * htonl(phebei2_event_hdr->count);
+
+	}
+	// 汇总长度
+	len += tlen;
+
+
+	// 每条告警曲线内容
+
+	tms_FillGlinkFrame(&base_hdr, paddr);
+
+	glink_Build(&base_hdr, ID_CURALARM, len);
+	glink_SendHead(fd, &base_hdr);
+
+	// 发送告警头
+	glink_SendSerial(fd, (uint8_t *)alarmlist_hdr, sizeof(struct tms_alarmlist_hdr) );
+	glink_SendSerial(fd, (uint8_t *)alarmlist_val, sizeof(struct tms_alarmlist_val) * list_hdr_count);
+	glink_SendSerial(fd, (uint8_t *)alarmline_hdr, sizeof(struct tms_alarmline_hdr) );
+
+	// 逐条发送OTDR告警数据
+	t_alarmline_val = alarmline_val;
+	for (int i = 0; i < line_hdr_count; i++) {
+		pret_otdrparam    = t_alarmline_val->ret_otdrparam;
+		ptest_result      = t_alarmline_val->test_result;
+		phebei2_data_hdr  = t_alarmline_val->hebei2_data_hdr;
+		phebei2_data_val  = t_alarmline_val->hebei2_data_val;
+		phebei2_event_hdr = t_alarmline_val->hebei2_event_hdr;
+		phebei2_event_val = t_alarmline_val->hebei2_event_val;
+		printf("data_hdr_count %d %d \n", data_hdr_count, line_hdr_count);
+		printf("event_hdr_count %d\n", event_hdr_count);
+		glink_SendSerial(fd, (uint8_t *)&pret_otdrparam, sizeof(struct tms_ret_otdrparam) );
+		glink_SendSerial(fd, (uint8_t *)&ptest_result, sizeof(struct tms_test_result) );
+		glink_SendSerial(fd, (uint8_t *)&phebei2_data_hdr, sizeof(struct tms_hebei2_data_hdr) );
+		glink_SendSerial(fd, (uint8_t *)phebei2_data_val, sizeof(struct tms_hebei2_data_val) * htonl(phebei2_data_hdr->count));
+		glink_SendSerial(fd, (uint8_t *)&phebei2_event_hdr, sizeof(struct tms_hebei2_event_hdr) );
+		glink_SendSerial(fd, (uint8_t *)phebei2_event_val, sizeof(struct tms_hebei2_event_val) * htonl(phebei2_event_hdr->count));
+	}
+	glink_SendTail(fd);
+
+
+	printf("finish\n");
+	return 0;
+}
 int32_t tms_CurAlarm(
     int fd,
     struct glink_addr *paddr,
@@ -1524,7 +1662,7 @@ int32_t tms_CurAlarm(
 	struct tms_alarmlist_hdr    alarmlist_hdr;
 	struct tms_alarmlist_val    alarmlist_val[10];
 	struct tms_alarmline_hdr    alarmline_hdr;
-	struct tms_alarmline_val    alarmline_val[1];
+	struct tms_alarmline_val    alarmline_val[10];
 #define otdr_val val->alarmline_val
 
 	// 如果要支持多条OTDR曲线，那么函数内部内存开销太大
@@ -1534,6 +1672,8 @@ int32_t tms_CurAlarm(
 	struct tms_hebei2_data_val  hebei2_data_val[1024 * 32];
 	struct tms_hebei2_event_hdr hebei2_event_hdr;
 	struct tms_hebei2_event_val hebei2_event_val[128];
+	uint32_t data_hdr_count;
+	uint32_t event_hdr_count;
 
 	printf("%d\n", __LINE__);
 	memcpy(&alarmlist_hdr, val->alarmlist_hdr, sizeof(struct tms_alarmlist_hdr));
@@ -1574,14 +1714,14 @@ int32_t tms_CurAlarm(
 	// conver alarm struct
 	alarmlist_hdr.count = htonl(alarmlist_hdr.count);
 	printf("count %x \n", alarmlist_hdr.count);
-	printf("alarm pipe %x fiber %x\n", 
-		alarmlist_val[0].pipe,
-		alarmlist_val[0].fiber);
+	printf("alarm pipe %x fiber %x\n",
+	       alarmlist_val[0].pipe,
+	       alarmlist_val[0].fiber);
 
 	tms_OTDRConv_tms_alarmlist_val(&alarmlist_val[0], &alarmlist_val[0], val->alarmline_hdr->count);
-	printf("alarm pipe %x fiber %x\n", 
-		alarmlist_val[0].pipe,
-		alarmlist_val[0].fiber);
+	printf("alarm pipe %x fiber %x\n",
+	       alarmlist_val[0].pipe,
+	       alarmlist_val[0].fiber);
 
 	alarmline_hdr.count = htonl(alarmline_hdr.count);
 
@@ -1592,15 +1732,19 @@ int32_t tms_CurAlarm(
 
 	tms_OTDRConv_tms_test_result(&test_result, &test_result);
 	printf("%d\n", __LINE__);
-
+	data_hdr_count = hebei2_data_hdr.count;
 	tms_OTDRConv_tms_hebei2_data_hdr(&hebei2_data_hdr, &hebei2_data_hdr);
 
-	tms_OTDRConv_tms_hebei2_data_val(&hebei2_data_val[0], &hebei2_data_val[0], otdr_val->hebei2_data_hdr);
+	tms_OTDRConv_tms_hebei2_data_val(&hebei2_data_val[0], &hebei2_data_val[0], data_hdr_count);
 
+	printf("%d\n", __LINE__);
+	event_hdr_count = hebei2_event_hdr.count;
 	tms_OTDRConv_tms_hebei2_event_hdr(&hebei2_event_hdr, &hebei2_event_hdr);
+	printf("%d\n", __LINE__);
+	printf("event_hdr_count %d\n", event_hdr_count);
 
-	tms_OTDRConv_tms_hebei2_event_val(&hebei2_event_val[0], &hebei2_event_val[0], otdr_val->hebei2_event_hdr);
-
+	tms_OTDRConv_tms_hebei2_event_val(&hebei2_event_val[0], &hebei2_event_val[0], event_hdr_count);
+	printf("%d\n", __LINE__);
 
 	int len;
 	struct glink_base  base_hdr;
@@ -1700,6 +1844,9 @@ int32_t tms_RetOTDRData(
 	struct tms_hebei2_event_hdr  *pmem_hebei2_event_hdr;/*hebei2_event_hdr,*/
 	struct tms_hebei2_event_val *pmem_hebei2_event_val; /*hebei2_event_val[128],*/
 
+	uint32_t data_hdr_count;
+	uint32_t event_hdr_count;
+
 	pmem_ret_otdrparam	= (struct tms_ret_otdrparam *)malloc(sizeof(struct tms_ret_otdrparam));
 	pmem_ret_otdrparam_p1 = (struct tms_ret_otdrparam_p1 *)pmem_ret_otdrparam;
 	pmem_ret_otdrparam_p2 = (struct tms_ret_otdrparam_p2 *) & (pmem_ret_otdrparam->range);
@@ -1732,13 +1879,15 @@ int32_t tms_RetOTDRData(
 	tms_OTDRConv_tms_test_result(pmem_test_result, pmem_test_result);
 
 
+	data_hdr_count = pmem_hebei2_data_hdr->count;
 	tms_OTDRConv_tms_hebei2_data_hdr(pmem_hebei2_data_hdr, pmem_hebei2_data_hdr);
 
-	tms_OTDRConv_tms_hebei2_data_val(&pmem_hebei2_data_val[0], &pmem_hebei2_data_val[0], val->hebei2_data_hdr);
+	tms_OTDRConv_tms_hebei2_data_val(&pmem_hebei2_data_val[0], &pmem_hebei2_data_val[0], data_hdr_count);
 
+	event_hdr_count = pmem_hebei2_event_hdr->count;
 	tms_OTDRConv_tms_hebei2_event_hdr(pmem_hebei2_event_hdr, pmem_hebei2_event_hdr);
 
-	tms_OTDRConv_tms_hebei2_event_val(&pmem_hebei2_event_val[0], &pmem_hebei2_event_val[0], val->hebei2_event_hdr);
+	tms_OTDRConv_tms_hebei2_event_val(&pmem_hebei2_event_val[0], &pmem_hebei2_event_val[0], event_hdr_count);
 
 
 	int len;

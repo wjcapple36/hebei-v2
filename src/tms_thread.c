@@ -8,9 +8,13 @@
 #include "sys/wait.h"
 // #include <strings.h>
 
-// #ifdef __cplusplus
-// extern "C" {
-// #endif
+
+
+#include "common/global.h"
+#include "otdr_ch/hb_spi.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 extern int do_channal(void *ptr, int argc, char **argv);
 extern int do_slot(void *ptr, int argc, char **argv);
@@ -26,7 +30,7 @@ int g_cu_socket = 0;
 int g_slot = 0 & SLOT_MASK, g_slot_last;
 int g_subnet = SUBNET_1_XX, g_subnet_last;
 
-
+struct _tagSpiDev spiDev;
 
 void NotifyCU(int fd)
 {
@@ -59,6 +63,8 @@ void *ThreadConnectCU(void *arg)
 	struct tmsxx_app *ptapp = (struct tmsxx_app *)client.ptr;
 	g_slot_last = g_slot;
 	g_subnet_last = g_subnet;
+	initial_spi_dev(&spiDev, "/dev/spidev1.0", 0, 8, 0, 20000000);
+	int32_t t_slot, t_subnet;
 	while(1) {
 #if 0
 		if (g_cu_socket != 0) {
@@ -80,29 +86,36 @@ void *ThreadConnectCU(void *arg)
 		// 	g_cu_socket = client.sockfd;
 		// 	system("echo 1 > /sys/class/leds/leda/brightness");
 		// }
-		g_slot = do_slot(NULL, 0, NULL);	
+		g_slot = do_slot(NULL, 0, NULL);
 		g_subnet = do_net(NULL, 0, NULL);
-		printf("slot %x subnet %x\n", g_slot, g_subnet);
-		if (g_slot != g_slot_last ||
-		    g_subnet != g_subnet_last) {
 
-		    if (g_subnet == SUBNET_0_XX) {
-		    	printf("IP 192.168.0.%d\n",
-		    		(((~SLOT_MASK) & g_slot)) + 201);
-		    }
-		    else {
-			printf("IP 192.168.1.%d\n",
-				(((~SLOT_MASK) & g_slot)) + 201);
-		    }
+		get_net_flag(&spiDev, &t_subnet);
+
+		get_dev_slot(&spiDev, &t_slot);
+		printf("slot %x %x   subnet %x %x\n\n", g_slot , t_slot, g_subnet, t_subnet);
+		if (g_slot != g_slot_last || g_subnet != g_subnet_last) {
+
+			if (g_subnet == SUBNET_0_XX) {
+				printf("IP 192.168.0.%d\n",
+				       (((~SLOT_MASK) & g_slot)) + 201);
+
+			}
+			else {
+				printf("IP 192.168.1.%d\n",
+				       (((~SLOT_MASK) & g_slot)) + 201);
+			}
+			// TODO 设置IP
+			g_slot_last = g_slot;
+			g_subnet_last = g_subnet;
 		}
 
-		
+
 		sleep(1);
 	}
 
 	return NULL;
 }
 
-// #ifdef __cplusplus
-// }
-// #endif
+#ifdef __cplusplus
+}
+#endif

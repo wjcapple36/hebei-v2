@@ -740,6 +740,10 @@ int32_t tms_CurAlarm(
     int fd,
     struct glink_addr *paddr,
     struct tms_curalarm *val);
+int32_t tms_CurAlarm_V2(
+    int fd,
+    struct glink_addr *paddr,
+    struct tms_curalarm *val);
 #ifdef __cplusplus
 }
 #endif

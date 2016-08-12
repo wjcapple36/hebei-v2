@@ -146,7 +146,6 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 
 	tms_OTDRBasicInfo(pcontext, NULL, &val);
 #endif
-	sleep(5);
 	
 	// 上报模拟告警
 	trace_dbg("上报模拟告警，节点管理器不支持逐条发送告警\n");
@@ -157,7 +156,8 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	struct tms_alarmlist_hdr    alarmlist_hdr;
 	struct tms_alarmlist_val    alarmlist_val[10];
 	struct tms_alarmline_hdr    alarmline_hdr;
-	struct tms_alarmline_val    alarmline_val[1];
+	struct tms_alarmline_val    alarmline_val[8];
+
 
 	struct tms_ret_otdrdata otdrdata;
 	struct tms_ret_otdrparam    ret_otdrparam;
@@ -167,14 +167,22 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	struct tms_hebei2_event_hdr hebei2_event_hdr;
 	struct tms_hebei2_event_val hebei2_event_val[128];
 
-	printf("%d\n", __LINE__);
+
+	struct tms_ret_otdrparam    ret_otdrparam_2;
+	struct tms_test_result      test_result_2;
+	struct tms_hebei2_data_hdr  hebei2_data_hdr_2;
+	struct tms_hebei2_data_val  hebei2_data_val_2[1024 * 32];
+	struct tms_hebei2_event_hdr hebei2_event_hdr_2;
+	struct tms_hebei2_event_val hebei2_event_val_2[128];
+
+
 	// ************************************************************
 	alarm.alarmlist_hdr = &alarmlist_hdr;
 	alarm.alarmlist_val = &alarmlist_val[0];
 	alarm.alarmline_hdr = &alarmline_hdr;
 	alarm.alarmline_val = &alarmline_val[0];
 	
-	alarmlist_hdr.count = 1;
+	alarmlist_hdr.count = 2;
 
 	
 	alarmlist_val[0].pipe = 2;
@@ -182,19 +190,39 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	alarmlist_val[0].level = 1;
 	alarmlist_val[0].type = 1;
 	
+	alarmlist_val[1].pipe = 7;
+	alarmlist_val[1].fiber = 7;
+	alarmlist_val[1].level = 1;
+	alarmlist_val[1].type = 1;
+
 	strcpy(alarmlist_val[0].time, "2016-04-32 12:12:33");
 	strcpy(alarmlist_val[0].reserved0, "");;
 	alarmlist_val[0].location[0] = 0;
 
-	alarmline_hdr.count = 1;
+	strcpy(alarmlist_val[1].time, "2016-04-32 12:12:33");
+	strcpy(alarmlist_val[1].reserved0, "");;
+	alarmlist_val[1].location[0] = 0;
+
+	alarmline_hdr.count = 2;
 	alarmline_val[0].pipe = 1;
-	alarmline_val[0].datalen =  sizeof(otdrdata) +
+	alarmline_val[0].datalen =  
+	// sizeof(otdrdata) +
 	                            sizeof(ret_otdrparam) +
 	                            sizeof(test_result) +
 	                            sizeof(hebei2_data_hdr) +
 	                            sizeof(hebei2_data_val) +
 	                            sizeof(hebei2_event_hdr) +
-	                            sizeof(hebei2_event_val) + 4;
+	                            sizeof(hebei2_event_val) +4;
+
+	alarmline_val[1].pipe = 1;
+	alarmline_val[1].datalen =  
+	// sizeof(otdrdata) +
+	                            sizeof(ret_otdrparam) +
+	                            sizeof(test_result) +
+	                            sizeof(hebei2_data_hdr) +
+	                            sizeof(hebei2_data_val) +
+	                            sizeof(hebei2_event_hdr) +
+	                            sizeof(hebei2_event_val) +4;
 
 
 
@@ -258,16 +286,76 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	hebei2_event_val[1].reflect    = 4;
 	hebei2_event_val[1].link_loss  = 4;
 
-	tms_CurAlarm(pcontext->fd, NULL, &alarm);
-	sleep(5);
-	alarmlist_val[0].pipe = 7;
-	alarmlist_val[0].fiber = 7;
-	alarmlist_val[0].level = 1;
-	alarmlist_val[0].type = 1;
 
-	int fd = connect_first_card("127.0.0.1","6000");	
-	tms_CurAlarm(fd, NULL, &alarm);
-	close(fd);
+
+
+
+
+
+	alarmline_val[1].ret_otdrparam    = &ret_otdrparam_2;
+	alarmline_val[1].test_result      = &test_result_2;
+	alarmline_val[1].hebei2_data_hdr  = &hebei2_data_hdr_2;
+	alarmline_val[1].hebei2_data_val  = hebei2_data_val_2;
+	alarmline_val[1].hebei2_event_hdr = &hebei2_event_hdr_2;
+	alarmline_val[1].hebei2_event_val = hebei2_event_val_2;
+
+
+	// ret_otdrparam.pipe   = pval->pipe;
+	ret_otdrparam_2.range  = 30000;//pval->range;
+	ret_otdrparam_2.wl     = 1550;
+	ret_otdrparam_2.pw     = 40;
+	ret_otdrparam_2.time   = 1234;
+	ret_otdrparam_2.gi     = 1.1f;//pval->gi;
+	ret_otdrparam_2.end_threshold          = 1.1;
+	ret_otdrparam_2.none_reflect_threshold = 1.1;
+
+	strcpy(test_result_2.result, "OTDRTestResultInfo");
+	test_result_2.range = 30000;
+	test_result_2.loss = 2;
+	test_result_2.atten = 2;
+	strcpy(test_result_2.time, "2016-03-02 22:11:31");
+
+	strcpy((char *)hebei2_data_hdr_2.dpid, "OTDRData");
+	hebei2_data_hdr_2.count = 16000;
+	hebei2_data_hdr_2.count = 15000;
+
+	tmp_data_val = hebei2_data_val_2;
+	for (int i = 0; i < 4000; i++) {
+		tmp_data_val->data = 40000 + i;
+		tmp_data_val++;
+	}
+	for (int i = 4000; i < 8000; i++) {
+		tmp_data_val->data = 40000 - i;
+		tmp_data_val++;
+	}
+	for (int i = 8000; i < 16000; i++) {
+		tmp_data_val->data = 40000 + i;
+		tmp_data_val++;
+	}
+	strcpy((char *)hebei2_event_hdr_2.eventid, "KeyEvents");
+	hebei2_event_hdr_2.count = 2;
+
+	hebei2_event_val[0].distance   = 10;
+	hebei2_event_val[0].event_type = 0;
+	hebei2_event_val[0].att        = 3;
+	hebei2_event_val[0].loss       = 3;
+	hebei2_event_val[0].reflect    = 3;
+	hebei2_event_val[0].link_loss  = 3;
+
+	hebei2_event_val[1].distance   = 10000;
+	hebei2_event_val[1].event_type = 3;
+	hebei2_event_val[1].att        = 4;
+	hebei2_event_val[1].loss       = 4;
+	hebei2_event_val[1].reflect    = 4;
+	hebei2_event_val[1].link_loss  = 4;
+	tms_CurAlarm_V2(pcontext->fd, NULL, &alarm);
+	// tms_CurAlarm(pcontext->fd, NULL, &alarm);
+	sleep(5);
+
+
+	// int fd = connect_first_card("127.0.0.1","6000");	
+	// tms_CurAlarm(fd, NULL, &alarm);
+	// close(fd);
 	return 0;
 }
 

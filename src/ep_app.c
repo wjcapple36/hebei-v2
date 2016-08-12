@@ -25,9 +25,9 @@
 #include "ep_app.h"
 // #include "tmsxxdb.h"
 
-// #ifdef __cplusplus
-// extern "C" {
-// #endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct tms_callback tcb;
 struct epapp_callback epapp_cb;
@@ -618,9 +618,9 @@ int ThreadRunServerAndShell(struct ep_t *pep)
 
 
 	pthread_create(&g_pthreadshell, NULL, ThreadShell, pep);
-// #ifdef AUTOCONNECT_DBG 
+#ifdef AUTOCONNECT_DBG 
 	pthread_create(&g_pthreadconnect_cu,NULL,ThreadConnectCU,pep);
-// #endif
+#endif
 
 	return 0;
 }
@@ -628,7 +628,6 @@ int ThreadRunServerAndShell(struct ep_t *pep)
 
 
 
-// #ifdef __cplusplus
-// }
-// #endif
-// 
+#ifdef __cplusplus
+}
+#endif

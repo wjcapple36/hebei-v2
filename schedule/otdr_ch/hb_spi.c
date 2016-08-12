@@ -416,7 +416,7 @@ int32_t reset_by_fpfa(struct _tagSpiDev *dev)
 		goto usr_exit;
 	}
 	snprintf(log, NUM_CHAR_LOG_MSG,"reset by fpga!");
-	LOGW(__FUNCTION__, __LINE__,LOG_LEV_FATAL_ERRO, log);
+	// LOGW(__FUNCTION__, __LINE__,LOG_LEV_FATAL_ERRO, log);
 usr_exit:
 	return ret;
 
