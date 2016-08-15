@@ -38,7 +38,7 @@ extern "C" {
 	//otdr算法可重入函数
 	void OtdrStateInit_r(OtdrStateVariable_t  *pOtdrState);
 	//计算输入脉宽对应的采样点数目
-	int32_t PulseWidthInSampleNum_r (uint32_t pl_ns, uint32_t sample_hz);
+	int32_t PulseWidthInSampleNum_r(OtdrStateVariable_t *pOtdrState);
 	//根据测量数据估算是否需要拼接，如果需要拼接，计算拼接点等相关参数，很重要
 	void EstimateCurveConnect_r(
 			int32_t chan_data[],

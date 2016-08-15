@@ -264,7 +264,7 @@ int32_t start_otdr_algro(
 int32_t tsk_schedule(void *arg)
 {
 	int32_t ch, ret, buf_index, next_ch;
-	int32_t working_ch;
+	int32_t bkup_ch;
 	const int32_t sleep_time = 3;
 	struct _tagThreadInfo *ptsk_info;
 	//系统管理otdr线程的参数
@@ -280,28 +280,32 @@ int32_t tsk_schedule(void *arg)
 	OtdrAlgroPara.pState = &OtdrState;
 	OtdrAlgroPara.pOtdrData = &OtdrData;
 	//做为启动
+	initial_otdr_dev(&otdrDev[0]);
 	otdrDev[0].ch_ctrl.on_ff = OTDR_CH_ON;
+	bkup_ch = -1;
 	while(1)
 	{
 		for(ch = 0; ch < CH_NUM; ch++)
 		{
 #ifdef OTDR_MOD_SERRI
-			//处理点名测量
+			//点名测量，比较特殊，要先进行初始化要测量通道
 			if(usrOtdrTest.state == USR_OTDR_TEST_WAIT){
-				usrOtdrTest.reserv_ch = ch;
+				otdrDev[ch].ch_ctrl.on_ff = OTDR_CH_OFF;
+				bkup_ch = ch;
 				ch = usrOtdrTest.ch % CH_NUM;
-				otdrDev[working_ch].ch_ctrl.on_ff = OTDR_CH_OFF;
-				initial_otdr_dev(&otdrDev[working_ch]);
+				initial_otdr_dev(&otdrDev[ch]);
 				otdrDev[ch].ch_ctrl.on_ff = OTDR_CH_ON;
-				working_ch = ch;
 			}
 			//顺序执行,如果当前通道没有处理完，不处理别的通道
 			if(otdrDev[ch].ch_ctrl.on_ff == OTDR_CH_ON){
 				ret = process_every_ch(ch,&otdrDev[ch],&usrOtdrTest, &spiDev, &OtdrAlgroPara);
 				if(ret == RET_SWITCH_CH){
+					if(bkup_ch != -1){
+						ch = bkup_ch;
+						bkup_ch = -1;
+					}
 					next_ch = (ch + 1)%CH_NUM;
 					otdrDev[next_ch].ch_ctrl.on_ff = OTDR_CH_ON;
-					working_ch = ch;
 				}
 				else
 					break;
@@ -333,9 +337,8 @@ int32_t process_every_ch(
 	 * 如果不是当前通道，直接返回
 	 */
 	if(pUsrTest->state == USR_OTDR_TEST_WAIT){
-		pUsrTest->state = USR_OTDR_TEST_ACCUM;
 		if(pUsrTest->ch == ch) {
-			pOtdrDev->ch_ctrl.accum_num = 0;
+			pUsrTest->state = USR_OTDR_TEST_ACCUM;
 			pOtdrDev->ch_ctrl.mod = OTDR_TEST_MOD_USR;
 			pUsrTest->reserv_ch = ch;
 		}
@@ -357,9 +360,6 @@ int32_t process_every_ch(
 		ret = first_process( ch, pOtdrDev, pUsrTest,spi_dev);
 	else
 		ret = agin_process( ch, pOtdrDev, pUsrTest,spi_dev, pAlgroPara);
-
-
-	pOtdrDev->ch_ctrl.send_num++;
 
 usr_exit:
 	//切换通道前，将本通道初始化
@@ -405,6 +405,7 @@ int32_t first_process(
 			1,
 			&pOtdrDev->laser_para);
 	ret = start_otdr_test(ch, spi_dev, pCHPara,&pOtdrDev->laser_para);
+	pCHCtrl->send_num++;
 usr_exit:
 	/*
 	 * 如果操作失败，那么指定下一个可测量的通道;
@@ -497,7 +498,10 @@ int32_t agin_process(
 
 	//第一次收到数据，要判断是否拼接
 	if(pCHCtrl->send_num == 1){
-		EstimateCurveConnect_r(pCHBuf->hp_buf,pOtdrCtl, pOtdrState);
+		memcpy(pCHBuf->lp_buf, pCHBuf->hp_buf, sizeof(int32_t)*DATA_LEN);
+		EstimateCurveConnect_r(pCHBuf->lp_buf,pOtdrCtl, pOtdrState);
+		memset(pCHBuf->lp_buf, 0, sizeof(int32_t)*DATA_LEN);
+
 		pCHCtrl->curv_cat = pOtdrCtl->CurveConcat;
 		//如果不用拼接，那么全部使用高功率测试
 		if(!pOtdrCtl->CurveConcat){
@@ -525,8 +529,10 @@ int32_t agin_process(
 		goto usr_exit;
 	}
 
-	if(pCHCtrl->hp_num > 0)
+	if(pCHCtrl->hp_num > 0){
 		ret = start_otdr_test(ch, pspi_dev, pCHPara,&pOtdrDev->laser_para);
+		pCHCtrl->send_num++;
+	}
 	else if(pCHCtrl->lp_num > 0){
 		if(pCHCtrl->hp_num == 0){
 			pCHCtrl->hp_num--;

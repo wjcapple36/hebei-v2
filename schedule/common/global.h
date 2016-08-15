@@ -37,7 +37,7 @@ extern "C" {
 #define FIBER_ALARM_LEV1	1
 #define FIBER_ALARM_LEV2	2
 #define FIBER_ALARM_LEV3	3
-
+#define SEC_NUM_IN_CH		10
 //通道的基数，从fpga中获取到，通道号+该基数为对外使用的通道号
 extern volatile int32_t ch_offset; 
 //通道的光纤段参数
