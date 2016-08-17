@@ -684,15 +684,17 @@ void EstimateCurveConnect_r(
 		OtdrStateVariable_t  *pOtdrState)
 {
 	int32_t   m, i, avg, sigma, Cn, accept, FrontFlat = 0, fiberlessthan30km = 0;
-	int32_t   *An = NULL;
+	int32_t   *An = NULL, ratio;
 	uint32_t  PulseWidth_ns;
 	float   v, k;
 
 	An = chan_data;
-
+	pOtdrCtrl->CurveConcat = 1;
 	PulseWidth_ns       = pOtdrState->MeasureParam.PulseWidth_ns;
 	RemoveBaseLine_r(An, DATA_LEN, NOISE_LEN,pOtdrCtrl, pOtdrState);
-	EnlargeData(An, DATA_LEN, 128);
+	ratio = ENLARGE_FACTOR(pOtdrState->TotalMeasureTime);
+	ratio = MAX(ratio, 1);   // 放大因子至少为1
+	EnlargeData(An, DATA_LEN, ratio);
 	sigma = RootMeanSquare(An, DATA_LEN, NOISE_LEN-pOtdrState->M);
 	pOtdrState->CurveStartPoint =  get_curv_start_point(sigma,An, pOtdrState, pOtdrCtrl);
 	AdjustCurve_r(An, DATA_LEN, pOtdrState);
@@ -854,6 +856,7 @@ void EstimateCurveConnect_r(
 	{
 		//        pOtdrState->CurveConcatPoint = 6200; // debug
 		pOtdrCtrl->PowerMode = POWER_MODE_COMBINE;
+		pOtdrCtrl->LowPowerDataProcessed = 1;
 		TCPDEBUG_PRINT("connection point = %d(%.3fkm)\n", pOtdrState->CurveConcatPoint,
 				(float)pOtdrState->CurveConcatPoint/pOtdrState->Points_1m/1000);
 	}

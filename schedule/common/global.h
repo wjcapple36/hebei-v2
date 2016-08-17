@@ -32,6 +32,7 @@ extern "C" {
 #define ADDR_HOST_SERVER		0x0000003e
 //定义一些其他关键变量
 #define MAX_RANG_M	180000
+#define OUTPUT_USR_MSG   1
 //光纤告警级别	
 #define FIBER_ALARM_LEV0	0
 #define FIBER_ALARM_LEV1	1

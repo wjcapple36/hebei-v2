@@ -148,6 +148,7 @@ int32_t get_ch_para_from_fiber_sec(struct _tagCHPara *pCHPara,
 	quick_lock(&pFiberSec->lock);
 	pCHPara->Lambda_nm = pFiberSec->para.otdr_param.wl;
 	pCHPara->PulseWidth_ns = pFiberSec->para.otdr_param.pw;
+	pCHPara->MeasureLength_m = pFiberSec->para.otdr_param.range;
 	pCHPara->MeasureTime_ms = pFiberSec->para.otdr_param.time*1000;
 	pCHPara->n = pFiberSec->para.otdr_param.gi;
 	pCHPara->EndThreshold = pFiberSec->para.otdr_param.end_threshold;
@@ -2047,6 +2048,19 @@ usr_exit:
 	return ret;
 }
 
+int32_t save_data_pt(const char file[], int32_t *An, int32_t len)
+{
+	FILE *fp;
+	int i;
+	fp = fopen(file, "w");
+	if(!fp)
+		goto usr_exit;
+	for(i = 0; i < len; i++)
+		fprintf(fp, "%d\r\n", An[i]);
+	fclose(fp);
+usr_exit:
+	return 0;
+}
 
 
 

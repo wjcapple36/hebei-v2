@@ -17,6 +17,7 @@
 
 #include "hb_spi.h"
 #include "../common/program_run_log.h"
+#include "../common/global.h"
 #include "../../protocol/SPICommand.h"
 
 
@@ -223,7 +224,10 @@ int32_t start_otdr_test(
 	
 	CmdSPIStartTest(ch, tx, ptest_para, plasr_para);
 	ret = spi_send_usual_cmd(dev, tx, SPI_CMD_LEN, rx, SPI_CMD_LEN);
-	
+#if OUTPUT_USR_MSG
+	print_buf(tx, SPI_CMD_LEN, "tx");	
+	print_buf(rx, SPI_CMD_LEN, "rx");	
+#endif
 	if(ret != SPI_RET_OP_OK)
 		printf("%s() %d: ret %d %s res ch %d cmd %d\n",\
 				__FUNCTION__, __LINE__, ret, spi_msg[ret],res_ch, res_cmd);

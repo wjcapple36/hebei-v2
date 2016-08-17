@@ -228,7 +228,7 @@ int32_t OnGetOTDRData(struct tms_context *pcontext,struct tms_get_otdrdata *pget
 		goto usr_exit;
 	}
 	//给点名测量传递参数
-	memcpy(&usrOtdrTest.ch, &pget_otdr_data->pipe, sizeof(struct _tagUsrOtdrTest) - 8);
+	memcpy(&usrOtdrTest.ch, &pget_otdr_data->pipe, sizeof(struct tms_get_otdrdata) );
 	usrOtdrTest.ch--;
 	usrOtdrTest.cmd = ack.cmdid;
 	usrOtdrTest.src_addr = pcontext->pgb->src;

@@ -176,6 +176,7 @@ int32_t convert_ch_cyc_curv2host(
 		);
 
 
+int32_t save_data_pt(const char file[], int32_t *An, int32_t len);
 
 
 

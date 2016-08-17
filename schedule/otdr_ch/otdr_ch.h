@@ -268,7 +268,7 @@ struct _tagUsrOtdrTest
 	uint32_t state;		//空闲？累加？找事件点？
 	uint32_t cmd;		//0x80*014/0x80*15 点名测量，配置测量
 	uint32_t src_addr;	//操作设备的地址
-	uint32_t reserv_ch;	//点名测量前抢占的的通道
+	uint32_t initial;	//点名测量前抢占的的通道
 
 	uint32_t ch;
 	uint32_t range;
