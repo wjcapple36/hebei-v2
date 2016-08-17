@@ -707,6 +707,7 @@ int32_t tms_RetNodeTime(
 	pevent_val  = (struct tms_retotdr_event_val  *)(((char*)pevent_hdr) + sizeof(struct tms_retotdr_event_hdr)); \
 	pchain      = (struct tms_retotdr_chain      *)(((char*)pevent_val) + sizeof(struct tms_retotdr_event_val) * (pevent_hdr->count));
 
+int connect_first_card(char *str_addr, char *str_port);
 int32_t tms_RetOTDRData(
     int fd,
     struct glink_addr *paddr,
@@ -744,6 +745,7 @@ int32_t tms_CurAlarm_V2(
     int fd,
     struct glink_addr *paddr,
     struct tms_curalarm *val);
+int32_t tms_MergeCurAlarm();
 #ifdef __cplusplus
 }
 #endif

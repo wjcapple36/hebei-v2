@@ -615,7 +615,7 @@ int ThreadRunServerAndShell(struct ep_t *pep)
 #endif
 
 	ep_RunServer(pep);             // 运行epollserver线程
-
+	tms_connect();
 
 	pthread_create(&g_pthreadshell, NULL, ThreadShell, pep);
 #ifdef AUTOCONNECT_DBG 

@@ -51,6 +51,7 @@ int tms_ReadOLPAuto();
 
 int list(struct ep_con_t *pconNode, void *ptr);
 void NotifyCU(int fd);
+void tms_connect();
 #ifdef __cplusplus
 }
 #endif
