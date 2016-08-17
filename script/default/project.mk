@@ -15,11 +15,13 @@ OUTPUT_DIR 	=
 
 
 
-INCLUDE_DIR	+=  -I./include -I./osnet -I./shell -I./src -I/usr/include/readline -I/usr/local/install/include -I./ramlog
+# INCLUDE_DIR	+=  -I./include -I./osnet -I./shell -I./src -I/usr/include/readline -I/usr/local/install/include -I./ramlog -I./
+INCLUDE_DIR += -I./include -I./osnet -I./shell -I./ -I./src -I/usr/include/readline -I/usr/local/install/include -I./schedule -I./algorithm
 LFLAGS		+= -lreadline -lpthread -lhistory   -ltermcap -lminishell-ex -lepollserver
 # -lsqlite3
 LIB_DIR 	+= 
 
+CFLAGS  += -g
 CFLAGS  += -DHEBEI2_DBG 
 CFLAGS	+= -DPRINT_CMD_NAME_DBG 
 CFLAGS	+= -DTRACE_DBG 

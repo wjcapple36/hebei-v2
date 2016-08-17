@@ -7,18 +7,44 @@
 // #include "tmsxxdb.h"
 #include "sys/wait.h"
 // #include <strings.h>
-
+#include <stdio.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+extern struct ep_t ep;
+int connect_first_card(char *str_addr, char *str_port)
+{
+	printf("%s\n", __FUNCTION__);
+	struct ep_con_t client;
+	char *pstrAddr;
+	unsigned short port;
+
+	// goto _Next;
+	// _Next:
+	// printf("connect\n");
+	// return 0;
+	pstrAddr = str_addr;
+	port     = (unsigned short)atoi(str_port);
+
+	printf("Request connect %s:%d\n", pstrAddr, port);
+	if (0 == ep_Connect(&ep, &client, pstrAddr, port)) {
+		// if (0 == ep_Connect(&ep,&client, "127.0.0.1", 6000)) {
+		printf("client %s:%d\n",
+		       inet_ntoa(client.loc_addr.sin_addr),
+		       htons(client.loc_addr.sin_port));
+	}
+	return client.sockfd;
+}
 int32_t OnGetBasicInfo(struct tms_context *pcontext)
 {
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	trace_dbg("cmdid %x\n", pcontext->pgb->cmdid );
-// 当前节点管理器只支持最大16通道，多了报告信息存在乱码
-#define MAX_PIPE (16)
+
+	// 当前节点管理器只支持最大16通道，多了报告信息存在乱码
+#define MAX_PIPE (8)
 	char strout[64];
+#if 1
 
 	struct tms_otdrbaseinfo     val;
 	struct tms_otdr_crc_hdr     otdr_crc_hdr;
@@ -32,13 +58,13 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 
 	// 最大通道号有32个，通道号从1开始计数
 	// 只需要修改active_pipe里的通道就可构造相应的数据包
-	int active_pipe[] = {2,3, 7,8};
+	int active_pipe[] = {2, 3, 7, 8};
 
 	trace_dbg("节点管理器存在缺陷，具体描述查看源码\n");
 	// 节点管理器存在缺陷
 	// int active_pipe[] = {1,2,3,4,8,9};// 能支持
 	// int active_pipe[] = {1,2,3,4,8,9,10};// 报告乱码
-	
+
 
 
 	val.otdr_crc_hdr = &otdr_crc_hdr;
@@ -53,7 +79,14 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	otdr_crc_hdr.count = MAX_PIPE;//sizeof(active_pipe) / sizeof(active_pipe[0]);
 	strcpy(otdr_crc_hdr.id, "OTDRInfo");
 	strcpy(otdr_crc_hdr.name, "HelloKuGou");
-	strcpy(otdr_crc_hdr.addr, "192.168.1.251");
+
+	struct sockaddr addr;
+	socklen_t addrlen = sizeof(struct sockaddr);
+	getsockname(pcontext->fd, &addr, &addrlen);
+	struct sockaddr_in *addr_in;
+	addr_in = (struct sockaddr_in *)&addr;
+	snprintf(strout, 64, "%s", inet_ntoa(addr_in->sin_addr));
+	strcpy(otdr_crc_hdr.addr, strout);
 	strcpy(otdr_crc_hdr.hw_ver, "1.2.3.4");
 	strcpy(otdr_crc_hdr.sf_ver, "4.3.2.1");
 
@@ -77,7 +110,7 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	strcpy(otdr_param_hdr.id, "OTDRTestParaConfig");
 
 	for (int i = 0; i < sizeof(active_pipe) / sizeof(active_pipe[0]); i++) {
-		otdr_param_val[i].pipe = active_pipe[i] + 1;
+		otdr_param_val[i].pipe = active_pipe[i];
 		otdr_param_val[i].range = 10000;
 		otdr_param_val[i].wl = 1550;
 		otdr_param_val[i].pw = 40;
@@ -91,8 +124,8 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	fiber_hdr.count = sizeof(active_pipe) / sizeof(active_pipe[0]);
 	strcpy(fiber_hdr.id, "FiberSectionConfig");
 	for (int i = 0; i < fiber_hdr.count; i++) {
-		fiber_val[i].pipe_num = active_pipe[i] + 1;
-		fiber_val[i].fiber_num = active_pipe[i] + 1;
+		fiber_val[i].pipe_num = active_pipe[i];
+		fiber_val[i].fiber_num = active_pipe[i];
 		snprintf(strout, 64, "route %d", active_pipe[i] + 1);
 		strcpy(fiber_val[i].fiber_route, strout);
 		snprintf(strout, 64, "name %d", active_pipe[i] + 1);
@@ -112,6 +145,217 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	}
 
 	tms_OTDRBasicInfo(pcontext, NULL, &val);
+#endif
+
+	// 上报模拟告警
+	trace_dbg("上报模拟告警，节点管理器不支持逐条发送告警\n");
+
+
+	struct tms_curalarm alarm;
+
+	struct tms_alarmlist_hdr    alarmlist_hdr;
+	struct tms_alarmlist_val    alarmlist_val[10];
+	struct tms_alarmline_hdr    alarmline_hdr;
+	struct tms_alarmline_val    alarmline_val[8];
+
+
+	struct tms_ret_otdrdata otdrdata;
+	struct tms_ret_otdrparam    ret_otdrparam;
+	struct tms_test_result      test_result;
+	struct tms_hebei2_data_hdr  hebei2_data_hdr;
+	struct tms_hebei2_data_val  hebei2_data_val[1024 * 32], *tmp_data_val;
+	struct tms_hebei2_event_hdr hebei2_event_hdr;
+	struct tms_hebei2_event_val hebei2_event_val[128];
+
+
+	struct tms_ret_otdrparam    ret_otdrparam_2;
+	struct tms_test_result      test_result_2;
+	struct tms_hebei2_data_hdr  hebei2_data_hdr_2;
+	struct tms_hebei2_data_val  hebei2_data_val_2[1024 * 32];
+	struct tms_hebei2_event_hdr hebei2_event_hdr_2;
+	struct tms_hebei2_event_val hebei2_event_val_2[128];
+
+
+	// ************************************************************
+	alarm.alarmlist_hdr = &alarmlist_hdr;
+	alarm.alarmlist_val = &alarmlist_val[0];
+	alarm.alarmline_hdr = &alarmline_hdr;
+	alarm.alarmline_val = &alarmline_val[0];
+
+	alarmlist_hdr.count = 2;
+
+
+	alarmlist_val[0].pipe = 2;
+	alarmlist_val[0].fiber = 2;
+	alarmlist_val[0].level = 1;
+	alarmlist_val[0].type = 1;
+
+	alarmlist_val[1].pipe = 7;
+	alarmlist_val[1].fiber = 7;
+	alarmlist_val[1].level = 1;
+	alarmlist_val[1].type = 1;
+
+	strcpy(alarmlist_val[0].time, "2016-04-32 12:12:33");
+	strcpy(alarmlist_val[0].reserved0, "");;
+	alarmlist_val[0].location[0] = 0;
+
+	strcpy(alarmlist_val[1].time, "2016-04-32 12:12:33");
+	strcpy(alarmlist_val[1].reserved0, "");;
+	alarmlist_val[1].location[0] = 0;
+
+	alarmline_hdr.count = 2;
+	alarmline_val[0].pipe = 1;
+	alarmline_val[0].datalen =
+	    // sizeof(otdrdata) +
+	    sizeof(ret_otdrparam) +
+	    sizeof(test_result) +
+	    sizeof(hebei2_data_hdr) +
+	    sizeof(hebei2_data_val) +
+	    sizeof(hebei2_event_hdr) +
+	    sizeof(hebei2_event_val) + 4;
+
+	alarmline_val[1].pipe = 1;
+	alarmline_val[1].datalen =
+	    // sizeof(otdrdata) +
+	    sizeof(ret_otdrparam) +
+	    sizeof(test_result) +
+	    sizeof(hebei2_data_hdr) +
+	    sizeof(hebei2_data_val) +
+	    sizeof(hebei2_event_hdr) +
+	    sizeof(hebei2_event_val) + 4;
+
+
+
+
+	// ************************************************************
+
+	alarmline_val[0].ret_otdrparam    = &ret_otdrparam;
+	alarmline_val[0].test_result      = &test_result;
+	alarmline_val[0].hebei2_data_hdr  = &hebei2_data_hdr;
+	alarmline_val[0].hebei2_data_val  = hebei2_data_val;
+	alarmline_val[0].hebei2_event_hdr = &hebei2_event_hdr;
+	alarmline_val[0].hebei2_event_val = hebei2_event_val;
+
+
+	// ret_otdrparam.pipe   = pval->pipe;
+	ret_otdrparam.range  = 30000;//pval->range;
+	ret_otdrparam.wl     = 1550;
+	ret_otdrparam.pw     = 40;
+	ret_otdrparam.time   = 1234;
+	ret_otdrparam.gi     = 1.1f;//pval->gi;
+	ret_otdrparam.end_threshold          = 1.1;
+	ret_otdrparam.none_reflect_threshold = 1.1;
+
+	strcpy(test_result.result, "OTDRTestResultInfo");
+	test_result.range = 30000;
+	test_result.loss = 2;
+	test_result.atten = 2;
+	strcpy(test_result.time, "2016-03-02 22:11:31");
+
+	strcpy((char *)hebei2_data_hdr.dpid, "OTDRData");
+	hebei2_data_hdr.count = 16000;
+	hebei2_data_hdr.count = 15000;
+
+	tmp_data_val = hebei2_data_val;
+	for (int i = 0; i < 4000; i++) {
+		tmp_data_val->data = 40000 + i;
+		tmp_data_val++;
+	}
+	for (int i = 4000; i < 8000; i++) {
+		tmp_data_val->data = 40000 - i;
+		tmp_data_val++;
+	}
+	for (int i = 8000; i < 16000; i++) {
+		tmp_data_val->data = 40000 + i;
+		tmp_data_val++;
+	}
+	strcpy((char *)hebei2_event_hdr.eventid, "KeyEvents");
+	hebei2_event_hdr.count = 2;
+
+	hebei2_event_val[0].distance   = 10;
+	hebei2_event_val[0].event_type = 0;
+	hebei2_event_val[0].att        = 3;
+	hebei2_event_val[0].loss       = 3;
+	hebei2_event_val[0].reflect    = 3;
+	hebei2_event_val[0].link_loss  = 3;
+
+	hebei2_event_val[1].distance   = 10000;
+	hebei2_event_val[1].event_type = 3;
+	hebei2_event_val[1].att        = 4;
+	hebei2_event_val[1].loss       = 4;
+	hebei2_event_val[1].reflect    = 4;
+	hebei2_event_val[1].link_loss  = 4;
+
+
+
+
+
+
+
+	alarmline_val[1].ret_otdrparam    = &ret_otdrparam_2;
+	alarmline_val[1].test_result      = &test_result_2;
+	alarmline_val[1].hebei2_data_hdr  = &hebei2_data_hdr_2;
+	alarmline_val[1].hebei2_data_val  = hebei2_data_val_2;
+	alarmline_val[1].hebei2_event_hdr = &hebei2_event_hdr_2;
+	alarmline_val[1].hebei2_event_val = hebei2_event_val_2;
+
+
+	// ret_otdrparam.pipe   = pval->pipe;
+	ret_otdrparam_2.range  = 30000;//pval->range;
+	ret_otdrparam_2.wl     = 1550;
+	ret_otdrparam_2.pw     = 40;
+	ret_otdrparam_2.time   = 1234;
+	ret_otdrparam_2.gi     = 1.1f;//pval->gi;
+	ret_otdrparam_2.end_threshold          = 1.1;
+	ret_otdrparam_2.none_reflect_threshold = 1.1;
+
+	strcpy(test_result_2.result, "OTDRTestResultInfo");
+	test_result_2.range = 30000;
+	test_result_2.loss = 2;
+	test_result_2.atten = 2;
+	strcpy(test_result_2.time, "2016-03-02 22:11:31");
+
+	strcpy((char *)hebei2_data_hdr_2.dpid, "OTDRData");
+	hebei2_data_hdr_2.count = 16000;
+	hebei2_data_hdr_2.count = 15000;
+
+	tmp_data_val = hebei2_data_val_2;
+	for (int i = 0; i < 4000; i++) {
+		tmp_data_val->data = 40000 + i;
+		tmp_data_val++;
+	}
+	for (int i = 4000; i < 8000; i++) {
+		tmp_data_val->data = 40000 - i;
+		tmp_data_val++;
+	}
+	for (int i = 8000; i < 16000; i++) {
+		tmp_data_val->data = 40000 + i;
+		tmp_data_val++;
+	}
+	strcpy((char *)hebei2_event_hdr_2.eventid, "KeyEvents");
+	hebei2_event_hdr_2.count = 2;
+
+	hebei2_event_val[0].distance   = 10;
+	hebei2_event_val[0].event_type = 0;
+	hebei2_event_val[0].att        = 3;
+	hebei2_event_val[0].loss       = 3;
+	hebei2_event_val[0].reflect    = 3;
+	hebei2_event_val[0].link_loss  = 3;
+
+	hebei2_event_val[1].distance   = 10000;
+	hebei2_event_val[1].event_type = 3;
+	hebei2_event_val[1].att        = 4;
+	hebei2_event_val[1].loss       = 4;
+	hebei2_event_val[1].reflect    = 4;
+	hebei2_event_val[1].link_loss  = 4;
+	tms_CurAlarm_V2(pcontext->fd, NULL, &alarm);
+	// tms_CurAlarm(pcontext->fd, NULL, &alarm);
+	sleep(5);
+
+
+	// int fd = connect_first_card("127.0.0.1","6000");
+	// tms_CurAlarm(fd, NULL, &alarm);
+	// close(fd);
 	return 0;
 }
 
@@ -130,7 +374,7 @@ int32_t OnGetNodeTime(struct tms_context *pcontext)
 
 
 	char buf[20];
-	strftime(buf, 20, " % Y - % m - % d % H: % M: % S", local);
+	strftime(buf, 20, "%Y-%m-%d %H %M:%S", local);
 
 #ifdef CONFIG_PROC_HEBEI2
 	tms_RetNodeTime(pcontext, NULL, buf);
@@ -230,6 +474,7 @@ int32_t OnConfigNodeTime(struct tms_context *pcontext)
 {
 	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
 	// TODO set time
+	OnGetBasicInfo(pcontext);
 	return 0;
 }
 int32_t OnCurAlarm(struct tms_context *pcontext)
@@ -314,9 +559,12 @@ int32_t OnGetOTDRData(struct tms_context *pcontext, struct tms_get_otdrdata *pva
 		tms_RetOTDRData(pcontext->fd, NULL, &otdrdata, ID_RETOTDRDATA_17);
 	}
 	else if (pcontext->pgb->cmdid == ID_GETOTDRDATA_14) {
-		tms_RetOTDRData(pcontext->fd, NULL, &otdrdata, ID_RETOTDRDATA_19);
+
+		tms_RetOTDRData(pcontext->fd, NULL, &otdrdata, ID_RETOTDRDATA_16);
 	}
 	else {
+		// 需要苏宁配合
+		tms_RetOTDRData(pcontext->fd, NULL, &otdrdata, ID_RETOTDRDATA_19);
 		trace_dbg("unknow cmd\n");
 	}
 

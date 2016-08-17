@@ -10,9 +10,9 @@ static int do_fpga_get(void *ptr, int argc, char **argv);
 static int do_quit_system(void *ptr, int argc, char **argv);
 static int do_disappear(void *ptr, int argc, char **argv);
 static int do_appear(void *ptr, int argc, char **argv);
-static int do_channal(void *ptr, int argc, char **argv);
-static int do_slot(void *ptr, int argc, char **argv);
-static int do_net(void *ptr, int argc, char **argv);
+int do_channal(void *ptr, int argc, char **argv);
+int do_slot(void *ptr, int argc, char **argv);
+int do_net(void *ptr, int argc, char **argv);
 
 
 
@@ -114,13 +114,17 @@ static uint16_t delay  = 0;
 static int do_fpga_get(void *ptr, int argc, char **argv)
 {
 	printf("%s\n", __FUNCTION__);
-	
+	int ret;
 	if (argc >= 2 && memcmp(argv[1], "ch", strlen(argv[1])) == 0) {
-		do_channal(ptr, argc, argv);
+		ret = do_channal(ptr, argc, argv);
 	}
 	else if (argc >= 2 && memcmp(argv[1], "slot", strlen(argv[1])) == 0) {
 		do_slot(ptr, argc, argv);
 	}
+	else if (argc >= 2 && memcmp(argv[1], "net", strlen(argv[1])) == 0) {
+		do_net(ptr, argc, argv);
+	}
+	printf("%x\n", ret);
 	return 0;
 }
 
@@ -146,9 +150,9 @@ static int do_appear(void *ptr, int argc, char **argv)
 	return 0;
 }
 
-static int do_channal(void *ptr, int argc, char **argv)
+int do_channal(void *ptr, int argc, char **argv)
 {
-	printf("%s\n", __FUNCTION__);
+	// printf("%s\n", __FUNCTION__);
 
 	char tx[7];
 	char rx[7];
@@ -173,6 +177,7 @@ static int do_channal(void *ptr, int argc, char **argv)
 		array[i].delay_usecs = 0;
 		array[i].speed_hz = speed;
 		array[i].bits_per_word = bits;
+		array[i].cs_change = 1;
 	}
 
 
@@ -182,26 +187,27 @@ static int do_channal(void *ptr, int argc, char **argv)
 	array[7].delay_usecs = 0;
 	array[7].speed_hz = speed;
 	array[7].bits_per_word = bits;
+	array[7].cs_change = 1;
 
 	ret = ioctl(fd, SPI_IOC_MESSAGE(8), &array[0]);
 	if (ret == 1) {
 		perror("can't send spi message");
 		return 0;
 	}
-	for (ret = 0; ret < ARRAY_SIZE(rx); ret++) {
-		if (!(ret % 6)) {
-			puts("");
-		}
-		printf("%.2X ", rx[ret]);
-	}
+	// for (ret = 0; ret < ARRAY_SIZE(rx); ret++) {
+	// 	if (!(ret % 6)) {
+	// 		puts("");
+	// 	}
+	// 	printf("%.2X ", rx[ret]);
+	// }
 	close(fd);
 
-	return 0;
+	return rx[1];
 }
 
-static int do_slot(void *ptr, int argc, char **argv)
+int do_slot(void *ptr, int argc, char **argv)
 {
-	printf("%s\n", __FUNCTION__);
+	// printf("%s\n", __FUNCTION__);
 
 	char tx[7];
 	char rx[7];
@@ -226,6 +232,7 @@ static int do_slot(void *ptr, int argc, char **argv)
 		array[i].delay_usecs = 0;
 		array[i].speed_hz = speed;
 		array[i].bits_per_word = bits;
+		array[i].cs_change = 1;
 	}
 
 
@@ -235,26 +242,76 @@ static int do_slot(void *ptr, int argc, char **argv)
 	array[7].delay_usecs = 0;
 	array[7].speed_hz = speed;
 	array[7].bits_per_word = bits;
+	array[7].cs_change = 1;
 
 	ret = ioctl(fd, SPI_IOC_MESSAGE(8), &array[0]);
 	if (ret == 1) {
 		perror("can't send spi message");
 		return 0;
 	}
-	for (ret = 0; ret < ARRAY_SIZE(rx); ret++) {
-		if (!(ret % 6)) {
-			puts("");
-		}
-		printf("%.2X ", rx[ret]);
-	}
+	// for (ret = 0; ret < ARRAY_SIZE(rx); ret++) {
+	// 	if (!(ret % 6)) {
+	// 		puts("");
+	// 	}
+	// 	printf("%.2X ", rx[ret]);
+	// }
 	close(fd);
-	return 0;
+	return rx[1];
 }
 
-static int do_net(void *ptr, int argc, char **argv)
+int do_net(void *ptr, int argc, char **argv)
 {
-	printf("%s\n", __FUNCTION__);
-	return 0;
+	// printf("%s\n", __FUNCTION__);
+
+	char tx[7];
+	char rx[7];
+
+	CmdSPIGetNetSegmentFlag((unsigned char *)tx);
+
+
+
+	struct spi_ioc_transfer array[8];
+
+	int fd, ret;
+	fd = open(device, O_RDWR);
+	if (fd == -1) {
+		printf("open file %s error\n", device);
+		return 0;
+	}
+	// transfer(fd);
+
+	for (int i = 0; i < ARRAY_SIZE(tx);i++) {
+		array[i].tx_buf = (unsigned long)tx + i;
+		array[i].rx_buf = NULL;//(unsigned long)rx;
+		array[i].len = 1;
+		array[i].delay_usecs = 0;
+		array[i].speed_hz = speed;
+		array[i].bits_per_word = bits;
+		array[i].cs_change = 1;
+	}
+
+
+	array[7].tx_buf = NULL;
+	array[7].rx_buf = (unsigned long)rx;
+	array[7].len = 7;
+	array[7].delay_usecs = 0;
+	array[7].speed_hz = speed;
+	array[7].bits_per_word = bits;
+	array[7].cs_change = 1;
+
+	ret = ioctl(fd, SPI_IOC_MESSAGE(8), &array[0]);
+	if (ret == 1) {
+		perror("can't send spi message");
+		return 0;
+	}
+	// for (ret = 0; ret < ARRAY_SIZE(rx); ret++) {
+	// 	if (!(ret % 6)) {
+	// 		puts("");
+	// 	}
+	// 	printf("%.2X ", rx[ret]);
+	// }
+	close(fd);
+	return rx[1];
 }
 
 
