@@ -175,8 +175,10 @@ int32_t convert_ch_cyc_curv2host(
 		struct _tagUpOtdrCurv *pcyc_curv
 		);
 
-
+//保存采样点，调试时使用
 int32_t save_data_pt(const char file[], int32_t *An, int32_t len);
+//修改设备ip，在网段发生改变的时候使用
+int32_t modifiy_eq_ip(const char ip[], const char mask[], const char gw[]);
 
 
 

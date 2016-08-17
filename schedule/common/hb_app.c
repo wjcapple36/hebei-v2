@@ -2061,15 +2061,27 @@ int32_t save_data_pt(const char file[], int32_t *An, int32_t len)
 usr_exit:
 	return 0;
 }
-
-
-
-
-
-
-
-
-
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  modifiy_eq_ip  设置IP，通过调用Menglong接口实现
+ *
+ * @param ip[]
+ * @param mask[]
+ * @param gw[]
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t modifiy_eq_ip(const char ip[], const char mask[], const char gw[])
+{
+	int32_t ret;
+	char set_ip[128] = {0};
+	snprintf(set_ip, 128, "/app/freebox ip wan0 %s %s %s \0", ip, mask, gw);
+	system(set_ip);
+	printf("%s %d %s \n", __FUNCTION__, __LINE__, set_ip);
+	ret = OP_OK;
+	return ret;
+}
 
 
 //按照C风格编译
