@@ -828,7 +828,7 @@ void ProcessFinalData(uint32_t AlgoPurpose)
     ratio = MAX(ratio, 1);   // 放大因子至少为1
     EnlargeData(An, DATA_LEN, ratio);
     sigma = RootMeanSquare(An, DATA_LEN, NOISE_LEN-OtdrState.M);
-    OtdrState.CurveStartPoint = get_curv_start_point(sigma, &OtdrData, &OtdrCtrl, &OtdrState);
+    OtdrState.CurveStartPoint = get_curv_start_point(sigma, OtdrData.ChanData, &OtdrCtrl, &OtdrState);
     AdjustCurve(An, DATA_LEN);
 // DATA_ZERO_MOVE
     if((OtdrCtrl.RawDataLevel == DATA_ZERO_MOVE) && OtdrCtrl.FindEvent)

@@ -115,7 +115,7 @@ int32_t exit_self(int32_t err_code, char function[], int32_t line, char msg[]);
 int32_t get_ret_curv_cmd(int32_t in_cmd, int32_t *ret_cmd);
 //获取曲线起始点
 int32_t get_curv_start_point(int32_t Sigma,
-		OTDR_ChannelData_t *pOtdrData,
+		int32_t input[],
 	       	OtdrCtrlVariable_t *pOtdrCtrl,
 		OtdrStateVariable_t *pOtdrState);
 //通过事件点比较获取光纤段之间的告警
@@ -161,8 +161,24 @@ int32_t get_host_curv_from_algro(
 		struct tms_ret_otdrdata *hebei2_otdrdata
 		);
 
+//发送总的告警
+int32_t ret_total_curalarm2host();
+//获取该通道内所有的告警
+int32_t get_ch_total_alarm(
+		struct tms_alarmlist_val alarm_val[], 
+		struct _tagCHFiberSec *pfiber_sec
+		);
+//将周期性测量曲线转换成host格式
+int32_t convert_ch_cyc_curv2host(
+		int32_t ch,
+		struct tms_alarmline_val line_val[], 
+		struct _tagUpOtdrCurv *pcyc_curv
+		);
 
-
+//保存采样点，调试时使用
+int32_t save_data_pt(const char file[], int32_t *An, int32_t len);
+//修改设备ip，在网段发生改变的时候使用
+int32_t modifiy_eq_ip(const char ip[], const char mask[], const char gw[]);
 
 
 

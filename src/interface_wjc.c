@@ -36,13 +36,11 @@ int32_t OnGetNodeTime(struct tms_context *pcontext)
 	       local->tm_hour, local->tm_mday, local->tm_wday,
 	       local->tm_hour, local->tm_min, local->tm_sec);
 
-
-	char buf[20];
+	char buf[20] = {0};
 	strftime(buf, 20, "%Y-%m-%d %H:%M:%S", local);
 
-#ifdef CONFIG_PROC_HEBEI2
 	tms_RetNodeTime(pcontext, NULL, buf);
-#endif
+	printf("%s %d ret host time %s \n", __FUNCTION__, __LINE__, buf);
 	return 0;
 }
 int32_t OnRetNodeTime(struct tms_context *pcontext)
@@ -228,7 +226,7 @@ int32_t OnGetOTDRData(struct tms_context *pcontext,struct tms_get_otdrdata *pget
 		goto usr_exit;
 	}
 	//给点名测量传递参数
-	memcpy(&usrOtdrTest.ch, &pget_otdr_data->pipe, sizeof(struct _tagUsrOtdrTest) - 8);
+	memcpy(&usrOtdrTest.ch, &pget_otdr_data->pipe, sizeof(struct tms_get_otdrdata) );
 	usrOtdrTest.ch--;
 	usrOtdrTest.cmd = ack.cmdid;
 	usrOtdrTest.src_addr = pcontext->pgb->src;

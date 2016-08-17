@@ -15,6 +15,7 @@ extern "C" {
 #endif
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? (strrchr(__FILE__, '/') + 1):__FILE__)
+#define STR_LEN_IP 			16
 //定义返回给网管的错误码
 #define CMD_RET_OK			0 // 成功	
 #define CMD_RET_PARA_INVLADE		1 //参数非法
@@ -32,12 +33,13 @@ extern "C" {
 #define ADDR_HOST_SERVER		0x0000003e
 //定义一些其他关键变量
 #define MAX_RANG_M	180000
+#define OUTPUT_USR_MSG   1
 //光纤告警级别	
 #define FIBER_ALARM_LEV0	0
 #define FIBER_ALARM_LEV1	1
 #define FIBER_ALARM_LEV2	2
 #define FIBER_ALARM_LEV3	3
-
+#define SEC_NUM_IN_CH		10
 //通道的基数，从fpga中获取到，通道号+该基数为对外使用的通道号
 extern volatile int32_t ch_offset; 
 //通道的光纤段参数

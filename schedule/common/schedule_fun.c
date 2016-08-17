@@ -342,7 +342,7 @@ void OtdrStateInit_r(OtdrStateVariable_t  *pOtdrState)
 	pOtdrState->TreatAsHighPowerData = 1;
 	pOtdrState->PowerLevel = MAX_POWER_LEVEL;
 
-	pOtdrState->M = PulseWidthInSampleNum_r(PulseWidth_ns, pOtdrState->RealSampleRate_Hz);
+	pOtdrState->M = PulseWidthInSampleNum_r(pOtdrState);
 	pOtdrState->Points_1m = 2*pOtdrState->MeasureParam.n * pOtdrState->RealSampleRate_Hz /C;
 	if(MeasureLength_m > 60000)
 	{
@@ -366,12 +366,317 @@ void OtdrStateInit_r(OtdrStateVariable_t  *pOtdrState)
 	pOtdrState->MeasureLengthPoint = DATA_LEN - NOISE_LEN;
 	pOtdrState->CurveStartPoint = OtdrParam.OtdrStartPoint[i];
 }
-int32_t PulseWidthInSampleNum_r (uint32_t pl_ns, uint32_t sample_hz)
+void RemoveBaseLine_r(int32_t input[],
+		int32_t DataLen,
+	       	int32_t NoiseLen,
+		OtdrCtrlVariable_t *pOtdrCtrl,
+		OtdrStateVariable_t *pOtdrState)
+{
+    Int32 i, avg, temp, *An = input;
+    
+
+    MaxValue(input, 20, DataLen-NoiseLen, &pOtdrState->MaxRawData, NULL, DATA_TYPE_INT);
+    for(i = DataLen-NoiseLen-1; i > DataLen-NoiseLen-1-pOtdrCtrl->NullReadCount; i--)
+    {
+        An[i] = An[i-pOtdrCtrl->NullReadCount];
+    }
+    
+
+    if(pOtdrState->MeasureParam.MeasureLength_m > 100000)
+    {
+        for(i = DataLen-NoiseLen; i < DataLen; i++)
+        {
+            An[i] = An[i-NoiseLen];
+        }
+    }
+    
+
+	avg   = NoiseMean(An, DataLen, NoiseLen);
+	temp  = NoiseMean(An, DataLen-NoiseLen, NoiseLen);
+	if(temp > avg)
+	{
+    	for(i = DataLen-NoiseLen; i < DataLen; i++)
+    	{
+    	    An[i] += temp - avg;
+    	}
+    	avg  = temp;
+    }
+    for(i = 0; i < DataLen; i++)
+    {
+    	An[i] -= avg;
+    }
+}
+void AdjustCurve_r(int32_t input[], int32_t DataLen, OtdrStateVariable_t *pOtdrState)
+{
+    Int32 i, m = pOtdrState->CurveStartPoint;
+    for(i = 0; i < DataLen - m; i++)
+    {
+    	input[i] = input[i+m];
+    }
+}
+int32_t GetSaturateThreshold_r(const int32_t input[], OtdrStateVariable_t *pOtdrState)
+{
+    Int32 i, count, maxcount, SatThreshold;
+    Int32 acc, mv, yes = 0;
+    
+    MaxValue(input, 0, DATA_LEN-NOISE_LEN-pOtdrState->M, &SatThreshold, &i, DATA_TYPE_INT);
+
+    printf("GetSaturateThreshold : MaxValue at %d is %d", i, SatThreshold);
+    SatThreshold *= Tenth_div5(-0.05);
+	printf(", low down to %d\n", SatThreshold);
+    
+    count = 0;
+    maxcount = MIN(pOtdrState->M, 100);
+    maxcount = MAX(maxcount, 5);
+    for(i = 0; i < DATA_LEN-NOISE_LEN-pOtdrState->M; i++)
+    {
+        if(input[i] >= SatThreshold)
+        {
+            count++;
+            if(count >= maxcount)     break;
+        }
+    }
+    
+    if(count < maxcount)
+    {
+
+        acc = OtdrCtrl.AccCountOnce-2;
+        if(pOtdrState->MeasureParam.MeasureLength_m == 5000)  acc = OtdrCtrl.AccCountOnce-4;
+        acc = acc * (pOtdrState->TotalMeasureTime / TIMES_COUNT_ONCE);
+        mv  = acc * 1020;
+        
+        printf("There're NO saturate points(%d < %d)", count, maxcount);
+        if(pOtdrState->MaxRawData >= mv)
+        {
+            yes = 1;
+            printf(", but I find it in anther way\n");
+        }
+        else    printf("\n");
+    }
+    else
+    {
+        printf("There's saturate point from %d\n", i);
+        yes = 1;
+    }
+    
+    if(!yes)     SatThreshold *= 1.5;
+    pOtdrState->SatThreshold = SatThreshold;
+    return yes;
+}
+uint32_t GetNfirWidth_r(uint32_t PowerMode, OtdrStateVariable_t *pOtdrState )
+{
+    uint32_t m, PulseWidth_ns;
+    
+    m = pOtdrState->M;
+    PulseWidth_ns = pOtdrState->MeasureParam.PulseWidth_ns;
+    
+	if((PulseWidth_ns > 2560) && (PulseWidth_ns <= 10240))      m /= 2;     // 2011-8-23 21:11:11
+	if((PulseWidth_ns > 10240) && (PulseWidth_ns <= 20480))     m /= 4;     // 2011-8-23 21:11:13
+	if(pOtdrState->MeasureParam.MeasureLength_m > 100000)         m *= 2;     // 2012-4-16 11:05:38
+	return m;
+}
+Int32 CapacityLinearCompensate_r(Int32 input[], 
+		Int32 DataLen,
+	       	Int32 FilterLen, 
+		Int32 sigma,
+		OtdrCtrlVariable_t *pOtdrCtrl,
+		OtdrStateVariable_t *pOtdrState)
+{
+    Int32   i, temp, BadPoint, freeRT = 1, freeTC = 1;
+    Int32   MinTrend, Avg, NoiseStart;
+	Int32   *TrendCurve = NULL, *RawTemp = NULL;
+    
+    if(!pOtdrCtrl->EnableCapacityCompensate)      return 0;
+    
+    RawTemp = (Int32*)malloc(DATA_LEN * sizeof(Int32));
+    if(NULL == RawTemp)
+    {
+	    exit_self(errno,__FUNCTION__, __LINE__,"new buf fail\0");
+	    return  0;
+    }
+    
+    TrendCurve = (Int32*)malloc(DATA_LEN * sizeof(Int32));
+    if(NULL == TrendCurve)
+    {
+	    exit_self(errno,__FUNCTION__, __LINE__,"new buf fail\0");
+	    return 0;
+    }
+
+    nfir_center(input, TrendCurve, DataLen, FilterLen);
+
+    if(pOtdrState->MeasureParam.PulseWidth_ns < MIN_PW_DATA_COMBINE)
+    {
+        BadPoint = DataLen - NOISE_LEN;
+        MinTrend = 0;
+        for(i = FilterLen; i < DataLen-1-NOISE_LEN; i++)
+        {
+            if(TrendCurve[i] <= MinTrend)   break;
+        }
+        BadPoint = i;
+    }
+    else
+    {
+        MinValue(TrendCurve, FilterLen, DataLen-1 - NOISE_LEN, &MinTrend, &BadPoint, DATA_TYPE_INT);
+        if(MinTrend > -sigma/2)         return 0;
+    }
+    if(BadPoint > DataLen-NOISE_LEN)    return 0;
+
+
+	Avg = MinTrend;
+	
+    pOtdrState->SignalBadPoint = BadPoint;
+    printf("pOtdrState->SignalBadPoint = %d\n", BadPoint);
+
+	memcpy(RawTemp, input, DataLen*sizeof(Int32));
+	{
+        for(i = BadPoint; i < DataLen - NOISE_LEN; i++)
+        {
+            input[i] = input[i] - TrendCurve[i];
+    	}
+    	for(i = 0; i < BadPoint; i++)
+    	{
+    	    input[i] -= Avg;
+    	}
+    	
+    	pOtdrState->SatThreshold -= Avg;
+    	
+
+    	temp     = 3.5*sigma;
+    	if(RawTemp != NULL)
+    	{
+    	    for(i = BadPoint; i < DataLen - NOISE_LEN; i++)
+            {
+        	    if(input[i] > temp)
+        	    {
+        	        input[i] = RawTemp[i];
+        	    }
+        	}
+    	}
+
+    	NoiseStart = DataLen-1;
+    	temp     = -3*sigma;
+    	for(i = BadPoint; i < DataLen - NOISE_LEN; i++)
+        {
+    	    if(input[i] < temp)
+    	    {
+    	        input[i] = input[NoiseStart--];
+    	        if(NoiseStart <= DataLen-NOISE_LEN+FilterLen)   NoiseStart = DataLen-1;
+    	    }
+    	}
+    	
+
+    	for(i = DataLen-NOISE_LEN-FilterLen; i < DataLen - NOISE_LEN; i++)
+        {
+    	    if(input[i] < temp)
+    	    {
+    	        input[i] = input[NoiseStart--];
+    	        if(NoiseStart <= DataLen-NOISE_LEN+FilterLen)   NoiseStart = DataLen-1;
+    	    }
+    	}
+    }
+    
+    if(freeRT)  free(RawTemp);
+    if(freeTC)  free(TrendCurve);
+    
+    return 1;
+}
+int32_t PulseWidthInSampleNum_r(OtdrStateVariable_t *pOtdrState)
 {
     Int32 m;
-    m = (int32_t)(pl_ns * (sample_hz / 1000) / 1e6);
+    m = (Int32)(pOtdrState->MeasureParam.PulseWidth_ns * (pOtdrState->RealSampleRate_Hz / 1000) / 1e6);
+
     m = MAX(m, 2);
+
     return m;
+}
+void GetEventFindingParamBeforeLog_r(float *t1,
+	       	float *t2,
+	       	float *k,
+	       	Int32 *M,
+	       	const char type[],
+	       	Int32 PowerMode,
+		OtdrStateVariable_t *pOtdrState)
+{
+	float k0, tt1, tt2;
+	Int32 Lambda_nm, PulseWidth_ns, m;
+
+	Lambda_nm       = pOtdrState->MeasureParam.Lambda_nm;
+	PulseWidth_ns   = pOtdrState->MeasureParam.PulseWidth_ns;
+    
+	if(strcmp(type, "Large") == 0)          // Ѱ?Ҵ??¼???
+	{
+        if(PowerMode == POWER_MODE_LOW)
+        {
+            tt1 = 8;
+            tt2 = 0.03;
+        }
+        else
+        {
+            tt1 = 8;
+            tt2 = 0.04;
+        }
+
+        if((Lambda_nm == 850) || (Lambda_nm == 1300))  // 850????   2012-6-27 15:16:53
+	    {
+	        tt1 = 8;
+	        tt2 = 0.04;
+	    }
+	    else if(TR600_C_CLASS && !TR600_A_CLASS)      // 2012-11-5 17:21:16 24CΪ???弤???????й??ʿ???
+	    {
+	        if(pOtdrState->RealSampleRate_MHz >= CLK_400MHz)
+	        {
+    	        tt1 = 8;
+    	        tt2 = 0.065;
+    	    }
+	    }
+	    
+    	if(t1 != NULL)		*t1 = tt1;		// 2011-3-7 17:12:44
+    	if(t2 != NULL)		*t2 = tt2;
+    }
+    else if(strcmp(type, "Small") == 0)     // Ѱ??С?¼???
+    {
+        tt1 = 7;//8;//
+        tt2 = 0.03;//0.025;//
+    	if((Lambda_nm == 850) || (Lambda_nm == 1300))  // 850????   2012-6-27 15:16:53
+	    {
+	        tt1 = 8;
+	        tt2 = 0.04;
+	    }
+	    else if(TR600_C_CLASS && !TR600_A_CLASS)      // 2012-11-5 17:21:16 24CΪ???弤???????й??ʿ???
+	    {
+	        if(pOtdrState->RealSampleRate_MHz >= CLK_200MHz)
+	        { 
+    	        tt1 = 14;
+    	        tt2 = 0.1;
+    	    }
+	    }
+
+    	if(t1 != NULL)		*t1 = tt1;		// 2011-3-7 17:12:44
+    	if(t2 != NULL)		*t2 = tt2;
+    }
+
+	GetLaserParam(Lambda_nm, &k0, NULL);
+
+	m = PulseWidthInSampleNum_r(pOtdrState);
+	if(strcmp(type, "Large") == 0)     // Ѱ?Ҵ??¼???
+    {
+        if(PulseWidth_ns < 20)          m <<= 1;
+    	else if(PulseWidth_ns >= 5120)  m = (Int32)(m / (PulseWidth_ns / 5120.0));
+    	
+    	if(k != NULL)		*k = k0 / (pOtdrState->Points_1m * 1000); // ???任??1km??Ӧ?ĵ???
+    	if(M != NULL)		*M = m;
+    }
+    else if(strcmp(type, "Small") == 0)          // Ѱ??С?¼???
+	{
+    	if(k != NULL)		*k = k0 / (pOtdrState->Points_1m * 1000); // ???任??1km??Ӧ?ĵ???
+    	if(M != NULL)
+    	{
+    	    if(PulseWidth_ns <= 20)         *M = 16*m;              // ʹ???????˲?
+    	    else if(PulseWidth_ns <= 240)   *M = 8*m;               // ʹ???????˲?
+    	    else if(PulseWidth_ns <= 320)   *M = 4*m;               // ʹ???????˲?
+    	    else                            *M = 2*m;
+    	}
+    }
 }
 void EstimateCurveConnect_r(
 		int32_t chan_data[],
@@ -379,29 +684,33 @@ void EstimateCurveConnect_r(
 		OtdrStateVariable_t  *pOtdrState)
 {
 	int32_t   m, i, avg, sigma, Cn, accept, FrontFlat = 0, fiberlessthan30km = 0;
-	int32_t   *An = NULL;
+	int32_t   *An = NULL, ratio;
 	uint32_t  PulseWidth_ns;
 	float   v, k;
 
 	An = chan_data;
-
+	pOtdrCtrl->CurveConcat = 1;
 	PulseWidth_ns       = pOtdrState->MeasureParam.PulseWidth_ns;
-	RemoveBaseLine(An, DATA_LEN, NOISE_LEN);
-	EnlargeData(An, DATA_LEN, 128);
-	AdjustCurve(An, DATA_LEN);
-	i = GetSaturateThreshold(An);
+	RemoveBaseLine_r(An, DATA_LEN, NOISE_LEN,pOtdrCtrl, pOtdrState);
+	ratio = ENLARGE_FACTOR(pOtdrState->TotalMeasureTime);
+	ratio = MAX(ratio, 1);   // 放大因子至少为1
+	EnlargeData(An, DATA_LEN, ratio);
+	sigma = RootMeanSquare(An, DATA_LEN, NOISE_LEN-pOtdrState->M);
+	pOtdrState->CurveStartPoint =  get_curv_start_point(sigma,An, pOtdrState, pOtdrCtrl);
+	AdjustCurve_r(An, DATA_LEN, pOtdrState);
+	i = GetSaturateThreshold_r(An, pOtdrState);
 	//debug
 	if(i == 0)
 	{
 		printf( "%s():line : %d NOT found saturation",__FUNCTION__, __LINE__);
 	}
-	m = GetNfirWidth(pOtdrCtrl->PowerMode);   // 2013-1-11 9:17:01
+	m = GetNfirWidth_r(pOtdrCtrl->PowerMode, pOtdrState);   // 2013-1-11 9:17:01
 	nfir(An, An, DATA_LEN, m);  // 2011-7-4 11:37:27
 	sigma = RootMeanSquare(An, DATA_LEN, NOISE_LEN-pOtdrState->M);
 	pOtdrState->sigma = sigma;
 
 	i = MAX(m, 128);
-	CapacityLinearCompensate(An, DATA_LEN, i, sigma);
+	CapacityLinearCompensate_r(An, DATA_LEN, i, sigma,pOtdrCtrl, pOtdrState);
 
 
 	int32_t Pos5dB, tmp;
@@ -463,7 +772,7 @@ void EstimateCurveConnect_r(
 	}
 	
 
-	m = PulseWidthInSampleNum();
+	m = PulseWidthInSampleNum_r(pOtdrState);
 	for(i = Cn+10; i < DATA_LEN; i++)
 	{
 		if(An[i] < pOtdrState->SatThreshold)
@@ -478,7 +787,8 @@ void EstimateCurveConnect_r(
 					(pOtdrState->CurveConcatPoint >= DATA_LEN - 6*m))
 			{
 				UseLowPowerMode_r(pOtdrCtrl, pOtdrState);
-				printf("%s(): Line:%d connection point is too far away, use low power mode\n",__FUNCTION__, __LINE__);
+				printf("%s(): Line:%d connection point is too far away, use low power mode\n",\
+						__FUNCTION__, __LINE__);
 				return;
 			}
 			break;
@@ -491,7 +801,7 @@ void EstimateCurveConnect_r(
 	{
 		An = chan_data;
 		Cn = pOtdrState->CurveConcatPoint;
-		GetEventFindingParamBeforeLog(NULL, NULL, &k, &m, "Large", 0);
+		GetEventFindingParamBeforeLog_r(NULL, NULL, &k, &m, "Large", 0,pOtdrState);
 		k = k*m;
 		while((Cn < pOtdrState->MeasureLengthPoint*8/10) && (Cn < DATA_LEN - 6*m))
 		{
@@ -521,7 +831,8 @@ void EstimateCurveConnect_r(
 			else if(-1 == accept)
 			{
 				UseLowPowerMode_r(pOtdrCtrl, pOtdrState);
-				printf("%s(): line:%d can't find a proper cat point, use low power mode\n",__FUNCTION__, __LINE__);
+				printf("%s(): line:%d can't find a proper cat point, use low power mode\n",\
+						__FUNCTION__, __LINE__);
 				return;
 			}
 			else    Cn += m;
@@ -545,6 +856,7 @@ void EstimateCurveConnect_r(
 	{
 		//        pOtdrState->CurveConcatPoint = 6200; // debug
 		pOtdrCtrl->PowerMode = POWER_MODE_COMBINE;
+		pOtdrCtrl->LowPowerDataProcessed = 1;
 		TCPDEBUG_PRINT("connection point = %d(%.3fkm)\n", pOtdrState->CurveConcatPoint,
 				(float)pOtdrState->CurveConcatPoint/pOtdrState->Points_1m/1000);
 	}

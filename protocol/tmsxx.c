@@ -1814,9 +1814,9 @@ static int32_t tms_AnalyseCurAlarm(struct tms_context *pcontext, int8_t *pdata, 
 	alarmline_val[n]
 	*/
 	struct tms_alarmlist_hdr *palarmlist_hdr = (struct tms_alarmlist_hdr *)(pdata + GLINK_OFFSET_DATA);
-	// struct tms_alarmlist_val ;
-	// struct tms_alarmline_hdr ;
-	// struct tms_alarmline_val ;
+	struct tms_alarmlist_val *palarmlist_val = (struct tms_alarmlist_val*)(palarmlist_hdr + 1);
+	struct tms_alarmline_hdr *palarmline_hdr = (struct tms_alarmline_hdr*)(palarmlist_val + htonl(palarmlist_hdr->count));
+	struct tms_alarmline_val *alarmline_val = (struct tms_alarmline_val*)(palarmline_hdr + 1);
 
 	
 	// 数据包拆分成两部分，告警头 + 告警曲线
