@@ -1690,7 +1690,7 @@ int32_t ret_host_basic_info(
 	pfiber_val = NULL;
 
 	//首先获取光线段配置信息
-	strcpy(fiber_hdr.fiber_id, "FiberSectionConfig\0");
+	strcpy(fiber_hdr.id, "FiberSectionConfig\0");
 	memset(&otdr_param_hdr, 0, sizeof(struct tms_otdr_param_hdr));
 	strcpy(otdr_param_hdr.id, "OTDRTestParaConfig\0");
 	otdr_param_hdr.count = 0;
