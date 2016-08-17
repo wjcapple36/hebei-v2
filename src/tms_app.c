@@ -21,18 +21,18 @@ int connect_first_card(char *str_addr, char *str_port)
 	unsigned short port;
 
 	// goto _Next;
-// _Next:
+	// _Next:
 	// printf("connect\n");
 	// return 0;
 	pstrAddr = str_addr;
 	port     = (unsigned short)atoi(str_port);
 
-	printf("Request connect %s:%d\n",pstrAddr,port);
-	if (0 == ep_Connect(&ep,&client, pstrAddr, port)) {
-	// if (0 == ep_Connect(&ep,&client, "127.0.0.1", 6000)) {
-		printf("client %s:%d\n", 
-					inet_ntoa(client.loc_addr.sin_addr),
-					htons(client.loc_addr.sin_port));	
+	printf("Request connect %s:%d\n", pstrAddr, port);
+	if (0 == ep_Connect(&ep, &client, pstrAddr, port)) {
+		// if (0 == ep_Connect(&ep,&client, "127.0.0.1", 6000)) {
+		printf("client %s:%d\n",
+		       inet_ntoa(client.loc_addr.sin_addr),
+		       htons(client.loc_addr.sin_port));
 	}
 	return client.sockfd;
 }
@@ -40,11 +40,11 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 {
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	trace_dbg("cmdid %x\n", pcontext->pgb->cmdid );
-	
+
 	// 当前节点管理器只支持最大16通道，多了报告信息存在乱码
 #define MAX_PIPE (8)
 	char strout[64];
-	#if 1
+#if 1
 
 	struct tms_otdrbaseinfo     val;
 	struct tms_otdr_crc_hdr     otdr_crc_hdr;
@@ -59,13 +59,13 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	// 最大通道号有32个，通道号从1开始计数
 	// 只需要修改active_pipe里的通道就可构造相应的数据包
 	int active_pipe[] = {2, 3, 7, 8};
-	
+
 	trace_dbg("节点管理器存在缺陷，具体描述查看源码\n");
 	// 节点管理器存在缺陷
 	// int active_pipe[] = {1,2,3,4,8,9};// 能支持
 	// int active_pipe[] = {1,2,3,4,8,9,10};// 报告乱码
 
-	
+
 
 	val.otdr_crc_hdr = &otdr_crc_hdr;
 	val.otdr_crc_val = &otdr_crc_val[0];
@@ -146,7 +146,7 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 
 	tms_OTDRBasicInfo(pcontext, NULL, &val);
 #endif
-	
+
 	// 上报模拟告警
 	trace_dbg("上报模拟告警，节点管理器不支持逐条发送告警\n");
 
@@ -181,15 +181,15 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	alarm.alarmlist_val = &alarmlist_val[0];
 	alarm.alarmline_hdr = &alarmline_hdr;
 	alarm.alarmline_val = &alarmline_val[0];
-	
+
 	alarmlist_hdr.count = 2;
 
-	
+
 	alarmlist_val[0].pipe = 2;
 	alarmlist_val[0].fiber = 2;
 	alarmlist_val[0].level = 1;
 	alarmlist_val[0].type = 1;
-	
+
 	alarmlist_val[1].pipe = 7;
 	alarmlist_val[1].fiber = 7;
 	alarmlist_val[1].level = 1;
@@ -205,24 +205,24 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 
 	alarmline_hdr.count = 2;
 	alarmline_val[0].pipe = 1;
-	alarmline_val[0].datalen =  
-	// sizeof(otdrdata) +
-	                            sizeof(ret_otdrparam) +
-	                            sizeof(test_result) +
-	                            sizeof(hebei2_data_hdr) +
-	                            sizeof(hebei2_data_val) +
-	                            sizeof(hebei2_event_hdr) +
-	                            sizeof(hebei2_event_val) +4;
+	alarmline_val[0].datalen =
+	    // sizeof(otdrdata) +
+	    sizeof(ret_otdrparam) +
+	    sizeof(test_result) +
+	    sizeof(hebei2_data_hdr) +
+	    sizeof(hebei2_data_val) +
+	    sizeof(hebei2_event_hdr) +
+	    sizeof(hebei2_event_val) + 4;
 
 	alarmline_val[1].pipe = 1;
-	alarmline_val[1].datalen =  
-	// sizeof(otdrdata) +
-	                            sizeof(ret_otdrparam) +
-	                            sizeof(test_result) +
-	                            sizeof(hebei2_data_hdr) +
-	                            sizeof(hebei2_data_val) +
-	                            sizeof(hebei2_event_hdr) +
-	                            sizeof(hebei2_event_val) +4;
+	alarmline_val[1].datalen =
+	    // sizeof(otdrdata) +
+	    sizeof(ret_otdrparam) +
+	    sizeof(test_result) +
+	    sizeof(hebei2_data_hdr) +
+	    sizeof(hebei2_data_val) +
+	    sizeof(hebei2_event_hdr) +
+	    sizeof(hebei2_event_val) + 4;
 
 
 
@@ -353,7 +353,7 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	sleep(5);
 
 
-	// int fd = connect_first_card("127.0.0.1","6000");	
+	// int fd = connect_first_card("127.0.0.1","6000");
 	// tms_CurAlarm(fd, NULL, &alarm);
 	// close(fd);
 	return 0;
@@ -374,7 +374,7 @@ int32_t OnGetNodeTime(struct tms_context *pcontext)
 
 
 	char buf[20];
-	strftime(buf, 20, " % Y - % m - % d % H: % M: % S", local);
+	strftime(buf, 20, "%Y-%m-%d %H %M:%S", local);
 
 #ifdef CONFIG_PROC_HEBEI2
 	tms_RetNodeTime(pcontext, NULL, buf);
@@ -474,6 +474,7 @@ int32_t OnConfigNodeTime(struct tms_context *pcontext)
 {
 	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
 	// TODO set time
+	OnGetBasicInfo(pcontext);
 	return 0;
 }
 int32_t OnCurAlarm(struct tms_context *pcontext)

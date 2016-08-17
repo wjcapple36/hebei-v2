@@ -1136,7 +1136,7 @@ int32_t tms_RetNodeTime(
 	int len;
 
 	pmem = tm;
-	len = strlen(tm);
+	len = strlen(tm)+1;
 
 	tms_FillGlinkFrame(&base_hdr, paddr);
 	if (0 == pcontext->fd) {
@@ -1801,6 +1801,39 @@ int32_t tms_CurAlarm(
 
 static int32_t tms_AnalyseCurAlarm(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
+	/* 数据包内容
+	alarmlist_hdr
+	alarmlist_val[0]
+	alarmlist_val[1]
+	alarmlist_val[2]
+	alarmlist_val[n] 
+	alarmline_hdr
+	alarmline_val[0]
+	alarmline_val[1]
+	alarmline_val[2]
+	alarmline_val[n]
+	*/
+	struct tms_alarmlist_hdr *palarmlist_hdr = (struct tms_alarmlist_hdr *)(pdata + GLINK_OFFSET_DATA);
+	// struct tms_alarmlist_val ;
+	// struct tms_alarmline_hdr ;
+	// struct tms_alarmline_val ;
+
+	
+	// 数据包拆分成两部分，告警头 + 告警曲线
+
+	// 分析告警头
+
+
+	// 保存简述文件：
+	/*包括
+	* 描述有几条告警
+	*/
+
+
+	// 保存告警头
+
+	// 保存告警曲线
+
 	if (pcontext->ptcb->pf_OnCurAlarm) {
 		pcontext->ptcb->pf_OnCurAlarm(pcontext);
 	}
