@@ -236,7 +236,7 @@ extern "C" {
 // 0x80000004
 
 struct tms_fibersection_hdr {
-	char fiber_id[20];
+	char id[20];
 	uint32_t count;
 };
 struct tms_fibersection_val {
@@ -336,7 +336,7 @@ struct tms_otdr_crc_hdr {
 	uint32_t crc;
 	char id[12];
 	char name[64];
-	char addr[64];
+	char addr[16];
 	char hw_ver[12];
 	char sf_ver[12];
 	uint32_t count;
@@ -698,7 +698,11 @@ int32_t tms_RetOTDRData(
     struct glink_addr *paddr,
     struct tms_ret_otdrdata *val,
     unsigned long cmdid);
-
+int32_t tms_RetStatusData(struct tms_context *pcontext,
+                          struct glink_addr *paddr,
+                          struct tms_getstatus_data_hdr *hdr,
+                          struct tms_getstatus_data_val *val,
+                          int32_t ilen);
 
 void tms_Print_tms_fibersection_hdr(struct tms_fibersection_hdr *pval);
 void tms_Print_tms_fibersection_val(struct tms_fibersection_val *pval);

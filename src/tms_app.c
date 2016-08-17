@@ -16,15 +16,30 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 {
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	trace_dbg("cmdid %x\n", pcontext->pgb->cmdid );
+// 当前节点管理器只支持最大16通道，多了报告信息存在乱码
+#define MAX_PIPE (16)
+	char strout[64];
 
 	struct tms_otdrbaseinfo     val;
 	struct tms_otdr_crc_hdr     otdr_crc_hdr;
-	struct tms_otdr_crc_val     otdr_crc_val[8];
+	struct tms_otdr_crc_val     otdr_crc_val[MAX_PIPE];
 	struct tms_otdr_ch_status   otdr_ch_status;
 	struct tms_otdr_param_hdr   otdr_param_hdr;
-	struct tms_otdr_param_val   otdr_param_val[8];
+	struct tms_otdr_param_val   otdr_param_val[MAX_PIPE];
 	struct tms_fibersection_hdr fiber_hdr;
-	struct tms_fibersection_val fiber_val[8];
+	struct tms_fibersection_val fiber_val[MAX_PIPE];
+
+
+	// 最大通道号有32个，通道号从1开始计数
+	// 只需要修改active_pipe里的通道就可构造相应的数据包
+	int active_pipe[] = {2,3, 7,8};
+
+	trace_dbg("节点管理器存在缺陷，具体描述查看源码\n");
+	// 节点管理器存在缺陷
+	// int active_pipe[] = {1,2,3,4,8,9};// 能支持
+	// int active_pipe[] = {1,2,3,4,8,9,10};// 报告乱码
+	
+
 
 	val.otdr_crc_hdr = &otdr_crc_hdr;
 	val.otdr_crc_val = &otdr_crc_val[0];
@@ -35,7 +50,7 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	val.fiber_val = &fiber_val[0];
 
 
-	otdr_crc_hdr.count = 2;
+	otdr_crc_hdr.count = MAX_PIPE;//sizeof(active_pipe) / sizeof(active_pipe[0]);
 	strcpy(otdr_crc_hdr.id, "OTDRInfo");
 	strcpy(otdr_crc_hdr.name, "HelloKuGou");
 	strcpy(otdr_crc_hdr.addr, "192.168.1.251");
@@ -43,32 +58,53 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	strcpy(otdr_crc_hdr.sf_ver, "4.3.2.1");
 
 	for (int i = 0; i < otdr_crc_hdr.count; i++) {
-		otdr_crc_val[i].pipe = i;
+		otdr_crc_val[i].pipe = i + 1;
 		otdr_crc_val[i].wl = 1550;
 		otdr_crc_val[i].dr = 40;
 		strcpy(otdr_crc_val[i].wdm, "what?");
 	}
 
 	strcpy(otdr_ch_status.id, "PipeState");
-	otdr_ch_status.ch_status = 0x3;
+	otdr_ch_status.ch_status = 0;
+	for (int i = 0; i < sizeof(active_pipe) / sizeof(active_pipe[0]); i++) {
+		otdr_ch_status.ch_status |= (1 << (active_pipe[i] - 1));
+	}
+	printf("-------%x-------\n", otdr_ch_status.ch_status );
 
 
-	otdr_param_hdr.count = 2;
+
+	otdr_param_hdr.count = sizeof(active_pipe) / sizeof(active_pipe[0]);
 	strcpy(otdr_param_hdr.id, "OTDRTestParaConfig");
 
+	for (int i = 0; i < sizeof(active_pipe) / sizeof(active_pipe[0]); i++) {
+		otdr_param_val[i].pipe = active_pipe[i] + 1;
+		otdr_param_val[i].range = 10000;
+		otdr_param_val[i].wl = 1550;
+		otdr_param_val[i].pw = 40;
+		otdr_param_val[i].time = 1234;
+		otdr_param_val[i].gi = 1.1;
+		otdr_param_val[i].end_threshold = 1.1;
+		otdr_param_val[i].none_reflect_threshold = 1.10;
+	}
 
-	fiber_hdr.count = 2;
+
+	fiber_hdr.count = sizeof(active_pipe) / sizeof(active_pipe[0]);
+	strcpy(fiber_hdr.id, "FiberSectionConfig");
 	for (int i = 0; i < fiber_hdr.count; i++) {
-		fiber_val[i].pipe_num = 0;
-		fiber_val[i].fiber_num = 0;
-		strcpy(fiber_val[i].fiber_route,"route");
-		strcpy(fiber_val[i].fiber_name,"name");
+		fiber_val[i].pipe_num = active_pipe[i] + 1;
+		fiber_val[i].fiber_num = active_pipe[i] + 1;
+		snprintf(strout, 64, "route %d", active_pipe[i] + 1);
+		strcpy(fiber_val[i].fiber_route, strout);
+		snprintf(strout, 64, "name %d", active_pipe[i] + 1);
+		strcpy(fiber_val[i].fiber_name, strout);
 		fiber_val[i].start_coor = 0;
-		strcpy(fiber_val[i].start_inf,"start");
+		snprintf(strout, 64, "start %d", active_pipe[i] + 1);
+		strcpy(fiber_val[i].start_inf, strout);
 		fiber_val[i].end_coor = 0;
-		strcpy(fiber_val[i].end_inf,"end");
+		snprintf(strout, 64, "end %d", active_pipe[i] + 1);
+		strcpy(fiber_val[i].end_inf, strout);
 
-		
+
 		fiber_val[i].fibe_atten_init = 1.1;
 		fiber_val[i].level1 = 1.1;
 		fiber_val[i].level2 = 1.1;
@@ -81,20 +117,20 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 
 int32_t OnGetNodeTime(struct tms_context *pcontext)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
 	time_t t;
 	struct tm *local; //本地时间
 
 	t = time(NULL);
 	local = localtime(&t); //转为本地时间
 
-	printf("%d-%d-%d %d:%d:%d\n",
+	printf(" % d - % d - % d % d: % d: % d\n",
 	       local->tm_hour, local->tm_mday, local->tm_wday,
 	       local->tm_hour, local->tm_min, local->tm_sec);
 
 
 	char buf[20];
-	strftime(buf, 20, "%Y-%m-%d %H:%M:%S", local);
+	strftime(buf, 20, " % Y - % m - % d % H: % M: % S", local);
 
 #ifdef CONFIG_PROC_HEBEI2
 	tms_RetNodeTime(pcontext, NULL, buf);
@@ -103,18 +139,18 @@ int32_t OnGetNodeTime(struct tms_context *pcontext)
 }
 int32_t OnRetNodeTime(struct tms_context *pcontext)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
 
 	return 0;
 }
 int32_t OnNameAndAddress(struct tms_context *pcontext)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
 	return 0;
 }
 int32_t OnFiberSectionCfg(struct tms_context *pcontext, struct tms_fibersectioncfg *pval)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
 
 #if 0
 	struct tms_fibersection_hdr *fiber_hdr;
@@ -143,14 +179,14 @@ int32_t OnFiberSectionCfg(struct tms_context *pcontext, struct tms_fibersectionc
 }
 int32_t OnConfigPipeState(struct tms_context *pcontext, struct tms_cfgpip_status *pval)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
 	uint32_t status = pval->status;
 	char ch8[8];
 
 	for (int i = 0; i < 8; i++) {
 		ch8[i] = status & (0x01 << i);
 		if (ch8[i]) {
-			printf("\tch%2d on\n", i + 1);
+			printf("\tch % 2d on\n", i + 1);
 		}
 	}
 	// todo 该设备在本机框第几槽位，对应第几通道，写入配置文件
@@ -160,50 +196,50 @@ int32_t OnConfigPipeState(struct tms_context *pcontext, struct tms_cfgpip_status
 }
 int32_t OnGetCycleTestCuv(struct tms_context *pcontext, struct tms_getcyctestcuv *pval)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
-	printf("\tget pipe %d\n", pval->pipe);
+	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
+	printf("\tget pipe % d\n", pval->pipe);
 	return 0;
 }
 int32_t OnGetStatusData(struct tms_context *pcontext, struct tms_getstatus_data *pval)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
-	printf("\tget pipe status %d\n", pval->pipe);
+	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
+	printf("\tget pipe status % d\n", pval->pipe);
 	return 0;
 }
 int32_t OnStatusData(struct tms_context *pcontext)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
 	return 0;
 }
 int32_t OnCRCCheckout(struct tms_context *pcontext)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
 	return 0;
 }
 int32_t OnCheckoutResult(struct tms_context *pcontext)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
 	return 0;
 }
 int32_t OnOTDRBasicInfo(struct tms_context *pcontext)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
 	return 0;
 }
 int32_t OnConfigNodeTime(struct tms_context *pcontext)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
 	// TODO set time
 	return 0;
 }
 int32_t OnCurAlarm(struct tms_context *pcontext)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
 	return 0;
 }
 int32_t OnGetOTDRData(struct tms_context *pcontext, struct tms_get_otdrdata *pval)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
 	struct tms_ret_otdrdata otdrdata;
 	struct tms_ret_otdrparam    ret_otdrparam;
 	struct tms_test_result      test_result;
@@ -234,7 +270,7 @@ int32_t OnGetOTDRData(struct tms_context *pcontext, struct tms_get_otdrdata *pva
 	test_result.range = 30000;
 	test_result.loss = 2;
 	test_result.atten = 2;
-	strcpy(test_result.time, "2016-03-02 22:11:31");
+	strcpy(test_result.time, "2016 - 03 - 02 22: 11: 31");
 
 	strcpy((char *)hebei2_data_hdr.dpid, "OTDRData");
 	hebei2_data_hdr.count = 16000;
@@ -288,8 +324,8 @@ int32_t OnGetOTDRData(struct tms_context *pcontext, struct tms_get_otdrdata *pva
 }
 int32_t OnGetStandardCurv(struct tms_context *pcontext, struct tms_getstandardcurv *pval)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
-	hb2_dbg("pipe %d\n", pval->pipe);
+	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
+	hb2_dbg("pipe % d\n", pval->pipe);
 
 
 	struct tms_ret_otdrdata otdrdata;
@@ -322,7 +358,7 @@ int32_t OnGetStandardCurv(struct tms_context *pcontext, struct tms_getstandardcu
 	test_result.range = 30000;
 	test_result.loss = 2;
 	test_result.atten = 2;
-	strcpy(test_result.time, "2016-03-02 22:11:31");
+	strcpy(test_result.time, "2016 - 03 - 02 22: 11: 31");
 
 	strcpy((char *)hebei2_data_hdr.dpid, "OTDRData");
 	hebei2_data_hdr.count = 16000;
@@ -364,8 +400,8 @@ int32_t OnGetStandardCurv(struct tms_context *pcontext, struct tms_getstandardcu
 }
 int32_t OnSetOTDRFPGAInfo(struct tms_context *pcontext, struct tms_setotdrfpgainfo *pval)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
-	hb2_dbg("pipe %d wl %d dr %d wdm %s\n",
+	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
+	hb2_dbg("pipe % d wl % d dr % d wdm % s\n",
 	        pval->pipe,
 	        pval->wl,
 	        pval->dr,
@@ -373,11 +409,11 @@ int32_t OnSetOTDRFPGAInfo(struct tms_context *pcontext, struct tms_setotdrfpgain
 }
 int32_t OnSetOCVMPara(struct tms_context *pcontext, struct tms_setocvmpara *pval)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
-	hb2_dbg("cable_len	%f"
-	        "host_thr	%d"
-	        "slave_thr	%d"
-	        "amend		%f\n",
+	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
+	hb2_dbg("cable_len	% f"
+	        "host_thr	% d"
+	        "slave_thr	% d"
+	        "amend		% f\n",
 	        pval->cable_len,
 	        pval->host_thr,
 	        pval->slave_thr,
@@ -387,9 +423,9 @@ int32_t OnSetOCVMPara(struct tms_context *pcontext, struct tms_setocvmpara *pval
 
 int32_t OnSetOCVMFPGAInfo(struct tms_context *pcontext, struct tms_setocvmfpgainfo *pval)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
-	hb2_dbg("max cable len	%f"
-	        "wl	%s\n",
+	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
+	hb2_dbg("max cable len	% f"
+	        "wl	% s\n",
 	        pval->max_cable_len,
 	        pval->wl);
 	return 0;
