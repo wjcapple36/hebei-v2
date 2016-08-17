@@ -1701,33 +1701,35 @@ int32_t ret_host_basic_info(
 		if(chFiberSec[i].para.is_initialize)
 			fiber_hdr.count += chFiberSec[i].para.fiber_hdr.count;
 	}
-
-	pfiber_val = malloc(sizeof(struct tms_fibersection_val)*fiber_hdr.count);
-	if(pfiber_val == NULL)
+	if(fiber_hdr.count > 0)
 	{
-		ack.errcode = errno;
-		hb_Ret_Ack(pcontext->pgb->src, ack);
-		printf("%s %d new buf fail. \n", __FUNCTION__, __LINE__);
-		exit_self(errno,__FUNCTION__, __LINE__,"new buf fail\0");
-	}
-
-	offset = 0;
-	for(i = 0; i < CH_NUM;i++)
-	{
-		if(chFiberSec[i].para.is_initialize)
+		pfiber_val = malloc(sizeof(struct tms_fibersection_val)*fiber_hdr.count);
+		if(pfiber_val == NULL && fiber_hdr.count > 0)
 		{
-			count_every_ch = chFiberSec[i].para.fiber_hdr.count;
-			memcpy(&pfiber_val[offset], chFiberSec[i].para.fiber_val,\
-				       count_every_ch*sizeof(struct tms_fibersectioncfg));
-			offset += count_every_ch;
-			memcpy(&otdr_param_val[i].range, &chFiberSec[i].para.otdr_param.range,
-				       	sizeof(struct tms_otdr_param_val) - 4);
-			otdr_param_val[i].pipe = chFiberSec[i].para.fiber_val[0].pipe_num; 
-			otdr_param_hdr.count++;
+			ack.errcode = errno;
+			hb_Ret_Ack(pcontext->pgb->src, ack);
+			printf("%s %d new buf fail. \n", __FUNCTION__, __LINE__);
+			exit_self(errno,__FUNCTION__, __LINE__,"new buf fail\0");
+		}
+
+		offset = 0;
+		for(i = 0; i < CH_NUM;i++)
+		{
+			if(chFiberSec[i].para.is_initialize)
+			{
+				count_every_ch = chFiberSec[i].para.fiber_hdr.count;
+				memcpy(&pfiber_val[offset], chFiberSec[i].para.fiber_val,\
+						count_every_ch*sizeof(struct tms_fibersectioncfg));
+				offset += count_every_ch;
+				memcpy(&otdr_param_val[i].range, &chFiberSec[i].para.otdr_param.range,
+						sizeof(struct tms_otdr_param_val) - 4);
+				otdr_param_val[i].pipe = chFiberSec[i].para.fiber_val[0].pipe_num; 
+				otdr_param_hdr.count++;
+			}
 		}
 	}
 	//通道使用状态
-	strcpy(otdr_ch_status.ch_status, "PipeState\0");
+	strcpy(otdr_ch_status.id, "PipeState\0");
 	otdr_ch_status.ch_status = devMisc.ch_state.state;
 
 
@@ -1749,9 +1751,9 @@ int32_t ret_host_basic_info(
 
 
 	tms_OTDRBasicInfo(pcontext,NULL,&baseinfo);
+	if(pfiber_val != NULL)
+		free(pfiber_val);
 
-	free(pfiber_val);
-	
 	return ret;
 }
 /* --------------------------------------------------------------------------*/
@@ -1765,7 +1767,7 @@ int32_t ret_host_basic_info(
  */
 /* ----------------------------------------------------------------------------*/
 int32_t get_host_curv_from_algro(
-	       	OTDR_UploadAllData_t *pResult,
+		OTDR_UploadAllData_t *pResult,
 		struct tms_ret_otdrdata *hebei2_otdrdata
 		)
 {
@@ -1780,7 +1782,7 @@ int32_t get_host_curv_from_algro(
 	int8_t cur_time[TIME_STR_LEN] = {0};
 	const char* pFormatTime = "%Y-%m-%d %H:%M:%S";
 	char *NextAddr;
-	
+
 	ret = OP_OK;
 	OTDR_UploadAllData_t *AllEvent;
 	ret_otdrparam = hebei2_otdrdata->ret_otdrparam;
@@ -1789,8 +1791,8 @@ int32_t get_host_curv_from_algro(
 	hebei2_event_hdr = hebei2_otdrdata->hebei2_event_hdr;
 	pevent_buf = hebei2_otdrdata->hebei2_event_val;
 
-        //获取当前时间
-        get_sys_time(cur_time, 0, pFormatTime);
+	//获取当前时间
+	get_sys_time(cur_time, 0, pFormatTime);
 	get_test_para_from_algro(ret_otdrparam, pResult);
 	get_test_result_from_algro(test_result, pResult);
 	memcpy(test_result->time, cur_time, TIME_STR_LEN);
