@@ -30,7 +30,9 @@ extern "C" {
 // #define MAX_CARD_1U (1) // 河北2期项目每个1U设备最多只有2块板卡
 
 int g_manger = 0, g_node_manger = 0;
+int g_201fd = 0;
 
+struct tms_attr g_attr;
 #ifdef USE_INLINE
 inline int unuse_echo(const char *__restrict __format, ...)
 {
@@ -69,6 +71,9 @@ int connect_first_card(char *str_addr, char *str_port)
 		printf("client %s:%d\n",
 		       inet_ntoa(client.loc_addr.sin_addr),
 		       htons(client.loc_addr.sin_port));
+	}
+	else {
+		return 0;
 	}
 	return client.sockfd;
 }
@@ -1913,8 +1918,20 @@ static int32_t tms_AnalyseCurAlarm(struct tms_context *pcontext, int8_t *pdata, 
 	         fp);
 	fclose(fp);
 
-
-	tms_MergeCurAlarm();
+	/*
+	 如果201的连接被断开
+	 自动重连
+	 重连失败则退出
+	 */
+	printf("201 fd = %d\n", g_201fd);
+	if (g_201fd == 0) {
+		if (tms_connect() == 0) {
+			return -1;
+		}
+		
+	}
+	tms_MergeCurAlarm(g_201fd);
+	
 	return 0;
 
 }
@@ -1962,8 +1979,13 @@ void sendonefile(int fd, char *file)
  * @see	tms_CurAlarm_V2 tms_AnalyseCurAlarm
  */
 
-int32_t tms_MergeCurAlarm()
+int32_t tms_MergeCurAlarm(int dst_fd)
 {
+	// 防止自身环路
+	if (dst_fd == g_201fd) {
+		return -1;
+	}
+
 	char strout[32];
 	int card_id = 0;
 	FILE *fp;
@@ -2020,10 +2042,10 @@ int32_t tms_MergeCurAlarm()
 	          sizeof(struct tms_alarmline_hdr);//计算合并后数据大小
 	struct glink_base  base_hdr;
 	int fd = g_node_manger;// 获取节点管理器fd
-
+	fd = dst_fd;
 	// TODO 加锁
 
-	extern int g_201fd;
+
 
 	// fd = g_201fd;// DEBUG
 	printf("go fd self = %d %d\n", fd, len);
@@ -2249,15 +2271,15 @@ int32_t tms_AckEx(
 }
 
 
-// static struct tms_analyse_array sg_analyse_0x1000xxxx[] = {
-// 	// {	tms_AnalyseTick	, 1}, //	0x10000000	ID_TICK
-// 	// {	tms_AnalyseUpdate	, PROCCESS_2DEV_AND_COPY2USE}, //	0x10000001	ID_UPDATE
-// 	// {	tms_AnalyseTrace	, 1}, //	0x10000002	ID_TRACE0
-// 	// {	tms_AnalyseTrace	, 1}, //	0x10000003	ID_TRACE1
-// 	// {	tms_AnalyseTrace	, 1}, //	0x10000004	ID_TRACE2
-// 	// {	tms_AnalyseCommand	, 1}, //	0x10000005	ID_TRACE3
-// 	// {	tms_AnalyseCommand	, 1}, //	0x10000006	ID_COMMAND
-// };
+static struct tms_analyse_array sg_analyse_0x1000xxxx[] = {
+	{	tms_AnalyseUnuse, 1}, //	0x10000000	ID_TICK
+	// 	// {	tms_AnalyseUpdate	, PROCCESS_2DEV_AND_COPY2USE}, //	0x10000001	ID_UPDATE
+	// 	// {	tms_AnalyseTrace	, 1}, //	0x10000002	ID_TRACE0
+	// 	// {	tms_AnalyseTrace	, 1}, //	0x10000003	ID_TRACE1
+	// 	// {	tms_AnalyseTrace	, 1}, //	0x10000004	ID_TRACE2
+	// 	// {	tms_AnalyseCommand	, 1}, //	0x10000005	ID_TRACE3
+	// 	// {	tms_AnalyseCommand	, 1}, //	0x10000006	ID_COMMAND
+};
 
 
 // #ifdef CONFIG_TEST_NET_STRONG
@@ -2563,7 +2585,14 @@ int32_t tms_Analyse(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 		pwhichArr = &sg_analyse_0x2000xxxx[cmdl];
 		break;
 	// #endif
-
+	case 0x10000000:
+		if (cmdl >= sizeof(sg_analyse_0x1000xxxx) / sizeof(struct tms_analyse_array)) {
+			fecho("0x10000000 out of cmd memory!!!\n");
+			goto _Unknow;
+		}
+		pcontext->ptr_analyse_arr = sg_analyse_0x1000xxxx + cmdl;
+		pwhichArr = &sg_analyse_0x1000xxxx[cmdl];
+		break;
 	default:
 _Unknow:
 		;
@@ -2650,6 +2679,7 @@ _Unknow:
 
 void tms_Init()
 {
+	hb2_dbg("%s() %d\n", __FUNCTION__, __LINE__);
 	// struct tms_devbase *pdev;
 
 	// pdev = &sg_devnet[0][0];
@@ -2657,6 +2687,14 @@ void tms_Init()
 	// 	pdev[i].frame = MAX_FRAME;
 	// }
 	// bzero(&sg_manage, sizeof(struct tms_manage));
+	// TODO cu_ip
+	// TODO local_ip
+	
+#ifdef DBG_201IP
+	strcpy(g_attr._201_ip, "127.0.0.1");
+#else
+	strcpy(g_attr._201_ip, "192.168.1.201");
+#endif
 }
 
 
@@ -2783,14 +2821,41 @@ int32_t tms_SelectNodeMangerContext(struct tms_context *context)
 // 在远方断开连接后调用该函数，判断是否是网管
 void tms_RemoveAnyMangerContext(int fd)
 {
+	hb2_dbg("%s() %d\n", __FUNCTION__, __LINE__);
 	if (fd == g_manger) {
 		g_manger = 0;
 	}
 	else if (fd == g_node_manger) {
 		g_node_manger = 0;
 	}
+	else if (fd == g_201fd) {
+		g_201fd = 0;
+	}
 }
 
+
+int tms_connect()
+{
+	hb2_dbg("%s() %d\n", __FUNCTION__, __LINE__);
+#ifdef DBG_201IP
+	g_201fd = connect_first_card("127.0.0.1","6000");//debug
+#else
+	g_201fd = connect_first_card(g_attr._201_ip,"6000");
+#endif
+	
+	return g_201fd;
+	
+}
+
+void tms_SetAttribute(struct tms_attr *attr)
+{
+	memcpy(&g_attr, attr, sizeof(struct tms_attr));
+}
+
+void tms_GetAttribute(struct tms_attr *attr)
+{
+	memcpy(attr, &g_attr, sizeof(struct tms_attr));
+}
 #ifdef __cplusplus
 }
 #endif

@@ -601,7 +601,8 @@ struct tmsxx_app {
 
 
 };
-
+extern int g_201fd;
+extern struct ep_t ep;
 struct tms_callback {
 	int32_t (*pf_OnCopy2Use)(char *data, int32_t datalen, int msec, void *fd);
 
@@ -745,7 +746,22 @@ int32_t tms_CurAlarm_V2(
     int fd,
     struct glink_addr *paddr,
     struct tms_curalarm *val);
-int32_t tms_MergeCurAlarm();
+
+struct tms_attr
+{
+	char cu_ip[16]; // CU 的IP地址
+	char local_ip[16]; // 本地IP地址(暂时无用)
+
+	/*
+	只能取值192.168.1.201
+	192.168.0.201，与自身IP处于同一网段
+	*/
+	char _201_ip[16]; // 本地第一块板卡的IP地址，
+};
+int32_t tms_MergeCurAlarm(int fd);
+int tms_connect();
+void tms_SetAttribute(struct tms_attr *attr);
+void tms_GetAttribute(struct tms_attr *attr);
 #ifdef __cplusplus
 }
 #endif

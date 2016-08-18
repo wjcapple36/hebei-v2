@@ -13,7 +13,7 @@ extern "C" {
 #endif
 
 
-int g_201fd =  0;
+
 
 int32_t OnGetBasicInfo(struct tms_context *pcontext)
 {
@@ -333,6 +333,12 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 
 
 	// int fd = connect_first_card("127.0.0.1","6000");
+	if (g_201fd == 0) {
+		if (tms_connect() == 0) {
+			return -1;
+		}
+		
+	}
 	pcontext->fd = g_201fd;
 	tms_CurAlarm_V2(pcontext->fd, NULL, &alarm);
 	sleep(1);
@@ -704,10 +710,7 @@ void tms_Callback(struct tms_callback *ptcb)
 	// tms_SetDoWhat(0x80000000, sizeof(cmd_0xx000xxxx) / sizeof(int), cmd_0xx000xxxx);
 #endif
 }
-void tms_connect()
-{
-	g_201fd = connect_first_card("127.0.0.1","6000");
-}
+
 
 #ifdef __cplusplus
 }
