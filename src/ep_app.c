@@ -596,7 +596,7 @@ int ThreadRunServerAndShell(struct ep_t *pep)
 	// tmsdb_Echo(1);       	// 关闭数据库回显
 	// tmsdb_CheckDb();		// 创建数据库
 
-	// tms_Init();
+	tms_Init();
 #ifdef CONFIG_APP_HEBEI2
 	tms_Callback(&tcb);
 #endif
@@ -615,12 +615,12 @@ int ThreadRunServerAndShell(struct ep_t *pep)
 #endif
 
 	ep_RunServer(pep);             // 运行epollserver线程
-
+	tms_connect();
 
 	pthread_create(&g_pthreadshell, NULL, ThreadShell, pep);
-#ifdef AUTOCONNECT_DBG 
+// #ifdef AUTOCONNECT_DBG 
 	pthread_create(&g_pthreadconnect_cu,NULL,ThreadConnectCU,pep);
-#endif
+// #endif
 
 	return 0;
 }

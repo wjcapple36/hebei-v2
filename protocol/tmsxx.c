@@ -25,9 +25,14 @@ TODO：详细描述
 #ifdef __cplusplus
 extern "C" {
 #endif
+#define RAM_DIR "/tmp"
+#define MAX_CARD_1U (2) // 河北2期项目每个1U设备最多只有2块板卡
+// #define MAX_CARD_1U (1) // 河北2期项目每个1U设备最多只有2块板卡
 
 int g_manger = 0, g_node_manger = 0;
+int g_201fd = 0;
 
+struct tms_attr g_attr;
 #ifdef USE_INLINE
 inline int unuse_echo(const char *__restrict __format, ...)
 {
@@ -45,6 +50,33 @@ int (*fecho)(const char *__restrict __format, ...) = unuse_echo;
 int (*fecho)(const char *__restrict __format, ...) = printf;
 #endif
 
+extern struct ep_t ep;
+int connect_first_card(char *str_addr, char *str_port)
+{
+	printf("%s\n", __FUNCTION__);
+	struct ep_con_t client;
+	char *pstrAddr;
+	unsigned short port;
+
+	// goto _Next;
+	// _Next:
+	// printf("connect\n");
+	// return 0;
+	pstrAddr = str_addr;
+	port     = (unsigned short)atoi(str_port);
+
+	printf("Request connect %s:%d\n", pstrAddr, port);
+	if (0 == ep_Connect(&ep, &client, pstrAddr, port)) {
+		// if (0 == ep_Connect(&ep,&client, "127.0.0.1", 6000)) {
+		printf("client %s:%d\n",
+		       inet_ntoa(client.loc_addr.sin_addr),
+		       htons(client.loc_addr.sin_port));
+	}
+	else {
+		return 0;
+	}
+	return client.sockfd;
+}
 
 void tms_Echo(int en)
 {
@@ -1093,18 +1125,21 @@ static int32_t tms_AnalyseGetBasicInfo(struct tms_context *pcontext, int8_t *pda
 #ifdef HEBEI2_DBG
 	tms_DbgAckSuccess(pcontext, pdata, len);
 #endif
+	// TODO 如果之前已经有网管连接，则断开
+	// 但之前好保证识别网管与节点管理器之间不会冲突
+	printf("old g_node_manger %d\n", g_node_manger);
+	if (g_node_manger != 0) {
+		// close(g_node_manger);
+	}
+	g_node_manger = pcontext->fd;
+	printf("new g_node_manger %d\n", g_node_manger);
 
 	hb2_dbg("Warning 应该返回什么内容，协议里没详细说明\n");
 	if (pcontext->ptcb->pf_OnGetBasicInfo) {
 		pcontext->ptcb->pf_OnGetBasicInfo(pcontext);
 	}
-	// TODO 如果之前已经有网管连接，则断开
-	// 但之前好保证识别网管与节点管理器之间不会冲突
-	if (g_node_manger != 0) {
-		// close(g_node_manger);
 
-	}
-	g_node_manger = pcontext->fd;
+
 	// struct tms_context con;
 	// int ret = tms_SelectContextByFD(6,&con);
 	// printf("ret = %d %d\n", ret, con.fd);
@@ -1136,7 +1171,7 @@ int32_t tms_RetNodeTime(
 	int len;
 
 	pmem = tm;
-	len = strlen(tm)+1;
+	len = strlen(tm) + 1;
 
 	tms_FillGlinkFrame(&base_hdr, paddr);
 	if (0 == pcontext->fd) {
@@ -1766,6 +1801,8 @@ int32_t tms_CurAlarm(
 	        val->alarmline_hdr->count
 	    );
 
+
+
 	tms_FillGlinkFrame(&base_hdr, paddr);
 
 	glink_Build(&base_hdr, ID_CURALARM, len);
@@ -1799,6 +1836,7 @@ int32_t tms_CurAlarm(
 }
 
 
+// 0x80000013 ID_CURALARM
 static int32_t tms_AnalyseCurAlarm(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
 	/* 数据包内容
@@ -1806,7 +1844,7 @@ static int32_t tms_AnalyseCurAlarm(struct tms_context *pcontext, int8_t *pdata, 
 	alarmlist_val[0]
 	alarmlist_val[1]
 	alarmlist_val[2]
-	alarmlist_val[n] 
+	alarmlist_val[n]
 	alarmline_hdr
 	alarmline_val[0]
 	alarmline_val[1]
@@ -1814,30 +1852,223 @@ static int32_t tms_AnalyseCurAlarm(struct tms_context *pcontext, int8_t *pdata, 
 	alarmline_val[n]
 	*/
 	struct tms_alarmlist_hdr *palarmlist_hdr = (struct tms_alarmlist_hdr *)(pdata + GLINK_OFFSET_DATA);
-	struct tms_alarmlist_val *palarmlist_val = (struct tms_alarmlist_val*)(palarmlist_hdr + 1);
-	struct tms_alarmline_hdr *palarmline_hdr = (struct tms_alarmline_hdr*)(palarmlist_val + htonl(palarmlist_hdr->count));
-	struct tms_alarmline_val *alarmline_val = (struct tms_alarmline_val*)(palarmline_hdr + 1);
+	struct tms_alarmlist_val *palarmlist_val = (struct tms_alarmlist_val *)(palarmlist_hdr + 1);
+	struct tms_alarmline_hdr *palarmline_hdr = (struct tms_alarmline_hdr *)(palarmlist_val + htonl(palarmlist_hdr->count));
+	struct tms_alarmline_val *palarmline_val  = (struct tms_alarmline_val *)(palarmline_hdr + 1);
 
-	
+	int count_alarmlist_hdr = htonl(palarmlist_hdr->count);
+	char count_alarmline_hdr = htonl(palarmline_hdr->count);
 	// 数据包拆分成两部分，告警头 + 告警曲线
-
+	// printf("fiber %d\n", htonl(palarmlist_val->pipe));
+	// palarmlist_val++;
+	// printf("fiber %d\n", htonl(palarmlist_val->fiber));
 	// 分析告警头
+
+	char strout[32];
+	char card_id = htonl(palarmlist_val->pipe);
+
+	// 通道号在1-4表示该条信息是第1板卡发送的
+	// 5-8是第2板卡发送
+	printf("car_id %d\n", card_id);
+	if (card_id < 5) {
+		card_id = 1;
+	}
+	else {
+		card_id = 2;
+	}
 
 
 	// 保存简述文件：
 	/*包括
 	* 描述有几条告警
 	*/
+	snprintf(strout, 32, "%s/alias%d", RAM_DIR, card_id);
+	printf("strout %s\n", strout);
+	FILE *fp;
+	fp = fopen((char *)strout, "wa");
+	fprintf(fp, "%d %d", count_alarmlist_hdr, count_alarmline_hdr);
+	fclose(fp);
 
 
 	// 保存告警头
+	snprintf(strout, 32, "%s/alarm%d", RAM_DIR, card_id);
+	printf("strout %s\n", strout);
+	fp = fopen((char *)strout, "wa");
+	fwrite(  (char *)palarmlist_val,
+	         sizeof(char),
+	         sizeof(struct tms_alarmlist_val) * htonl(palarmlist_hdr->count),
+	         fp);
+	// fwrite(  (char *)palarmline_hdr,
+	//          sizeof(char),
+	//          sizeof(struct tms_alarmline_hdr),
+	//          fp);
+	fclose(fp);
+
+
 
 	// 保存告警曲线
+	snprintf(strout, 32, "%s/otdr%d", RAM_DIR, card_id);
+	printf("strout %s\n", strout);
+	fp = fopen((char *)strout, "wa");
 
-	if (pcontext->ptcb->pf_OnCurAlarm) {
-		pcontext->ptcb->pf_OnCurAlarm(pcontext);
+	// 写入该数据包末尾几乎全部数据，但不能写入末尾的EE EE FF FF，跳过末尾4byte
+	fwrite(  (char *)palarmline_val,
+	         sizeof(char),
+	         len - ((char *)palarmline_val - (char *)pdata) - 4,
+	         fp);
+	fclose(fp);
+
+	/*
+	 如果201的连接被断开
+	 自动重连
+	 重连失败则退出
+	 */
+	printf("201 fd = %d\n", g_201fd);
+	if (g_201fd == 0) {
+		if (tms_connect() == 0) {
+			return -1;
+		}
+		
+	}
+	tms_MergeCurAlarm(g_201fd);
+	
+	return 0;
+
+}
+
+
+void sendonefile(int fd, char *file)
+{
+	char buf[1025];
+	memset(buf, '2', 1024);
+	int len_file;
+	int send_count;
+	FILE *fp;
+
+	fp = fopen((char *)file, "rb");
+	if (fp == NULL) {
+		return ;
 	}
 
+	fseek(fp, 0, SEEK_END);
+	len_file = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+	int i = 0;
+	while(len_file > 0) {
+		if (len_file > 1024) {
+			len_file -= 1024;
+			send_count = 1024;
+		}
+		else {
+			send_count = len_file;
+			len_file = 0;
+		}
+		send_count = fread(buf, 1, send_count, fp);
+		// buf[send_count] = '\0';
+		// printf("%s",buf);
+		glink_SendSerial(fd, (uint8_t *)buf, (uint32_t)send_count);
+	}
+
+	fclose(fp);
+
+}
+/**
+ * @brief	混合OTDR告警曲线并上报给CU
+ 		河北2期项目里服务器不能很好处理多次上报告警，第2次上报告警
+ 		会将第1次内容清除
+ * @see	tms_CurAlarm_V2 tms_AnalyseCurAlarm
+ */
+
+int32_t tms_MergeCurAlarm(int dst_fd)
+{
+	// 防止自身环路
+	if (dst_fd == g_201fd) {
+		return -1;
+	}
+
+	char strout[32];
+	int card_id = 0;
+	FILE *fp;
+	int len_file = 0; // 统计所有文件大小
+	int count_alarmlist_hdr ;
+	int count_alarmline_hdr;
+	struct tms_alarmlist_hdr alarmlist_hdr;
+	struct tms_alarmline_hdr alarmline_hdr;
+
+	alarmlist_hdr.count = 0;
+	alarmline_hdr.count = 0;
+	// 计算所有文件大小之和
+	for (int i = 1; i <= MAX_CARD_1U; i++) {
+		snprintf(strout, 32, "%s/alarm%d", RAM_DIR, i);
+		fp = fopen((char *)strout, "r");
+		if (fp) {
+			fseek(fp, 0, SEEK_END);
+			len_file += ftell(fp);
+			hb2_dbg("%s f len %d\n", strout, (int)ftell(fp));
+			fclose(fp);
+		}
+
+
+		snprintf(strout, 32, "%s/otdr%d", RAM_DIR, i);
+		fp = fopen((char *)strout, "r");
+		if (fp) {
+			fseek(fp, 0, SEEK_END);
+			len_file += ftell(fp);
+			hb2_dbg("%s f len %d\n", strout, (int)ftell(fp));
+			fclose(fp);
+		}
+	}
+	for (int i = 1; i <= MAX_CARD_1U; i++) {
+		snprintf(strout, 32, "%s/alias%d", RAM_DIR, i);
+		fp = fopen((char *)strout, "r");
+		if (fp) {
+			fscanf(fp, "%d %d", &count_alarmlist_hdr, &count_alarmline_hdr);
+			alarmlist_hdr.count += count_alarmlist_hdr;
+			alarmline_hdr.count += count_alarmline_hdr;
+			hb2_dbg("count %d\n", count_alarmlist_hdr);
+		}
+	}
+	printf("count %d %d----\n", alarmlist_hdr.count , alarmline_hdr.count);
+	// alarmlist_hdr.count = 4;
+	// alarmline_hdr.count = 4;
+
+	alarmlist_hdr.count = htonl(alarmlist_hdr.count);
+	alarmline_hdr.count = htonl(alarmline_hdr.count);
+
+
+	// 发送合并数据
+	int len = sizeof(struct tms_alarmlist_hdr) +
+	          len_file +
+	          sizeof(struct tms_alarmline_hdr);//计算合并后数据大小
+	struct glink_base  base_hdr;
+	int fd = g_node_manger;// 获取节点管理器fd
+	fd = dst_fd;
+	// TODO 加锁
+
+
+
+	// fd = g_201fd;// DEBUG
+	printf("go fd self = %d %d\n", fd, len);
+	tms_FillGlinkFrame(&base_hdr, NULL);
+	glink_Build(&base_hdr, ID_CURALARM, len);
+	glink_SendHead(fd, &base_hdr);
+	glink_SendSerial(fd, (uint8_t *)&alarmlist_hdr, sizeof(struct tms_alarmlist_hdr) );
+
+	for (int i = 1; i <= MAX_CARD_1U; i++) {
+		snprintf(strout, 32, "%s/alarm%d", RAM_DIR, i);
+		printf("strout %s\n", strout);
+		sendonefile(fd, strout);
+	}
+	printf("sizeof(struct tms_alarmline_hdr) %d\n", sizeof(struct tms_alarmline_hdr));
+	glink_SendSerial(fd, (uint8_t *)&alarmline_hdr, sizeof(struct tms_alarmline_hdr) );
+	for (int i = 1; i <= MAX_CARD_1U; i++) {
+		snprintf(strout, 32, "%s/otdr%d", RAM_DIR, i);
+		printf("strout %s\n", strout);
+		sendonefile(fd, strout);
+	}
+	// snprintf(strout, 32, "%s/tmp%d", RAM_DIR, 1);
+	// sendonefile(fd, strout);
+	glink_SendTail(fd);
 }
 
 // 0x80000014	ID_GETOTDRDATA_14
@@ -2040,15 +2271,15 @@ int32_t tms_AckEx(
 }
 
 
-// static struct tms_analyse_array sg_analyse_0x1000xxxx[] = {
-// 	// {	tms_AnalyseTick	, 1}, //	0x10000000	ID_TICK
-// 	// {	tms_AnalyseUpdate	, PROCCESS_2DEV_AND_COPY2USE}, //	0x10000001	ID_UPDATE
-// 	// {	tms_AnalyseTrace	, 1}, //	0x10000002	ID_TRACE0
-// 	// {	tms_AnalyseTrace	, 1}, //	0x10000003	ID_TRACE1
-// 	// {	tms_AnalyseTrace	, 1}, //	0x10000004	ID_TRACE2
-// 	// {	tms_AnalyseCommand	, 1}, //	0x10000005	ID_TRACE3
-// 	// {	tms_AnalyseCommand	, 1}, //	0x10000006	ID_COMMAND
-// };
+static struct tms_analyse_array sg_analyse_0x1000xxxx[] = {
+	{	tms_AnalyseUnuse, 1}, //	0x10000000	ID_TICK
+	// 	// {	tms_AnalyseUpdate	, PROCCESS_2DEV_AND_COPY2USE}, //	0x10000001	ID_UPDATE
+	// 	// {	tms_AnalyseTrace	, 1}, //	0x10000002	ID_TRACE0
+	// 	// {	tms_AnalyseTrace	, 1}, //	0x10000003	ID_TRACE1
+	// 	// {	tms_AnalyseTrace	, 1}, //	0x10000004	ID_TRACE2
+	// 	// {	tms_AnalyseCommand	, 1}, //	0x10000005	ID_TRACE3
+	// 	// {	tms_AnalyseCommand	, 1}, //	0x10000006	ID_COMMAND
+};
 
 
 // #ifdef CONFIG_TEST_NET_STRONG
@@ -2354,7 +2585,14 @@ int32_t tms_Analyse(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 		pwhichArr = &sg_analyse_0x2000xxxx[cmdl];
 		break;
 	// #endif
-
+	case 0x10000000:
+		if (cmdl >= sizeof(sg_analyse_0x1000xxxx) / sizeof(struct tms_analyse_array)) {
+			fecho("0x10000000 out of cmd memory!!!\n");
+			goto _Unknow;
+		}
+		pcontext->ptr_analyse_arr = sg_analyse_0x1000xxxx + cmdl;
+		pwhichArr = &sg_analyse_0x1000xxxx[cmdl];
+		break;
 	default:
 _Unknow:
 		;
@@ -2441,6 +2679,7 @@ _Unknow:
 
 void tms_Init()
 {
+	hb2_dbg("%s() %d\n", __FUNCTION__, __LINE__);
 	// struct tms_devbase *pdev;
 
 	// pdev = &sg_devnet[0][0];
@@ -2448,6 +2687,14 @@ void tms_Init()
 	// 	pdev[i].frame = MAX_FRAME;
 	// }
 	// bzero(&sg_manage, sizeof(struct tms_manage));
+	// TODO cu_ip
+	// TODO local_ip
+	
+#ifdef DBG_201IP
+	strcpy(g_attr._201_ip, "127.0.0.1");
+#else
+	strcpy(g_attr._201_ip, "192.168.1.201");
+#endif
 }
 
 
@@ -2574,14 +2821,41 @@ int32_t tms_SelectNodeMangerContext(struct tms_context *context)
 // 在远方断开连接后调用该函数，判断是否是网管
 void tms_RemoveAnyMangerContext(int fd)
 {
+	hb2_dbg("%s() %d\n", __FUNCTION__, __LINE__);
 	if (fd == g_manger) {
 		g_manger = 0;
 	}
 	else if (fd == g_node_manger) {
 		g_node_manger = 0;
 	}
+	else if (fd == g_201fd) {
+		g_201fd = 0;
+	}
 }
 
+
+int tms_connect()
+{
+	hb2_dbg("%s() %d\n", __FUNCTION__, __LINE__);
+#ifdef DBG_201IP
+	g_201fd = connect_first_card("127.0.0.1","6000");//debug
+#else
+	g_201fd = connect_first_card(g_attr._201_ip,"6000");
+#endif
+	
+	return g_201fd;
+	
+}
+
+void tms_SetAttribute(struct tms_attr *attr)
+{
+	memcpy(&g_attr, attr, sizeof(struct tms_attr));
+}
+
+void tms_GetAttribute(struct tms_attr *attr)
+{
+	memcpy(attr, &g_attr, sizeof(struct tms_attr));
+}
 #ifdef __cplusplus
 }
 #endif

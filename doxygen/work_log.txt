@@ -1,4 +1,12 @@
 /*! \page workhis 河北2期项目 项目工作日志
+2016-08-18: Menglong Wu
+    * 完成合并告警0x80000013到201 IP并发送给CU
+    * 添加 struct tms_attr 描述
+        - 首先调用tms_Init
+        - tms_SetAttribute 配置是192.168.1.201还是192.168.0.201
+        - tms_GetAttribute
+    * 在tms_thread.c:ThreadConnectCU里15秒向所哟连接发送心跳
+
 2016-08-12: Menglong Wu
     * 0x80000013 调试上传多条曲线到节点管理器，但是节点管理器有BUG，并不是按照协议上来的，上传的曲线数可以是1条，告警数可以是多个
 

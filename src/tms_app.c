@@ -12,30 +12,9 @@
 extern "C" {
 #endif
 
-extern struct ep_t ep;
-int connect_first_card(char *str_addr, char *str_port)
-{
-	printf("%s\n", __FUNCTION__);
-	struct ep_con_t client;
-	char *pstrAddr;
-	unsigned short port;
 
-	// goto _Next;
-	// _Next:
-	// printf("connect\n");
-	// return 0;
-	pstrAddr = str_addr;
-	port     = (unsigned short)atoi(str_port);
 
-	printf("Request connect %s:%d\n", pstrAddr, port);
-	if (0 == ep_Connect(&ep, &client, pstrAddr, port)) {
-		// if (0 == ep_Connect(&ep,&client, "127.0.0.1", 6000)) {
-		printf("client %s:%d\n",
-		       inet_ntoa(client.loc_addr.sin_addr),
-		       htons(client.loc_addr.sin_port));
-	}
-	return client.sockfd;
-}
+
 int32_t OnGetBasicInfo(struct tms_context *pcontext)
 {
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
@@ -185,13 +164,13 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	alarmlist_hdr.count = 2;
 
 
-	alarmlist_val[0].pipe = 2;
-	alarmlist_val[0].fiber = 2;
+	alarmlist_val[0].pipe = 7;
+	alarmlist_val[0].fiber = 7;
 	alarmlist_val[0].level = 1;
 	alarmlist_val[0].type = 1;
 
-	alarmlist_val[1].pipe = 7;
-	alarmlist_val[1].fiber = 7;
+	alarmlist_val[1].pipe = 8;
+	alarmlist_val[1].fiber = 8;
 	alarmlist_val[1].level = 1;
 	alarmlist_val[1].type = 1;
 
@@ -348,13 +327,21 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	hebei2_event_val[1].loss       = 4;
 	hebei2_event_val[1].reflect    = 4;
 	hebei2_event_val[1].link_loss  = 4;
-	tms_CurAlarm_V2(pcontext->fd, NULL, &alarm);
+	// tms_CurAlarm_V2(pcontext->fd, NULL, &alarm);
+
 	// tms_CurAlarm(pcontext->fd, NULL, &alarm);
-	sleep(5);
 
 
 	// int fd = connect_first_card("127.0.0.1","6000");
-	// tms_CurAlarm(fd, NULL, &alarm);
+	if (g_201fd == 0) {
+		if (tms_connect() == 0) {
+			return -1;
+		}
+		
+	}
+	pcontext->fd = g_201fd;
+	tms_CurAlarm_V2(pcontext->fd, NULL, &alarm);
+	sleep(1);
 	// close(fd);
 	return 0;
 }
@@ -722,8 +709,8 @@ void tms_Callback(struct tms_callback *ptcb)
 	// tms_SetDoWhat(0x60000000, sizeof(cmd_0xx000xxxx) / sizeof(int), cmd_0xx000xxxx);
 	// tms_SetDoWhat(0x80000000, sizeof(cmd_0xx000xxxx) / sizeof(int), cmd_0xx000xxxx);
 #endif
-
 }
+
 
 #ifdef __cplusplus
 }

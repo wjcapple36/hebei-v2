@@ -40,6 +40,19 @@ void NotifyCU(int fd)
 	}
 }
 
+
+/**
+ * @brief	穷举所有网络连接并发送心跳，自连接同样发送，自身不处理心跳
+ * @param	null
+ * @retval	null
+ * @remarks	
+ * @see	
+ */
+
+int epcb_Tick(struct ep_con_t *ppconNode, void *ptr)
+{
+	tms_Tick(ppconNode->sockfd, NULL);
+}
 void *ThreadConnectCU(void *arg)
 {
 	// struct tmsxx_app *ptmsapp;
@@ -86,6 +99,7 @@ void *ThreadConnectCU(void *arg)
 		// 	g_cu_socket = client.sockfd;
 		// 	system("echo 1 > /sys/class/leds/leda/brightness");
 		// }
+#if 0
 		g_slot = do_slot(NULL, 0, NULL);
 		g_subnet = do_net(NULL, 0, NULL);
 
@@ -111,7 +125,11 @@ void *ThreadConnectCU(void *arg)
 
 
 		sleep(1);
+#endif
+		ep_Ergodic(&ep, epcb_Tick, NULL);
+		sleep(15);
 	}
+	
 
 	return NULL;
 }
