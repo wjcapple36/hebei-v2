@@ -1719,7 +1719,7 @@ int32_t ret_host_basic_info(
 			{
 				count_every_ch = chFiberSec[i].para.fiber_hdr.count;
 				memcpy(&pfiber_val[offset], chFiberSec[i].para.fiber_val,\
-						count_every_ch*sizeof(struct tms_fibersectioncfg));
+						count_every_ch*sizeof(struct tms_fibersection_val));
 				offset += count_every_ch;
 				memcpy(&otdr_param_val[i].range, &chFiberSec[i].para.otdr_param.range,
 						sizeof(struct tms_otdr_param_val) - 4);

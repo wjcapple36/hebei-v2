@@ -59,12 +59,13 @@ int32_t OnRetNodeTime(struct tms_context *pcontext)
  * @returns   0成功，以及无法保存的命令
  */
 /* ----------------------------------------------------------------------------*/
-int32_t OnNameAndAddress(struct tms_context *pcontext)
+int32_t OnNameAndAddress(struct tms_context *pcontext, struct tms_nameandaddr *pval)
 {
 	struct tms_ack ack;
 	int32_t ret;
 	//该回调函数缺乏输入节点名称，需要woo配合修改
 	ack.cmdid = pcontext->pgb->cmdid;
+	memcpy(&devMisc.name, pval,sizeof(struct _tagDevNameAddr));
 	ret = save_node_name_address(&devMisc);
 
 	if(ret != CMD_RET_OK)

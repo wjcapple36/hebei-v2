@@ -2335,7 +2335,7 @@ struct tms_analyse_array sg_analyse_0x8000xxxx[] = {
 	{	tms_AnalyseGetBasicInfo	, 0}, //	0x80000000	ID_GETBASICINFO
 	{	tms_AnalyseGetNodeTime	, 1}, //	0x80000001	ID_GETNODETIME
 	{	tms_AnalyseRetNodeTime	, 1}, //	0x80000002	ID_RETNodeTime
-	{	tms_AnalyseNameAndAddress	, 8}, //	0x80000003	ID_NAMEANDADDRESS
+	{	tms_AnalyseNameAndAddress	, 1}, //	0x80000003	ID_NAMEANDADDRESS
 	{	tms_AnalyseFiberSectionCfg	, 0}, //	0x80000004	ID_FIBERSECTIONCFG
 	{	tms_AnalyseConfigPipeState	, 0}, //	0x80000005	ID_CONFIGPIPESTATE
 	{	tms_AnalyseGetCycleTestCuv	, 0}, //	0x80000006	ID_GETCYCLETESTCUV
