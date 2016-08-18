@@ -233,6 +233,14 @@ extern "C" {
 // end hebei 2
 
 // hebei2
+
+struct tms_nameandaddr 
+{
+	char name[64];
+	char addr[16];
+	char mask[16];
+	char gw[16];
+};
 // 0x80000004
 
 struct tms_fibersection_hdr {
@@ -611,7 +619,7 @@ struct tms_callback {
 	int32_t (*pf_OnGetBasicInfo)(struct tms_context *pcontext);
 	int32_t (*pf_OnGetNodeTime)(struct tms_context *pcontext);
 	int32_t (*pf_OnRetNodeTime)(struct tms_context *pcontext);
-	int32_t (*pf_OnNameAndAddress)(struct tms_context *pcontext);
+	int32_t (*pf_OnNameAndAddress)(struct tms_context *pcontext, struct tms_nameandaddr *pval);
 	int32_t (*pf_OnFiberSectionCfg)(struct tms_context *pcontext, struct tms_fibersectioncfg *pval);
 	int32_t (*pf_OnConfigPipeState)(struct tms_context *pcontext, struct tms_cfgpip_status *pval);
 	int32_t (*pf_OnGetCycleTestCuv)(struct tms_context *pcontext, struct tms_getcyctestcuv *pval);
@@ -632,7 +640,6 @@ struct tms_callback {
 	// 70000000
 	int32_t (*pf_OnSetOCVMPara)(struct tms_context *pcontext, struct tms_setocvmpara *pval);
 	int32_t (*pf_OnSetOCVMFPGAInfo)(struct tms_context *pcontext, struct tms_setocvmfpgainfo *pval);
-
 
 };
 

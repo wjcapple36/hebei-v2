@@ -374,7 +374,7 @@ int32_t OnRetNodeTime(struct tms_context *pcontext)
 
 	return 0;
 }
-int32_t OnNameAndAddress(struct tms_context *pcontext)
+int32_t OnNameAndAddress(struct tms_context *pcontext, struct tms_nameandaddr *pval)
 {
 	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
 	return 0;

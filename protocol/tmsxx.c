@@ -1186,6 +1186,9 @@ int32_t tms_RetNodeTime(
 //	0x80000002	ID_RETNodeTime
 static int32_t tms_AnalyseRetNodeTime(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
+	if (pcontext->ptcb->pf_OnRetNodeTime) {
+		pcontext->ptcb->pf_OnRetNodeTime(pcontext);
+	}
 	return 0;
 }
 
@@ -1193,7 +1196,13 @@ static int32_t tms_AnalyseRetNodeTime(struct tms_context *pcontext, int8_t *pdat
 //	0x80000003	ID_NAMEANDADDRESS
 static int32_t tms_AnalyseNameAndAddress(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
+	struct tms_nameandaddr *pval;
+	pval = (struct tms_nameandaddr *)(pdata + GLINK_OFFSET_DATA);
+
 	hb2_dbg("Warning CU 需要处理此消息\n");
+	if (pcontext->ptcb->pf_OnRetNodeTime) {
+		pcontext->ptcb->pf_OnNameAndAddress(pcontext, pval);
+	}
 	return 0;
 }
 
@@ -1928,10 +1937,10 @@ static int32_t tms_AnalyseCurAlarm(struct tms_context *pcontext, int8_t *pdata, 
 		if (tms_connect() == 0) {
 			return -1;
 		}
-		
+
 	}
 	tms_MergeCurAlarm(g_201fd);
-	
+
 	return 0;
 
 }
@@ -2689,7 +2698,7 @@ void tms_Init()
 	// bzero(&sg_manage, sizeof(struct tms_manage));
 	// TODO cu_ip
 	// TODO local_ip
-	
+
 #ifdef DBG_201IP
 	strcpy(g_attr._201_ip, "127.0.0.1");
 #else
@@ -2838,13 +2847,13 @@ int tms_connect()
 {
 	hb2_dbg("%s() %d\n", __FUNCTION__, __LINE__);
 #ifdef DBG_201IP
-	g_201fd = connect_first_card("127.0.0.1","6000");//debug
+	g_201fd = connect_first_card("127.0.0.1", "6000"); //debug
 #else
-	g_201fd = connect_first_card(g_attr._201_ip,"6000");
+	g_201fd = connect_first_card(g_attr._201_ip, "6000");
 #endif
-	
+
 	return g_201fd;
-	
+
 }
 
 void tms_SetAttribute(struct tms_attr *attr)
