@@ -6,14 +6,14 @@
 SUPPORT_TARGET=x86 arm920t armv7 win32
 # SUPPORT_TARGET=x86 armv7 win32
 
-
+ARCH=armv7
 ifeq ("$(ARCH)", "")
 	ARCH=x86
 endif
 
 ifeq ("$(ARCH)", "arm920t")
-	CROSS_COMPILE	=/usr/local/arm/4.3.3/bin/arm-linux-
-	#CROSS_COMPILE	=/opt/EmbedSky/4.3.3/bin/arm-linux-
+	# CROSS_COMPILE	=/usr/local/arm/4.3.3/bin/arm-linux-
+	CROSS_COMPILE	=/opt/EmbedSky/4.3.3/bin/arm-linux-
 	# ARCH=arm920t
 	# CROSS_COMPILE	=/opt/EmbedSky/4.3.3/bin/arm-none-linux-gnueabi-
 	# CROSS_COMPILE	=/opt/iTop-4412/4.3.2/bin/arm-linux-
@@ -21,8 +21,8 @@ ifeq ("$(ARCH)", "arm920t")
 endif
 
 ifeq ("$(ARCH)", "armv7")
-	CROSS_COMPILE	=/usr/local/arm/4.3.2/bin/arm-linux-
-	#CROSS_COMPILE	=/opt/iTop-4412/4.3.2/bin/arm-linux-
+	# CROSS_COMPILE	=/usr/local/arm/4.3.2/bin/arm-linux-
+	CROSS_COMPILE	=/opt/iTop-4412/4.3.2/bin/arm-linux-
 endif
 
 ifeq ("$(ARCH)", "win32")
@@ -49,9 +49,10 @@ CFLAGS      =
 CS_FLAGS    = 
 
 ifeq ("$(ARCH)", "x86")
-	INCLUDE_DIR	+= 
+	INCLUDE_DIR	+= -I/usr/local/install/include
 	LFLAGS		+= -Wl,-rpath=./:lib-x86/
-	LIB_DIR 	+= -L/usr/local/install/lib -L./lib-$(ARCH)
+	LIB_DIR 	+= -L/usr/local/install/lib -L./lib-$(ARCH) \
+			   -L/lib/i386-linux-gnu/
 	CFLAGS		+= -DTARGET_X86
 endif
 

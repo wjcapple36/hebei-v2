@@ -1,4 +1,5 @@
 
+
 PRJ_NAME       = "[default-project]"
 PRJ_VERSION    = 1
 PRJ_PATCHLEVEL = 0
@@ -17,7 +18,7 @@ OUTPUT_DIR 	=
 
 # INCLUDE_DIR	+=  -I./include -I./osnet -I./shell -I./src -I/usr/include/readline -I/usr/local/install/include -I./ramlog -I./
 INCLUDE_DIR += -I./include -I./osnet -I./shell -I./ -I./src -I/usr/include/readline -I/usr/local/install/include -I./schedule -I./algorithm
-LFLAGS		+= -lreadline -lpthread -lhistory   -ltermcap -lminishell-ex -lepollserver
+LFLAGS		+=  -lminishell-ex -lepollserver -lreadline -lpthread -lhistory   -ltermcap
 # -lsqlite3
 LIB_DIR 	+= 
 
