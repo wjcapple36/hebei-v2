@@ -2847,9 +2847,9 @@ int tms_connect()
 {
 	hb2_dbg("%s() %d\n", __FUNCTION__, __LINE__);
 #ifdef DBG_201IP
-	g_201fd = connect_first_card("127.0.0.1", "6000"); //debug
+	//g_201fd = connect_first_card("127.0.0.1", "6000"); //debug
 #else
-	g_201fd = connect_first_card(g_attr._201_ip, "6000");
+	//g_201fd = connect_first_card(g_attr._201_ip, "6000");
 #endif
 
 	return g_201fd;

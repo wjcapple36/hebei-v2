@@ -179,8 +179,21 @@ int32_t convert_ch_cyc_curv2host(
 int32_t save_data_pt(const char file[], int32_t *An, int32_t len);
 //修改设备ip，在网段发生改变的时候使用
 int32_t modifiy_eq_ip(const char ip[], const char mask[], const char gw[]);
-
-
+//返回周期性测量曲线
+int32_t ret_host_cyc_curv(
+		const struct tms_context *pcontext, 
+		struct _tagCycCurv *pcyc_curv,
+		int32_t ch);
+//返回标准曲线
+int32_t ret_host_std_curv(
+		const struct tms_context *pcontext, 
+		struct _tagCHFiberSec *pchfiber_sec,
+		int32_t ch);
+//返回统计数据
+int32_t ret_host_statis_data(
+		int32_t ch, 
+		struct tms_context *pcontext,
+		struct _tagCHFiberSec *pchfiber_sec);
 
 
 #ifdef __cplusplus

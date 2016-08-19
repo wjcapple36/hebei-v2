@@ -197,7 +197,7 @@ int32_t OnConfigNodeTime(struct tms_context *pcontext)
 	ctime[19] = '\0';  
 	snprintf(strout, 64, "/bin/settime.sh \"%s\"", ctime);
 	system(strout);
-	ack.cmdid pcontext->pgb->cmdid;
+	ack.cmdid =  pcontext->pgb->cmdid;
 	ack.errcode = 0;
 	OnGetBasicInfo(pcontext);
 	// TODO set time
