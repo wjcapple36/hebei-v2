@@ -1031,7 +1031,12 @@ static int32_t tms_DbgAckSuccess(struct tms_context *pcontext, int8_t *pdata, in
 	struct tms_ack ack;
 	ack.errcode = 0;
 	ack.cmdid   = htonl(pbase_hdr->cmdid);
+
+	printf("%s pcontext->fd %d\n", __FUNCTION__, pcontext->fd);
 	tms_AckEx(pcontext->fd, NULL, &ack);
+	// tms_AckEx(g_201fd, NULL, &ack);
+	
+	return 0;
 }
 #endif
 // 0x20000000	ID_SETOTDRFPGAINFO
@@ -2081,6 +2086,14 @@ int32_t tms_MergeCurAlarm(int dst_fd)
 }
 
 // 0x80000014	ID_GETOTDRDATA_14
+int32_t tms_GetOTDRData(
+	int fd, 
+	struct glink_addr *paddr,
+	struct tms_getotdrdata *pval,
+	unsigned long cmdid)
+{
+
+}
 static int32_t tms_AnalyseGetOTDRData(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
 #ifdef HEBEI2_DBG
@@ -2095,6 +2108,7 @@ static int32_t tms_AnalyseGetOTDRData(struct tms_context *pcontext, int8_t *pdat
 #ifdef HEBEI2_DBG
 	tms_Print_tms_get_otdrdata(potdr);
 #endif
+	printf("%s pcontext->fd %d\n", __FUNCTION__, pcontext->fd);
 	if (pcontext->ptcb->pf_OnGetOTDRData) {
 		pcontext->ptcb->pf_OnGetOTDRData(pcontext, potdr);
 	}
@@ -2335,7 +2349,7 @@ struct tms_analyse_array sg_analyse_0x8000xxxx[] = {
 	{	tms_AnalyseGetBasicInfo	, 0}, //	0x80000000	ID_GETBASICINFO
 	{	tms_AnalyseGetNodeTime	, 1}, //	0x80000001	ID_GETNODETIME
 	{	tms_AnalyseRetNodeTime	, 1}, //	0x80000002	ID_RETNodeTime
-	{	tms_AnalyseNameAndAddress	, 8}, //	0x80000003	ID_NAMEANDADDRESS
+	{	tms_AnalyseNameAndAddress	, 1}, //	0x80000003	ID_NAMEANDADDRESS
 	{	tms_AnalyseFiberSectionCfg	, 0}, //	0x80000004	ID_FIBERSECTIONCFG
 	{	tms_AnalyseConfigPipeState	, 0}, //	0x80000005	ID_CONFIGPIPESTATE
 	{	tms_AnalyseGetCycleTestCuv	, 0}, //	0x80000006	ID_GETCYCLETESTCUV
@@ -2847,9 +2861,9 @@ int tms_connect()
 {
 	hb2_dbg("%s() %d\n", __FUNCTION__, __LINE__);
 #ifdef DBG_201IP
-	g_201fd = connect_first_card("127.0.0.1", "6000"); //debug
+	// g_201fd = connect_first_card("127.0.0.1", "6000"); //debug
 #else
-	g_201fd = connect_first_card(g_attr._201_ip, "6000");
+	// g_201fd = connect_first_card(g_attr._201_ip, "6000");
 #endif
 
 	return g_201fd;
