@@ -30,7 +30,9 @@ extern "C" {
 // #define MAX_CARD_1U (1) // 河北2期项目每个1U设备最多只有2块板卡
 
 int g_manger = 0, g_node_manger = 0;
+char unuse1[1000] = {0};
 int g_201fd = 0;
+char unuse2[1000] = {0};
 
 struct tms_attr g_attr;
 #ifdef USE_INLINE
@@ -2529,7 +2531,7 @@ int32_t tms_Analyse(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 	uint32_t cmdid, cmdh, cmdl;
 	struct glink_base *pbase_hdr;// glinkbase;
 	struct tms_analyse_array *pwhichArr = NULL;
-
+	printf("%s() fd %d\n", __FUNCTION__, pcontext->fd);
 #ifdef CONFIG_ACK_DEVICE
 	tms_AckDevice(pcontext, pdata, len);
 #endif
@@ -2861,9 +2863,9 @@ int tms_connect()
 {
 	hb2_dbg("%s() %d\n", __FUNCTION__, __LINE__);
 #ifdef DBG_201IP
-	// g_201fd = connect_first_card("127.0.0.1", "6000"); //debug
+	g_201fd = connect_first_card("127.0.0.1", "6000"); //debug
 #else
-	// g_201fd = connect_first_card(g_attr._201_ip, "6000");
+	g_201fd = connect_first_card(g_attr._201_ip, "6000");
 #endif
 
 	return g_201fd;

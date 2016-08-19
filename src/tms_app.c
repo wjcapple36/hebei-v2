@@ -330,8 +330,6 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	// tms_CurAlarm_V2(pcontext->fd, NULL, &alarm);
 
 	// tms_CurAlarm(pcontext->fd, NULL, &alarm);
-
-
 	// int fd = connect_first_card("127.0.0.1","6000");
 	if (g_201fd == 0) {
 		if (tms_connect() == 0) {
@@ -339,8 +337,8 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 		}
 		
 	}
-	pcontext->fd = g_201fd;
-	tms_CurAlarm_V2(pcontext->fd, NULL, &alarm);
+	// pcontext->fd = g_201fd;
+	tms_CurAlarm_V2(g_201fd, NULL, &alarm);
 	sleep(1);
 	// close(fd);
 	return 0;
