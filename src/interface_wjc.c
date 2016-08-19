@@ -190,8 +190,18 @@ int32_t OnOTDRBasicInfo(struct tms_context *pcontext)
 }
 int32_t OnConfigNodeTime(struct tms_context *pcontext)
 {
+	struct tms_ack ack;
+	char ctime[20] = {0};
+  	char strout[64] = {0};        
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	ctime[19] = '\0';  
+	snprintf(strout, 64, "/bin/settime.sh \"%s\"", ctime);
+	system(strout);
+	ack.cmdid pcontext->pgb->cmdid;
+	ack.errcode = 0;
+	OnGetBasicInfo(pcontext);
 	// TODO set time
+	tms_AckEx(pcontext->fd, NULL,&ack);
 	return 0;
 }
 int32_t OnCurAlarm(struct tms_context *pcontext)
