@@ -69,7 +69,7 @@ int32_t save_fiber_sec_para(int ch,
 int32_t read_fiber_sec_para(int ch, struct _tagCHFiberSec *pch_fiber_sec);
 //保存或者读取otdr fpga相关信息
 int32_t save_ch_fpga_info(const struct _tagCHInfo *pch_fpga_info,int32_t ch_num);
-int32_t read_ch_fpga_info(const struct _tagCHInfo *pch_fpga_info,int32_t ch_num);
+int32_t read_ch_fpga_info(struct _tagCHInfo *pch_fpga_info,int32_t ch_num);
 //创建文件夹
 int32_t creat_folder(const char folder_path[]);
 //为光纤段分配缓冲

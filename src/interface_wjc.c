@@ -141,9 +141,25 @@ int32_t OnConfigPipeState(struct tms_context *pcontext, struct tms_cfgpip_status
 }
 int32_t OnGetCycleTestCuv(struct tms_context *pcontext, struct tms_getcyctestcuv *pval)
 {
+	int ret, ch;
+	struct tms_ack ack;
+	ack.cmdid = pcontext->pgb->cmdid;
+	ret = CMD_RET_OK;
+	ch = pval->pipe - ch_offset;
+	printf("%s():%d ch %d \n", __FUNCTION__, __LINE__, pval->pipe);
+	if(ch < 0 || ch > CH_NUM)
+	{
+		ret = CMD_RET_PARA_INVLADE;
+		goto usr_exit;
+	}
+
+	ret_host_cyc_curv(pcontext, &otdrDev[ch].curv, ch);
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
-	printf("\tget pipe %d\n", pval->pipe);
-	return 0;
+	printf("\tget pipe status %d\n", pval->pipe);
+usr_exit:
+	if(ret)
+		tms_AckEx(pcontext->fd,NULL, &ack);
+	return ret;
 }
 /* --------------------------------------------------------------------------*/
 /**
@@ -157,15 +173,24 @@ int32_t OnGetCycleTestCuv(struct tms_context *pcontext, struct tms_getcyctestcuv
 /* ----------------------------------------------------------------------------*/
 int32_t OnGetStatusData(struct tms_context *pcontext, struct tms_getstatus_data *pval)
 {
-	int ret;
+	int ret, ch;
 	struct tms_ack ack;
 	ack.cmdid = pcontext->pgb->cmdid;
 	ret = CMD_RET_OK;
+	ch = pval->pipe - ch_offset;
+	if(ch < 0 || ch > CH_NUM)
+	{
+		ret = CMD_RET_PARA_INVLADE;
+		goto usr_exit;
+	}
 
 
-
+	ret_host_statis_data(ch, pcontext, &chFiberSec[ch]);
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	printf("\tget pipe status %d\n", pval->pipe);
+usr_exit:
+	if(ret)
+		tms_AckEx(pcontext->fd,NULL, &ack);
 	return 0;
 }
 int32_t OnStatusData(struct tms_context *pcontext)
@@ -238,7 +263,7 @@ int32_t OnGetOTDRData(struct tms_context *pcontext,struct tms_get_otdrdata *pget
 	}
 	//给点名测量传递参数
 	memcpy(&usrOtdrTest.ch, &pget_otdr_data->pipe, sizeof(struct tms_get_otdrdata) );
-	usrOtdrTest.ch--;
+	usrOtdrTest.ch -= ch_offset;
 	usrOtdrTest.cmd = ack.cmdid;
 	usrOtdrTest.src_addr = pcontext->pgb->src;
 	usrOtdrTest.state = USR_OTDR_TEST_WAIT;
@@ -261,8 +286,19 @@ usr_exit:
 /* ----------------------------------------------------------------------------*/
 int32_t OnGetStandardCurv(struct tms_context *pcontext, struct tms_getstandardcurv *pval)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
-	hb2_dbg("pipe %d\n", pval->pipe);
+	int ret, ch;
+	struct tms_ack ack;
+	ack.cmdid = pcontext->pgb->cmdid;
+	ret = CMD_RET_OK;
+	ch = pval->pipe - ch_offset;
+	printf("%s %d ch %d \n", __FUNCTION__, __LINE__, pval->pipe);
+	if(ch < 0 || ch > CH_NUM)
+	{
+		ret = CMD_RET_PARA_INVLADE;
+		goto usr_exit;
+	}
+	ret_host_std_curv(pcontext, &chFiberSec[ch],ch);
+usr_exit:
 	return 0;
 }
 int32_t OnSetOTDRFPGAInfo(struct tms_context *pcontext, struct tms_setotdrfpgainfo *pval)
@@ -278,8 +314,8 @@ int32_t OnSetOTDRFPGAInfo(struct tms_context *pcontext, struct tms_setotdrfpgain
 	        pval->dr,
 	        pval->wdm);
 
-	ch = pval->pipe - 1;
-	if(ch < ch_offset || ch > (ch_offset + CH_NUM)){
+	ch = pval->pipe - ch_offset;
+	if(ch < 0 || ch >  CH_NUM){
 		ret = CMD_RET_PARA_INVLADE;
 		goto usr_exit;
 	}

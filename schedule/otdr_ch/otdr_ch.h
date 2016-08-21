@@ -80,6 +80,7 @@ struct _tagCHState
 	int32_t spi_error_num;	//spi通信失败的次数
 	int32_t ch_buf_collid_num;	//ch buf 访问冲突的次数
 	int32_t algro_collid_num;	//算法线程访问冲突的次数
+	int32_t lamda_usr;
 
 
 };
@@ -191,6 +192,7 @@ struct _tagAlgroCHInfo
 	int32_t resource_id;	//资源id
 	int32_t mod;	//测试方式 点名测量，轮询
 	int32_t src_addr; //如果是点名测量，用来指示数据发向哪里
+	int32_t lamda_usr; //用户的波长
 };
 struct _tagAlarm
 {
