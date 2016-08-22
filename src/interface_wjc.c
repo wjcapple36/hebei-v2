@@ -390,6 +390,7 @@ void *ThreadConnectCU(void *arg)
 	bzero(&client, sizeof(struct ep_con_t));
 
 
+<<<<<<< Updated upstream
 	usleep(3000000);//延时3s，防止x86下efence奔溃
 
 	gl_addr.pkid = 0;
@@ -424,6 +425,8 @@ void *ThreadConnectCU(void *arg)
 }
 
 
+=======
+>>>>>>> Stashed changes
 #ifdef __cplusplus
 }
 #endif

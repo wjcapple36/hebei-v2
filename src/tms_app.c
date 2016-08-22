@@ -8,6 +8,12 @@
 #include "sys/wait.h"
 // #include <strings.h>
 #include <stdio.h>
+
+#include "stdio.h"
+#include <netcard.h>
+#include <freebox.h>
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -64,7 +70,9 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	getsockname(pcontext->fd, &addr, &addrlen);
 	struct sockaddr_in *addr_in;
 	addr_in = (struct sockaddr_in *)&addr;
-	snprintf(strout, 64, "%s", inet_ntoa(addr_in->sin_addr));
+	// snprintf(strout, 64, "%s", inet_ntoa(addr_in->sin_addr));
+	snprintf(strout, 64, "%s", "192.168.1.196");
+	// printf("strout ip %s\n", strout);
 	strcpy(otdr_crc_hdr.addr, strout);
 	strcpy(otdr_crc_hdr.hw_ver, "1.2.3.4");
 	strcpy(otdr_crc_hdr.sf_ver, "4.3.2.1");
@@ -163,16 +171,52 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 
 	alarmlist_hdr.count = 2;
 
+	// Debug
+	// 根据IP通知当前告警
+	// 
+	char *p;
+	char ip[16];
+	int unuse, ip4;
+	struct itifo wan0ip;
+	
+	if (true == GetInterfaceInfo("eth4", &wan0ip)) {
+		goto _FindNetcard;
+	}
+	if (true == GetInterfaceInfo("wan0", &wan0ip)) {
+		goto _FindNetcard;
+	}
+_FindNetcard:;
+	p = inet_ntoa((struct in_addr)wan0ip.addr.sin_addr);
+	strcpy(ip, p);
+	sscanf(ip, "%d.%d.%d.%d", &unuse, &unuse, &unuse, &ip4);
+	
+	// 当ip是201结尾，就返回2、3通道告警，否则返回7、8通道
+	if (201 == ip4) {
+		alarmlist_val[0].pipe = 2;
+		alarmlist_val[0].fiber = 2;
+		alarmlist_val[0].level = 1;
+		alarmlist_val[0].type = 1;
 
-	alarmlist_val[0].pipe = 7;
-	alarmlist_val[0].fiber = 7;
-	alarmlist_val[0].level = 1;
-	alarmlist_val[0].type = 1;
+		alarmlist_val[1].pipe = 3;
+		alarmlist_val[1].fiber = 3;
+		alarmlist_val[1].level = 1;
+		alarmlist_val[1].type = 1;	
+	}
+	else {
+		alarmlist_val[0].pipe = 7;
+		alarmlist_val[0].fiber = 7;
+		alarmlist_val[0].level = 1;
+		alarmlist_val[0].type = 1;
 
-	alarmlist_val[1].pipe = 8;
-	alarmlist_val[1].fiber = 8;
-	alarmlist_val[1].level = 1;
-	alarmlist_val[1].type = 1;
+		alarmlist_val[1].pipe = 8;
+		alarmlist_val[1].fiber = 8;
+		alarmlist_val[1].level = 1;
+		alarmlist_val[1].type = 1;		
+	}
+	// End Debug
+
+
+
 
 	strcpy(alarmlist_val[0].time, "2016-04-32 12:12:33");
 	strcpy(alarmlist_val[0].reserved0, "");;
@@ -339,6 +383,7 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	}
 	// pcontext->fd = g_201fd;
 	tms_CurAlarm_V2(g_201fd, NULL, &alarm);
+	// tms_CurAlarm_V2(pcontext->fd, NULL, &alarm);
 	sleep(1);
 	// close(fd);
 	return 0;

@@ -22,6 +22,9 @@ TODO：详细描述
 #include "time.h"
 #include <stdarg.h>
 
+#include "netcard.h"
+#include "freebox.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -274,6 +277,8 @@ int32_t tms_Update(
     int32_t flen,
     uint8_t *pdata)
 {
+	struct tms_context context;
+	tms_SelectContextByFD(fd, &context);
 	struct tms_dev_update_hdr hdr;
 	// uint8_t *pfdata;
 	struct tms_dev_md5 md5;
@@ -323,11 +328,13 @@ int32_t tms_Update(
 
 	}
 	glink_Build(&base_hdr, ID_UPDATE, len);
+	pthread_mutex_lock(&context.mutex);
 	glink_SendHead(fd, &base_hdr);
 	glink_SendSerial(fd, (uint8_t *)&hdr,   sizeof(struct tms_dev_update_hdr));
 	glink_SendSerial(fd, (uint8_t *)pdata, flen);
 	glink_SendSerial(fd, (uint8_t *)&md5,   sizeof(struct tms_dev_md5));
 	glink_SendTail(fd);
+	pthread_mutex_unlock(&context.mutex);
 	return 0;
 #if 0
 	uint8_t *pmem;
@@ -1530,6 +1537,7 @@ int32_t tms_OTDRBasicInfo(
 	// PrintfMemory(pdata, flen);
 	tms_FillGlinkFrame(&base_hdr, paddr);
 	glink_Build(&base_hdr, ID_OTDRBASICINFO, len);
+	pthread_mutex_lock(&pcontext->mutex);
 	glink_SendHead(pcontext->fd, &base_hdr);
 	glink_SendSerial(pcontext->fd, (uint8_t *)pmem_otdr_crc_hdr,      sizeof(struct tms_otdr_crc_hdr));
 	glink_SendSerial(pcontext->fd, (uint8_t *)pmem_otdr_crc_val,   sizeof(struct tms_otdr_crc_val)* potdr_crc_hdr->count);
@@ -1539,6 +1547,7 @@ int32_t tms_OTDRBasicInfo(
 	glink_SendSerial(pcontext->fd, (uint8_t *)pmem_fiber_hdr,         sizeof(struct tms_fibersection_hdr));
 	glink_SendSerial(pcontext->fd, (uint8_t *)pmem_fiber_val,      sizeof(struct tms_fibersection_val) * pfiber_hdr->count);
 	glink_SendTail(pcontext->fd);
+	pthread_mutex_unlock(&pcontext->mutex);
 
 	free(pmem_otdr_crc_hdr);
 	free(pmem_otdr_crc_val);
@@ -1577,6 +1586,9 @@ int32_t tms_CurAlarm_V2(
     struct glink_addr *paddr,
     struct tms_curalarm *val)
 {
+	struct tms_context context;
+	tms_SelectContextByFD(fd, &context);
+
 	struct tms_alarmlist_hdr    *alarmlist_hdr = val->alarmlist_hdr;
 	struct tms_alarmlist_val    *alarmlist_val = val->alarmlist_val;
 	struct tms_alarmline_hdr    *alarmline_hdr = val->alarmline_hdr;
@@ -1674,6 +1686,7 @@ int32_t tms_CurAlarm_V2(
 	tms_FillGlinkFrame(&base_hdr, paddr);
 
 	glink_Build(&base_hdr, ID_CURALARM, len);
+	pthread_mutex_lock(&context.mutex);
 	glink_SendHead(fd, &base_hdr);
 
 	// 发送告警头
@@ -1700,7 +1713,7 @@ int32_t tms_CurAlarm_V2(
 		glink_SendSerial(fd, (uint8_t *)phebei2_event_val, sizeof(struct tms_hebei2_event_val) * htonl(phebei2_event_hdr->count));
 	}
 	glink_SendTail(fd);
-
+	pthread_mutex_unlock(&context.mutex);
 
 	printf("finish\n");
 	return 0;
@@ -1725,6 +1738,9 @@ int32_t tms_CurAlarm(
 	struct tms_hebei2_event_val hebei2_event_val[128];
 	uint32_t data_hdr_count;
 	uint32_t event_hdr_count;
+
+	struct tms_context context;
+	tms_SelectContextByFD(fd, &context);
 
 	printf("%d\n", __LINE__);
 	memcpy(&alarmlist_hdr, val->alarmlist_hdr, sizeof(struct tms_alarmlist_hdr));
@@ -1817,13 +1833,29 @@ int32_t tms_CurAlarm(
 	        val->alarmline_hdr->count
 	    );
 
+	/*
+	 如果201的连接被断开
+	 自动重连
+	 重连失败则退出
+	 */
+	printf("201 fd = %d\n", g_201fd);
+	if (g_201fd == 0) {
+		printf("201 !!! reconnect\n");
+		if (tms_connect() == 0) {
+			return -1;
+		}
+	}
+	fd = g_201fd;
 
+	
 
 	tms_FillGlinkFrame(&base_hdr, paddr);
 
+	
 	glink_Build(&base_hdr, ID_CURALARM, len);
-	glink_SendHead(fd, &base_hdr);
 
+	pthread_mutex_lock(&context.mutex);
+	glink_SendHead(fd, &base_hdr);
 	glink_SendSerial(fd, (uint8_t *)&alarmlist_hdr, sizeof(struct tms_alarmlist_hdr) );
 	glink_SendSerial(fd, (uint8_t *)&alarmlist_val[0], sizeof(struct tms_alarmlist_val) * val->alarmlist_hdr->count );
 	glink_SendSerial(fd, (uint8_t *)&alarmline_hdr, sizeof(struct tms_alarmline_hdr) );
@@ -1848,6 +1880,7 @@ int32_t tms_CurAlarm(
 	glink_SendSerial(fd, (uint8_t *)&hebei2_event_hdr, sizeof(struct tms_hebei2_event_hdr) );
 	glink_SendSerial(fd, (uint8_t *)hebei2_event_val, sizeof(struct tms_hebei2_event_val) * otdr_val->hebei2_event_hdr->count);
 	glink_SendTail(fd);
+	pthread_mutex_unlock(&context.mutex);
 	return 0;
 }
 
@@ -1934,19 +1967,18 @@ static int32_t tms_AnalyseCurAlarm(struct tms_context *pcontext, int8_t *pdata, 
 	         fp);
 	fclose(fp);
 
-	/*
-	 如果201的连接被断开
-	 自动重连
-	 重连失败则退出
-	 */
-	printf("201 fd = %d\n", g_201fd);
-	if (g_201fd == 0) {
-		if (tms_connect() == 0) {
-			return -1;
-		}
 
-	}
-	tms_MergeCurAlarm(g_201fd);
+	// 暗示本机IP就是201，不再继续发送，否则环回
+	printf("pcontext->fd %d\n", pcontext->fd);
+	// if (pcontext->fd == g_201fd) {
+		// printf("send to -> nodemanger\n");
+		tms_MergeCurAlarm(g_node_manger);
+	// }
+	// else {
+		// printf("send to -> 201\n");
+		// tms_MergeCurAlarm(g_201fd);	
+	// }
+	
 
 	return 0;
 
@@ -1997,10 +2029,13 @@ void sendonefile(int fd, char *file)
 
 int32_t tms_MergeCurAlarm(int dst_fd)
 {
-	// 防止自身环路
-	if (dst_fd == g_201fd) {
-		return -1;
-	}
+	struct tms_context context;
+	tms_SelectContextByFD(dst_fd, &context);
+	// // 防止自身环路
+	printf(" dst_fd %d\n", dst_fd);
+	// if (dst_fd == g_201fd) {
+		// return -1;
+	// }
 
 	char strout[32];
 	int card_id = 0;
@@ -2057,7 +2092,7 @@ int32_t tms_MergeCurAlarm(int dst_fd)
 	          len_file +
 	          sizeof(struct tms_alarmline_hdr);//计算合并后数据大小
 	struct glink_base  base_hdr;
-	int fd = g_node_manger;// 获取节点管理器fd
+	int fd;// = g_node_manger;// 获取节点管理器fd
 	fd = dst_fd;
 	// TODO 加锁
 
@@ -2067,6 +2102,8 @@ int32_t tms_MergeCurAlarm(int dst_fd)
 	printf("go fd self = %d %d\n", fd, len);
 	tms_FillGlinkFrame(&base_hdr, NULL);
 	glink_Build(&base_hdr, ID_CURALARM, len);
+
+	pthread_mutex_lock(&context.mutex);
 	glink_SendHead(fd, &base_hdr);
 	glink_SendSerial(fd, (uint8_t *)&alarmlist_hdr, sizeof(struct tms_alarmlist_hdr) );
 
@@ -2085,6 +2122,8 @@ int32_t tms_MergeCurAlarm(int dst_fd)
 	// snprintf(strout, 32, "%s/tmp%d", RAM_DIR, 1);
 	// sendonefile(fd, strout);
 	glink_SendTail(fd);
+	pthread_mutex_unlock(&context.mutex);
+	return 0;
 }
 
 // 0x80000014	ID_GETOTDRDATA_14
@@ -2114,7 +2153,7 @@ static int32_t tms_AnalyseGetOTDRData(struct tms_context *pcontext, int8_t *pdat
 	if (pcontext->ptcb->pf_OnGetOTDRData) {
 		pcontext->ptcb->pf_OnGetOTDRData(pcontext, potdr);
 	}
-
+	return 0;
 }
 
 // 0x80000016 0x80000017 0x80000018 0x80000019	ID_RETOTDRDATA_19
@@ -2124,6 +2163,9 @@ int32_t tms_RetOTDRData(
     struct tms_ret_otdrdata *val,
     unsigned long cmdid)
 {
+	struct tms_context context;
+	tms_SelectContextByFD(fd, &context);
+
 	struct tms_ret_otdrparam     *pmem_ret_otdrparam;/*ret_otdrparam,*/
 	struct tms_ret_otdrparam_p1     *pmem_ret_otdrparam_p1;
 	struct tms_ret_otdrparam_p2     *pmem_ret_otdrparam_p2;
@@ -2206,6 +2248,8 @@ int32_t tms_RetOTDRData(
 	tms_FillGlinkFrame(&base_hdr, paddr);
 
 	glink_Build(&base_hdr, cmdid, len);
+
+	pthread_mutex_lock(&context.mutex);
 	glink_SendHead(fd, &base_hdr);
 	if (ID_RETOTDRDATA_19 == cmdid) {
 		glink_SendSerial(fd, (uint8_t *)(pmem_ret_otdrparam_p1), sizeof(struct tms_ret_otdrparam_p1));
@@ -2224,6 +2268,7 @@ int32_t tms_RetOTDRData(
 	free(pmem_hebei2_data_val);
 	free(pmem_hebei2_event_hdr);
 	free(pmem_hebei2_event_val);
+	pthread_mutex_unlock(&context.mutex);
 	return 0;
 }
 
@@ -2264,8 +2309,9 @@ int32_t tms_AckEx(
     struct glink_addr *paddr,
     struct tms_ack *pack)
 {
+	struct tms_context context;
 	struct tms_ack ack;
-
+	tms_SelectContextByFD(fd, &context);
 	ack.errcode  = htonl(pack->errcode);
 	ack.cmdid 	 = htonl(pack->cmdid);
 	// ack.reserve1 = htonl(pack->reserve1);
@@ -2291,9 +2337,10 @@ int32_t tms_AckEx(
 	// ret = glink_Send(fd,NULL, &base_hdr, pmem, sizeof(struct tms_ack));
 
 	glink_Build(&base_hdr, ID_ERROR, 8);
-	ret = glink_Send(fd, NULL, &base_hdr, pmem, 8);
+	ret = glink_Send(fd, &context.mutex, &base_hdr, pmem, 8);
 	return ret;
 }
+
 
 
 static struct tms_analyse_array sg_analyse_0x1000xxxx[] = {
@@ -2718,7 +2765,29 @@ void tms_Init()
 #ifdef DBG_201IP
 	strcpy(g_attr._201_ip, "127.0.0.1");
 #else
-	strcpy(g_attr._201_ip, "192.168.1.201");
+char *p;
+	char ip[16];
+	int unuse, ip3;
+	struct itifo wan0ip;
+
+	if (true == GetInterfaceInfo("eth4", &wan0ip)) {
+		goto _FindNetcard;
+	}
+	if (true == GetInterfaceInfo("wan0", &wan0ip)) {
+		goto _FindNetcard;
+	}
+_FindNetcard:;
+	p = inet_ntoa((struct in_addr)wan0ip.addr.sin_addr);
+	strcpy(ip, p);
+	sscanf(ip, "%d.%d.%d.%d", &unuse, &unuse, &ip3, &unuse );
+	
+	// 当ip是201结尾，就返回2、3通道告警，否则返回7、8通道
+	if (1 == ip3) {
+		strcpy(g_attr._201_ip, "192.168.1.201");
+	}
+	else {
+		strcpy(g_attr._201_ip, "192.168.0.201");
+	}	
 #endif
 }
 
