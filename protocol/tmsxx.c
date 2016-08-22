@@ -1597,6 +1597,7 @@ int32_t tms_CurAlarm_V2(
 
 	// 如果要支持多条OTDR曲线，那么函数内部内存开销太大
 	struct tms_ret_otdrparam    *pret_otdrparam;
+	struct tms_ret_otdrparam_p2 *pret_otdrparam_p2;
 	struct tms_test_result      *ptest_result;
 	struct tms_hebei2_data_hdr  *phebei2_data_hdr;
 	struct tms_hebei2_data_val  *phebei2_data_val;
@@ -1669,7 +1670,12 @@ int32_t tms_CurAlarm_V2(
 	for (int i = 0; i < line_hdr_count; i++) {
 		phebei2_data_hdr  = t_alarmline_val->hebei2_data_hdr;
 		phebei2_event_hdr = t_alarmline_val->hebei2_event_hdr;
-		tlen += sizeof(struct tms_ret_otdrparam) +
+		tlen += 
+#if 0
+			sizeof(struct tms_ret_otdrparam) +
+#else
+			sizeof(struct tms_ret_otdrparam_p2) +
+#endif
 		        sizeof(struct tms_test_result) +
 		        sizeof(struct tms_hebei2_data_hdr) +
 		        sizeof(struct tms_hebei2_data_val) * htonl(phebei2_data_hdr->count) +
@@ -1705,7 +1711,11 @@ int32_t tms_CurAlarm_V2(
 		phebei2_event_val = t_alarmline_val->hebei2_event_val;
 		printf("data_hdr_count %d %d \n", data_hdr_count, line_hdr_count);
 		printf("event_hdr_count %d\n", event_hdr_count);
+#if 0
 		glink_SendSerial(fd, (uint8_t *)&pret_otdrparam, sizeof(struct tms_ret_otdrparam) );
+#else
+		glink_SendSerial(fd, (uint8_t *)&pret_otdrparam_p2, sizeof(struct tms_ret_otdrparam_p2) );
+#endif		
 		glink_SendSerial(fd, (uint8_t *)&ptest_result, sizeof(struct tms_test_result) );
 		glink_SendSerial(fd, (uint8_t *)&phebei2_data_hdr, sizeof(struct tms_hebei2_data_hdr) );
 		glink_SendSerial(fd, (uint8_t *)phebei2_data_val, sizeof(struct tms_hebei2_data_val) * htonl(phebei2_data_hdr->count));
