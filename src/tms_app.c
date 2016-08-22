@@ -524,6 +524,38 @@ int32_t OnGetOTDRData(struct tms_context *pcontext, struct tms_get_otdrdata *pva
 	struct tms_hebei2_event_val hebei2_event_val[128];
 
 
+	// Debug
+	// 为了保证CU能中转，多块OTDR单元板检测节点管理器下发的通道
+	// 请求是否属于本通道，不是则不响应
+
+	char *p;
+	char ip[16];
+	int unuse, ip4;
+	struct itifo wan0ip;
+	
+	if (true == GetInterfaceInfo("eth4", &wan0ip)) {
+		goto _FindNetcard;
+	}
+	if (true == GetInterfaceInfo("wan0", &wan0ip)) {
+		goto _FindNetcard;
+	}
+_FindNetcard:;
+	p = inet_ntoa((struct in_addr)wan0ip.addr.sin_addr);
+	strcpy(ip, p);
+	sscanf(ip, "%d.%d.%d.%d", &unuse, &unuse, &unuse, &ip4);
+	
+	// 当ip是201结尾，拥有1-4通道
+	if (201 == ip4 && (pval->pipe < 1  || pval->pipe > 4)) {
+		// 没有该通道
+		return -1;
+	}
+	// 当ip是202结尾，拥有5-8通道
+	else if (202 == ip4 && (pval->pipe < 5  || pval->pipe > 8)) {
+		// 没有该通道
+		return -1;
+	}
+	// End Debug
+
 	otdrdata.ret_otdrparam    = &ret_otdrparam;
 	otdrdata.test_result      = &test_result;
 	otdrdata.hebei2_data_hdr  = &hebei2_data_hdr;
