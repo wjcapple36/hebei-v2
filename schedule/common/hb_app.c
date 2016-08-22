@@ -916,7 +916,7 @@ int32_t check_fiber_sec_para(const struct tms_fibersectioncfg *pfiber_sec_cfg)
 	//检查通道号,host通道号从1开始
 	for(i = 0; i < tmp; i++)
 	{
-		ch = pfiber_sec_cfg->fiber_val[i].pipe_num - 1; 
+		ch = pfiber_sec_cfg->fiber_val[i].pipe_num; 
 		if(ch < ch_offset || ch > (ch_offset + CH_NUM)){
 			ret = CMD_RET_PARA_INVLADE;
 			printf("%s() %d : ch error %d ch_offset %d\n",\
@@ -1527,7 +1527,7 @@ int32_t find_alarm_on_fiber(int32_t ch,
 	NextAddr = (char *)(&pResult->OtdrData.dB_x1000[offset]);
 	AllEvent = (OTDR_UploadAllData_t*)(NextAddr - 8 - \
 			sizeof(AllEvent->MeasureParam) - sizeof(AllEvent->OtdrData));
-	
+	palarm->chang = 0;	
 	quick_unlock(&pFibersec->lock);
 	if(!pFibersec->para.is_initialize)
 		goto usr_exit;
@@ -1580,14 +1580,14 @@ int32_t find_alarm_on_fiber(int32_t ch,
 			event_alarm.first.pos = 0;
 		distance_space = abs(event_alarm.first.pos - palarm->buf[i].pos[0]);
 		//级别不相等或者距离相差超过300米判断为告警发生变化
-		if(event_alarm.first.lev != palarm->buf[i].pos || distance_space > 300)
+		if(event_alarm.first.lev != palarm->buf[i].lev || distance_space > 300)
 		{
 			palarm->chang = 1;
 			palarm->buf[i].ch = ch + ch_offset;
 			palarm->buf[i].lev = event_alarm.first.lev;
 			palarm->buf[i].pos[0] = event_alarm.first.pos;
 			palarm->buf[i].reserv = 1;
-			palarm->buf[i].sec = i;
+			palarm->buf[i].sec = i + 1;
 			palarm->buf[i].type = 1;
 		}
 		if(palarm->buf[i].lev > FIBER_ALARM_LEV0)
@@ -1601,7 +1601,8 @@ int32_t find_alarm_on_fiber(int32_t ch,
 
 usr_exit:
 	quick_unlock(&pFibersec->lock);
-
+	if(palarm->chang)
+		ret_total_curalarm2host();
 	return ret;
 }
 /* --------------------------------------------------------------------------*/
@@ -1925,7 +1926,7 @@ int32_t get_ch_total_alarm(
 	offset = 0;
 	quick_lock(& pfiber_sec->lock);
 	psec_para = &pfiber_sec->para;
-	palarm = &pfiber_sec->para;
+	palarm = &pfiber_sec->alarm;
 	if(!psec_para->is_initialize || !palarm->alarm_num )
 		goto usr_exit;
 
@@ -2019,7 +2020,7 @@ int32_t ret_total_curalarm2host()
 		goto usr_exit;
 	}
 
-	curv_buf = malloc(sizeof(struct _tagUpOtdrCurv)*line_num);
+	curv_buf = malloc(sizeof(struct _tagUpOtdrCurv)*curv_buf_len);
 	if(!curv_buf){
 		ret = errno;
 		exit_self(errno,__FUNCTION__, __LINE__,"new buf fail\0");
@@ -2036,7 +2037,7 @@ int32_t ret_total_curalarm2host()
 		alarm_ch = get_ch_total_alarm(&alarmlist_val[alarm_total],&chFiberSec[i]);
 		if(alarm_ch){
 			//如果是并行otdr下面的方法很有必要
-			quick_lock_init(&otdrDev[i].curv.lock);
+			quick_lock(&otdrDev[i].curv.lock);
 			memcpy(&curv_buf[line_num], &otdrDev[i].curv.curv, sizeof(struct _tagUpOtdrCurv));
 			quick_unlock(&otdrDev[i].curv.lock);
 			convert_ch_cyc_curv2host(i,&alarmline_val[line_num],&curv_buf[line_num]);
@@ -2045,7 +2046,7 @@ int32_t ret_total_curalarm2host()
 		alarm_total += alarm_ch;
 	}
 	alarmlist_hdr.count = alarm_total;
-	alarmline_hdr.count = line_num++;
+	alarmline_hdr.count = line_num;
 	ret = OP_OK;
 usr_exit:
 	fiber_alarm.alarmline_hdr = &alarmline_hdr;
