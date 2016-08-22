@@ -27,6 +27,7 @@ extern "C" {
 #define CMD_RET_CH_UNEXIST		7 //通道不存在
 #define CMD_RET_TEST_ERROR		8 //测试异常
 #define CMD_RET_FPGA_COMMU_ERROR	9 //FPGA通信异常
+#define CMD_RET_OTHRER_ERROR 		0x80000036 	//其他错误码
 //节点管理器地址，网管客户端地址，网管服务器	
 #define ADDR_HOST_NODE			0x0000001e
 #define ADDR_HOST_CLIENT		0x0000002e

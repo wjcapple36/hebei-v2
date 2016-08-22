@@ -15,12 +15,12 @@ OUTPUT_DIR 	=
 
 
 
-INCLUDE_DIR	+=  -I./include -I./osnet -I./shell -I./ -I./src -I/usr/include/readline -I/usr/local/install/include -I./schdule -I./algorithm
+INCLUDE_DIR	+=  -I./include -I./osnet -I./shell -I./ -I./src -I/usr/include/readline -I/usr/local/install/include -I./schedule -I./algorithm
 LFLAGS		+= -lreadline -lpthread -lhistory   -ltermcap -lminishell-ex -lepollserver -lm
 # -lsqlite3
 LIB_DIR 	+= 
 
-CFLAGS  += -DHEBEI2_DBG 
+CFLAGS  += -DHEBEI2_DBG -g 
 CFLAGS	+= -DPRINT_CMD_NAME_DBG 
 CFLAGS	+= -DTRACE_DBG 
 

@@ -20,6 +20,7 @@ extern "C" {
 int32_t OnGetBasicInfo(struct tms_context *pcontext)
 {
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	ret_host_basic_info(pcontext,NULL);
 	return 0;
 }
 
@@ -58,12 +59,13 @@ int32_t OnRetNodeTime(struct tms_context *pcontext)
  * @returns   0成功，以及无法保存的命令
  */
 /* ----------------------------------------------------------------------------*/
-int32_t OnNameAndAddress(struct tms_context *pcontext)
+int32_t OnNameAndAddress(struct tms_context *pcontext, struct tms_nameandaddr *pval)
 {
 	struct tms_ack ack;
 	int32_t ret;
 	//该回调函数缺乏输入节点名称，需要woo配合修改
 	ack.cmdid = pcontext->pgb->cmdid;
+	memcpy(&devMisc.name, pval,sizeof(struct _tagDevNameAddr));
 	ret = save_node_name_address(&devMisc);
 
 	if(ret != CMD_RET_OK)
@@ -139,9 +141,25 @@ int32_t OnConfigPipeState(struct tms_context *pcontext, struct tms_cfgpip_status
 }
 int32_t OnGetCycleTestCuv(struct tms_context *pcontext, struct tms_getcyctestcuv *pval)
 {
+	int ret, ch;
+	struct tms_ack ack;
+	ack.cmdid = pcontext->pgb->cmdid;
+	ret = CMD_RET_OK;
+	ch = pval->pipe - ch_offset;
+	printf("%s():%d ch %d \n", __FUNCTION__, __LINE__, pval->pipe);
+	if(ch < 0 || ch > CH_NUM)
+	{
+		ret = CMD_RET_PARA_INVLADE;
+		goto usr_exit;
+	}
+
+	ret_host_cyc_curv(pcontext, &otdrDev[ch].curv, ch);
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
-	printf("\tget pipe %d\n", pval->pipe);
-	return 0;
+	printf("\tget pipe status %d\n", pval->pipe);
+usr_exit:
+	if(ret)
+		tms_AckEx(pcontext->fd,NULL, &ack);
+	return ret;
 }
 /* --------------------------------------------------------------------------*/
 /**
@@ -155,15 +173,24 @@ int32_t OnGetCycleTestCuv(struct tms_context *pcontext, struct tms_getcyctestcuv
 /* ----------------------------------------------------------------------------*/
 int32_t OnGetStatusData(struct tms_context *pcontext, struct tms_getstatus_data *pval)
 {
-	int ret;
+	int ret, ch;
 	struct tms_ack ack;
 	ack.cmdid = pcontext->pgb->cmdid;
 	ret = CMD_RET_OK;
+	ch = pval->pipe - ch_offset;
+	if(ch < 0 || ch > CH_NUM)
+	{
+		ret = CMD_RET_PARA_INVLADE;
+		goto usr_exit;
+	}
 
 
-
+	ret_host_statis_data(ch, pcontext, &chFiberSec[ch]);
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	printf("\tget pipe status %d\n", pval->pipe);
+usr_exit:
+	if(ret)
+		tms_AckEx(pcontext->fd,NULL, &ack);
 	return 0;
 }
 int32_t OnStatusData(struct tms_context *pcontext)
@@ -184,13 +211,22 @@ int32_t OnCheckoutResult(struct tms_context *pcontext)
 int32_t OnOTDRBasicInfo(struct tms_context *pcontext)
 {
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
-	ret_host_basic_info(pcontext,NULL);
 	return 0;
 }
 int32_t OnConfigNodeTime(struct tms_context *pcontext)
 {
+	struct tms_ack ack;
+	char ctime[20] = {0};
+  	char strout[64] = {0};        
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	ctime[19] = '\0';  
+	snprintf(strout, 64, "/bin/settime.sh \"%s\"", ctime);
+	system(strout);
+	ack.cmdid =  pcontext->pgb->cmdid;
+	ack.errcode = 0;
+	OnGetBasicInfo(pcontext);
 	// TODO set time
+	tms_AckEx(pcontext->fd, NULL,&ack);
 	return 0;
 }
 int32_t OnCurAlarm(struct tms_context *pcontext)
@@ -227,7 +263,7 @@ int32_t OnGetOTDRData(struct tms_context *pcontext,struct tms_get_otdrdata *pget
 	}
 	//给点名测量传递参数
 	memcpy(&usrOtdrTest.ch, &pget_otdr_data->pipe, sizeof(struct tms_get_otdrdata) );
-	usrOtdrTest.ch--;
+	usrOtdrTest.ch -= ch_offset;
 	usrOtdrTest.cmd = ack.cmdid;
 	usrOtdrTest.src_addr = pcontext->pgb->src;
 	usrOtdrTest.state = USR_OTDR_TEST_WAIT;
@@ -250,8 +286,19 @@ usr_exit:
 /* ----------------------------------------------------------------------------*/
 int32_t OnGetStandardCurv(struct tms_context *pcontext, struct tms_getstandardcurv *pval)
 {
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
-	hb2_dbg("pipe %d\n", pval->pipe);
+	int ret, ch;
+	struct tms_ack ack;
+	ack.cmdid = pcontext->pgb->cmdid;
+	ret = CMD_RET_OK;
+	ch = pval->pipe - ch_offset;
+	printf("%s %d ch %d \n", __FUNCTION__, __LINE__, pval->pipe);
+	if(ch < 0 || ch > CH_NUM)
+	{
+		ret = CMD_RET_PARA_INVLADE;
+		goto usr_exit;
+	}
+	ret_host_std_curv(pcontext, &chFiberSec[ch],ch);
+usr_exit:
 	return 0;
 }
 int32_t OnSetOTDRFPGAInfo(struct tms_context *pcontext, struct tms_setotdrfpgainfo *pval)
@@ -267,8 +314,8 @@ int32_t OnSetOTDRFPGAInfo(struct tms_context *pcontext, struct tms_setotdrfpgain
 	        pval->dr,
 	        pval->wdm);
 
-	ch = pval->pipe - 1;
-	if(ch < ch_offset || ch > (ch_offset + CH_NUM)){
+	ch = pval->pipe - ch_offset;
+	if(ch < 0 || ch >  CH_NUM){
 		ret = CMD_RET_PARA_INVLADE;
 		goto usr_exit;
 	}
@@ -367,66 +414,8 @@ void tms_Callback(struct tms_callback *ptcb)
 #endif
 
 }
-int g_cu_socket = 0;
-void NotifyCU(int fd)
-{
-	if (g_cu_socket == fd) {
-		g_cu_socket = 0;
-		system("echo 0 > /sys/class/leds/leda/brightness");
-	}
-}
-
-void *ThreadConnectCU(void *arg)
-{
-	// struct tmsxx_app *ptmsapp;
-	// struct tms_context *pcontext;
-	struct ep_t *pep = (struct ep_t*)arg;
-	struct ep_con_t client;
-
-	int server_fd;
-	// int server_cnt;
-	uint32_t server_addr;
-	struct glink_addr gl_addr;
-	bzero(&client, sizeof(struct ep_con_t));
 
 
-<<<<<<< Updated upstream
-	usleep(3000000);//延时3s，防止x86下efence奔溃
-
-	gl_addr.pkid = 0;
-	gl_addr.src = TMS_DEFAULT_LOCAL_ADDR;
-
-	
-	struct tmsxx_app *ptapp = (struct tmsxx_app *)client.ptr;
-	while(1) {
-		if (g_cu_socket != 0) {
-			tms_Tick(client.sockfd, NULL);
-			sleep(5);
-			continue;
-		}
-		
-		if (0 == ep_Connect(pep,&client, "192.168.0.200", 6000) ) {
-			system("echo 1 > /sys/class/leds/leda/brightness");
-			g_cu_socket = client.sockfd;	
-		}
-		
-		// else if (0 == ep_Connect(pep,&client, "192.168.1.200", 6000) ) {
-		// 	g_cu_socket = client.sockfd;	
-		// 	system("echo 1 > /sys/class/leds/leda/brightness");
-		// }
-		// else if (0 == ep_Connect(pep,&client, "192.168.1.251", 6000) ) {
-		// 	g_cu_socket = client.sockfd;	
-		// 	system("echo 1 > /sys/class/leds/leda/brightness");
-		// }
-		sleep(1);
-	}
-
-	return NULL;
-}
-
-
-=======
->>>>>>> Stashed changes
 #ifdef __cplusplus
 }
 #endif

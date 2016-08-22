@@ -69,7 +69,7 @@ int32_t save_fiber_sec_para(int ch,
 int32_t read_fiber_sec_para(int ch, struct _tagCHFiberSec *pch_fiber_sec);
 //保存或者读取otdr fpga相关信息
 int32_t save_ch_fpga_info(const struct _tagCHInfo *pch_fpga_info,int32_t ch_num);
-int32_t read_ch_fpga_info(const struct _tagCHInfo *pch_fpga_info,int32_t ch_num);
+int32_t read_ch_fpga_info(struct _tagCHInfo *pch_fpga_info,int32_t ch_num);
 //创建文件夹
 int32_t creat_folder(const char folder_path[]);
 //为光纤段分配缓冲
@@ -179,8 +179,21 @@ int32_t convert_ch_cyc_curv2host(
 int32_t save_data_pt(const char file[], int32_t *An, int32_t len);
 //修改设备ip，在网段发生改变的时候使用
 int32_t modifiy_eq_ip(const char ip[], const char mask[], const char gw[]);
-
-
+//返回周期性测量曲线
+int32_t ret_host_cyc_curv(
+		const struct tms_context *pcontext, 
+		struct _tagCycCurv *pcyc_curv,
+		int32_t ch);
+//返回标准曲线
+int32_t ret_host_std_curv(
+		const struct tms_context *pcontext, 
+		struct _tagCHFiberSec *pchfiber_sec,
+		int32_t ch);
+//返回统计数据
+int32_t ret_host_statis_data(
+		int32_t ch, 
+		struct tms_context *pcontext,
+		struct _tagCHFiberSec *pchfiber_sec);
 
 
 #ifdef __cplusplus

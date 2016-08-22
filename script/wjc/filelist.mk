@@ -5,8 +5,12 @@
 
 ################################
 SRCS-y += src/main_wjc.c \
-	src/ep_app.c 
+	src/ep_app.c \
+	src/tms_thread.c \
+	src/netcard.c
+
 SRCS-$(CONFIG_APP_HEBEI2) += src/interface_wjc.c 	
+# SRCS-$(CONFIG_APP_HEBEI2) += src/tms_thread.c
 
 ifeq ("$(CONFIG_USE_MINISHELL_EX)", "y")
 	SRCS-$(CONFIG_CMD_BOOT) += shell/cmd/cmd_root.c
