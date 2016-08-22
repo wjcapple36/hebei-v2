@@ -126,7 +126,7 @@ void *ThreadConnectCU(void *arg)
 
 		sleep(1);
 #endif
-		ep_Ergodic(&ep, epcb_Tick, NULL);
+		// ep_Ergodic(&ep, epcb_Tick, NULL);
 		sleep(15);
 	}
 	

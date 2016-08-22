@@ -736,6 +736,7 @@ void tms_Print_tms_hebei2_event(struct tms_hebei2_event_hdr *pevent_hdr, struct 
 
 int32_t tms_Transmit2Dev(struct tms_context *pcontext, int8_t *pdata, int32_t len);
 int32_t tms_Transmit2Manager(struct tms_context *pcontext, int8_t *pdata, int32_t len);
+int32_t  tms_SelectContextByFD(int fd, struct tms_context *context);
 int32_t tms_SelectMangerContext(struct tms_context *context);
 int32_t tms_SelectNodeMangerContext(struct tms_context *context);
 

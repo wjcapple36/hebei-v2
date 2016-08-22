@@ -600,6 +600,7 @@ int ThreadRunServerAndShell(struct ep_t *pep)
 #ifdef CONFIG_APP_HEBEI2
 	tms_Callback(&tcb);
 #endif
+
 	// tms_UseEpollServer(pep);
 	ep_Interface(pep, 2);           // 初始化ep接口
 	ep_Callback(pep);               // 设在epollserver在本工程的回掉函数
@@ -615,13 +616,14 @@ int ThreadRunServerAndShell(struct ep_t *pep)
 #endif
 
 	ep_RunServer(pep);             // 运行epollserver线程
-	tms_connect();
 
 	pthread_create(&g_pthreadshell, NULL, ThreadShell, pep);
 // #ifdef AUTOCONNECT_DBG 
 	pthread_create(&g_pthreadconnect_cu,NULL,ThreadConnectCU,pep);
 // #endif
 
+	// sleep(3);
+	tms_connect();
 	return 0;
 }
 

@@ -22,6 +22,8 @@ SRCS-y += protocol/SPICommand.c
 
 SRCS-$(CONFIG_RAMLOG) += ramlog/ramlog.c
 
+SRCS-y += src/netcard.c 
+
 
 # SRCS-y += shell/minishell_core.c
 # SRCS-y += shell/minishell_core_ex.c
