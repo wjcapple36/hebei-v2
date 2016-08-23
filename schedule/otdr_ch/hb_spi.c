@@ -643,6 +643,61 @@ void print_buf(int8_t buf[], int32_t len,int8_t *info)
 	printf("\n");
 	return;
 }
+//构造otdr与CU通信正常的命令
+unsigned long CmdSPICommuOk(unsigned char *pCmdSPI)
+{
+	pCmdSPI[0] = (1 << 4) + 0; //Í¨µÀºÅ´ËÊ±Îª0£¬¶ÔÓ¦1Í¨µÀ
+	pCmdSPI[1] = (2 << 4) + 15;
+	pCmdSPI[2] = (3 << 4) + 15;
+	pCmdSPI[3] = (4 << 4) + 15;
+	pCmdSPI[4] = (5 << 4) + 15;
+	pCmdSPI[5] = (6 << 4) + 15;
+	pCmdSPI[6] = (7 << 4) + 11;  //»ñÈ¡Í¨µÀÊýÄ¿
+
+	return FPGA_COMMAND_FRAME_BYTE_NUM;
+}
+//构造otdr与CU通信中断的命令
+unsigned long CmdSPICommuAbort(unsigned char *pCmdSPI)
+{
+	pCmdSPI[0] = (1 << 4) + 0; //Í¨µÀºÅ´ËÊ±Îª0£¬¶ÔÓ¦1Í¨µÀ
+	pCmdSPI[1] = (2 << 4) + 15;
+	pCmdSPI[2] = (3 << 4) + 15;
+	pCmdSPI[3] = (4 << 4) + 15;
+	pCmdSPI[4] = (5 << 4) + 15;
+	pCmdSPI[5] = (6 << 4) + 15;
+	pCmdSPI[6] = (7 << 4) + 11;  //»ñÈ¡Í¨µÀÊýÄ¿
+
+	return FPGA_COMMAND_FRAME_BYTE_NUM;
+}
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  set_card_commu_state 通信正常与否要通知到fpga，点灯
+ *
+ * @param dev spi设备
+ * @param state 0 通信正常，1 通信故障
+ *
+ * @returns   0 操作码
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t set_card_commu_state(const struct _tagSpiDev *dev, int32_t state)
+{
+	int32_t ret;
+	uint8_t tx[SPI_CMD_LEN] = {0}, rx[SPI_CMD_LEN] = {0};
+	if(!state)
+		CmdSPICommuAbort(tx);
+	else
+		CmdSPICommuOk(tx);
+	ret = spi_send_usual_cmd(dev, tx, SPI_CMD_LEN, rx, SPI_CMD_LEN);
+	
+usr_exit:
+	if(ret != SPI_RET_OP_OK)
+		printf("%s() %d: ret %d %s \n",\
+				__FUNCTION__, __LINE__, ret, spi_msg[ret]);
+	return ret;
+
+
+}
 
 #ifdef __cplusplus
 }

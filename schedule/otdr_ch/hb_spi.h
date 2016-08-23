@@ -116,7 +116,10 @@ int32_t get_data_from_spi_buf(
 void print_buf(int8_t buf[], int32_t len,int8_t *info);
 //获取槽位号
 int32_t get_dev_slot(struct _tagSpiDev *dev, int32_t *pslot); 
-
+//构造板卡与CU通信异常或者正常的命令
+unsigned long CmdSPICommuOk(unsigned char *pCmdSPI);
+unsigned long CmdSPICommuAbort(unsigned char *pCmdSPI);
+int32_t set_card_commu_state(const struct _tagSpiDev *dev, int32_t state);
 #ifdef __cplusplus
 }
 #endif

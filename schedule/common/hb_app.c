@@ -1963,8 +1963,6 @@ int32_t convert_ch_cyc_curv2host(
 		)
 {
 	int32_t ret, total_size;
-	char *NextAddr;
-	NextAddr = NULL;
 	line_val->pipe = ch + ch_offset;
 	line_val->datalen =  sizeof(struct tms_ret_otdrparam) + sizeof(struct tms_test_result) +\
 			       	sizeof(struct tms_hebei2_data_hdr) + sizeof(struct tms_hebei2_event_hdr) + \
@@ -1973,12 +1971,12 @@ int32_t convert_ch_cyc_curv2host(
 	//将参数值拷贝过去
 	//memcpy(&line_val->ret_otdrparam.range,   &pcyc_curv->para ,sizeof(struct _tagUpOtdrPara ));
 	//这个地方可能会出错，如果发送告警的时候使用line->ret_otdrparam成员变量pipe会出错
-	NextAddr = &pcyc_curv->para;
-	line_val->ret_otdrparam = (struct tms_ret_otdrparam *)(NextAddr - 4);
+	line_val->ret_otdrparam = (struct tms_ret_otdrparam *)&pcyc_curv->para;
 	line_val->hebei2_data_hdr = (struct tms_hebei2_data_hdr*)  &pcyc_curv->data.id[0];
 	line_val->hebei2_data_val = (struct tms_hebei2_data_val*) &pcyc_curv->data.buf[0];
 	line_val->hebei2_event_hdr = (struct tms_hebei2_event_hdr *) &pcyc_curv->event.id[0];
 	line_val->hebei2_event_val = (struct tms_hebei2_event_val*) &pcyc_curv->event.buf[0];
+	line_val->test_result = (struct tms_test_result *)&pcyc_curv->result;
 	return 0;
 
 }
@@ -1994,6 +1992,7 @@ static struct tms_alarmlist_val    alarmlist_val[SEC_NUM_IN_CH*CH_NUM];
 int32_t ret_total_curalarm2host()
 {
 	int32_t ret, i, j,alarm_total, alarm_ch, line_num, curv_buf_len;
+	int32_t alloc_size;
 	struct tms_curalarm fiber_alarm;
 	struct tms_alarmlist_hdr	alarmlist_hdr;
 	struct tms_alarmline_hdr	alarmline_hdr;
@@ -2002,6 +2001,7 @@ int32_t ret_total_curalarm2host()
 	struct tms_context context;
 	
 	curv_buf = NULL;
+	alloc_size = 0;
 	//存放具体告警缓冲区
 	memset(alarmlist_val, 0, sizeof(struct tms_alarmlist_val)*(SEC_NUM_IN_CH*CH_NUM));
 	//包含了曲线的指针已经头
@@ -2019,8 +2019,8 @@ int32_t ret_total_curalarm2host()
 		alarmline_hdr.count = 0;
 		goto usr_exit;
 	}
-
-	curv_buf = malloc(sizeof(struct _tagUpOtdrCurv)*curv_buf_len);
+	alloc_size = sizeof(struct _tagUpOtdrCurv)*curv_buf_len;
+	curv_buf = malloc(alloc_size);
 	if(!curv_buf){
 		ret = errno;
 		exit_self(errno,__FUNCTION__, __LINE__,"new buf fail\0");
@@ -2066,7 +2066,7 @@ usr_exit:
 
 	*/
 
-	if(!curv_buf)
+	if(curv_buf)
 		free(curv_buf);
 	return ret;
 }
@@ -2234,8 +2234,8 @@ int32_t ret_host_std_curv(
 		ret = CMD_RET_CH_UNCFG;
 		goto usr_exit;
 	}
-	//测量参数
-	memcpy(&ret_otdrparam.range, &pfiber_sec_cfg->otdr_param.range, sizeof(struct _tagUpOtdrPara));
+	//测量参数, not copy otdr_id[20] 
+	memcpy(&ret_otdrparam.range, &pfiber_sec_cfg->otdr_param.range, sizeof(struct tms_otdr_param) - 20);
 	tms_RetOTDRData(pcontext->fd, NULL, &hebei2_otdrdata, cmd);		
 
 usr_exit:

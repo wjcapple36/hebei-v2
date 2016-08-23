@@ -113,6 +113,7 @@ struct _tagCHBuf
 //上报时使用的otdr参数,下面配置的时候会多20个字节的标志，sb
 struct _tagUpOtdrPara
 {
+	int32_t pipe;//通道
 	int32_t rang_m;	//量程
 	int32_t lamda_nm;	//波长
 	int32_t pl;	//脉宽

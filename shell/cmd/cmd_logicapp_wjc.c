@@ -25,7 +25,7 @@ extern struct cmd_prompt boot_cmd6[];
 struct cmd_prompt boot_logicapp_root[] = {
 	PROMPT_NODE(boot_fpga_info   ,      do_get_fpga_info,
 		 (char*)"get"  ,
-		 (char*)"cmd: ch net slot alarm0 alarm1",
+		 (char*)"cmd: ch net slot alarm0 alarm1 commu_0 commu_1",
 		 (int)  NULL),
 	PROMPT_NODE(boot_cmd2   ,      do_cmd2,
 		 (char*)"cmd2"  ,
@@ -107,6 +107,10 @@ static int do_get_fpga_info(void *ptr, int argc, char **argv)
 		ret = alarm_find(&spiDev, op);
 	else if(argc >= 2 && strcmp(argv[1], "alarm0") == 0)
 		ret = alarm_disappear(&spiDev, op);
+	else if(argc >= 2 && strcmp(argv[1], "commu_0") == 0)
+		ret = set_card_commu_state(&spiDev, 0);
+	else if(argc >= 2 && strcmp(argv[1], "commu_1") == 0)
+		ret = set_card_commu_state(&spiDev, 1);
 
 	else{
 		printf("%s\n", __FUNCTION__);
