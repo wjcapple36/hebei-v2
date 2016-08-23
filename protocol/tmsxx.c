@@ -2944,6 +2944,29 @@ int tms_connect()
 #ifdef DBG_201IP
 	g_201fd = connect_first_card("127.0.0.1", "6000"); //debug
 #else
+	char *p;
+	char ip[16];
+	int unuse, ip3;
+	struct itifo wan0ip;
+
+	if (true == GetInterfaceInfo("eth4", &wan0ip)) {
+		goto _FindNetcard;
+	}
+	if (true == GetInterfaceInfo("wan0", &wan0ip)) {
+		goto _FindNetcard;
+	}
+_FindNetcard:;
+	p = inet_ntoa((struct in_addr)wan0ip.addr.sin_addr);
+	strcpy(ip, p);
+	sscanf(ip, "%d.%d.%d.%d", &unuse, &unuse, &ip3, &unuse );
+	
+	// 当ip是201结尾，就返回2、3通道告警，否则返回7、8通道
+	if (1 == ip3) {
+		strcpy(g_attr._201_ip, "192.168.1.201");
+	}
+	else {
+		strcpy(g_attr._201_ip, "192.168.0.201");
+	}
 	g_201fd = connect_first_card(g_attr._201_ip, "6000");
 #endif
 
