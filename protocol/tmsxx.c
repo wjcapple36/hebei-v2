@@ -24,14 +24,13 @@ TODO：详细描述
 
 #include "netcard.h"
 #include "freebox.h"
-
+#include "common/global.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 #define RAM_DIR "/tmp"
 #define MAX_CARD_1U (2) // 河北2期项目每个1U设备最多只有2块板卡
 // #define MAX_CARD_1U (1) // 河北2期项目每个1U设备最多只有2块板卡
-
 int g_manger = 0, g_node_manger = 0;
 char unuse1[1000] = {0};
 int g_201fd = 0;
@@ -54,6 +53,32 @@ int (*fecho)(const char *__restrict __format, ...) = unuse_echo;
 #else
 int (*fecho)(const char *__restrict __format, ...) = printf;
 #endif
+
+
+
+/**
+ * @brief	网管下发通道，如果该通道有效则继续解析，否则不传递给应用层，
+ 		也不返回错误码
+ * @param	int pipe 本地字节序
+ * @retval	true 应该处理
+ * @retval	false 直接丢弃
+ * @remarks
+ * @see
+ */
+
+static inline bool IsValidPipe (uint32_t pipe)
+{
+#if 1 || USE_ISVALIDPIPE
+	if (pipe - ch_offset < 9) {
+		return true;
+	}
+	else {
+		return false;
+	}
+#else
+	return true;
+#endif
+}
 
 extern struct ep_t ep;
 int connect_first_card(char *str_addr, char *str_port)
@@ -1044,7 +1069,7 @@ static int32_t tms_DbgAckSuccess(struct tms_context *pcontext, int8_t *pdata, in
 	printf("%s pcontext->fd %d\n", __FUNCTION__, pcontext->fd);
 	tms_AckEx(pcontext->fd, NULL, &ack);
 	// tms_AckEx(g_201fd, NULL, &ack);
-	
+
 	return 0;
 }
 #endif
@@ -1062,6 +1087,9 @@ static int32_t tms_AnalyseSetOTDRFPGAInfo(struct tms_context *pcontext, int8_t *
 	pval->dr	= htonl(pval->dr);
 	pval->reserved0	= htonl(pval->reserved0);
 
+	if (false == IsValidPipe(pval->pipe)) {
+		return -1;
+	}
 	if (pcontext->ptcb->pf_OnSetOTDRFPGAInfo) {
 		pcontext->ptcb->pf_OnSetOTDRFPGAInfo(pcontext, pval);
 	}
@@ -1318,6 +1346,9 @@ static int32_t tms_AnalyseFiberSectionCfg(struct tms_context *pcontext, int8_t *
 	val.event_hdr   = event_hdr;
 	val.event_val   = event_val;
 
+	if (false == IsValidPipe(fiber_val->pipe_num)) {
+		return -1;
+	}
 	if (pcontext->ptcb->pf_OnFiberSectionCfg) {
 		pcontext->ptcb->pf_OnFiberSectionCfg(pcontext, &val);
 	}
@@ -1351,6 +1382,9 @@ static int32_t tms_AnalyseGetCycleTestCuv(struct tms_context *pcontext, int8_t *
 	pval = (struct tms_getcyctestcuv *)(pdata + GLINK_OFFSET_DATA);
 
 	pval->pipe = htonl(pval->pipe);
+	if (false == IsValidPipe(pval->pipe)) {
+		return -1;
+	}
 	if (pcontext->ptcb->pf_OnGetCycleTestCuv) {
 		pcontext->ptcb->pf_OnGetCycleTestCuv(pcontext, pval);
 	}
@@ -1365,6 +1399,9 @@ static int32_t tms_AnalyseGetStatusData(struct tms_context *pcontext, int8_t *pd
 	pval = (struct tms_getstatus_data *)(pdata + GLINK_OFFSET_DATA);
 
 	pval->pipe = htonl(pval->pipe);
+	if (false == IsValidPipe(pval->pipe)) {
+		return -1;
+	}
 	if (pcontext->ptcb->pf_OnGetStatusData) {
 		pcontext->ptcb->pf_OnGetStatusData(pcontext, pval);
 	}
@@ -1670,17 +1707,17 @@ int32_t tms_CurAlarm_V2(
 	for (int i = 0; i < line_hdr_count; i++) {
 		phebei2_data_hdr  = t_alarmline_val->hebei2_data_hdr;
 		phebei2_event_hdr = t_alarmline_val->hebei2_event_hdr;
-		tlen += 
+		tlen +=
 #if 0
-			sizeof(struct tms_ret_otdrparam) +
+		    sizeof(struct tms_ret_otdrparam) +
 #else
-			sizeof(struct tms_ret_otdrparam_p2) +
+		    sizeof(struct tms_ret_otdrparam_p2) +
 #endif
-		        sizeof(struct tms_test_result) +
-		        sizeof(struct tms_hebei2_data_hdr) +
-		        sizeof(struct tms_hebei2_data_val) * htonl(phebei2_data_hdr->count) +
-		        sizeof(struct tms_hebei2_event_hdr) +
-		        sizeof(struct tms_hebei2_event_val) * htonl(phebei2_event_hdr->count);
+		    sizeof(struct tms_test_result) +
+		    sizeof(struct tms_hebei2_data_hdr) +
+		    sizeof(struct tms_hebei2_data_val) * htonl(phebei2_data_hdr->count) +
+		    sizeof(struct tms_hebei2_event_hdr) +
+		    sizeof(struct tms_hebei2_event_val) * htonl(phebei2_event_hdr->count);
 
 	}
 	// 汇总长度
@@ -1715,7 +1752,7 @@ int32_t tms_CurAlarm_V2(
 		glink_SendSerial(fd, (uint8_t *)&pret_otdrparam, sizeof(struct tms_ret_otdrparam) );
 #else
 		glink_SendSerial(fd, (uint8_t *)&pret_otdrparam_p2, sizeof(struct tms_ret_otdrparam_p2) );
-#endif		
+#endif
 		glink_SendSerial(fd, (uint8_t *)&ptest_result, sizeof(struct tms_test_result) );
 		glink_SendSerial(fd, (uint8_t *)&phebei2_data_hdr, sizeof(struct tms_hebei2_data_hdr) );
 		glink_SendSerial(fd, (uint8_t *)phebei2_data_val, sizeof(struct tms_hebei2_data_val) * htonl(phebei2_data_hdr->count));
@@ -1857,11 +1894,11 @@ int32_t tms_CurAlarm(
 	}
 	fd = g_201fd;
 
-	
+
 
 	tms_FillGlinkFrame(&base_hdr, paddr);
 
-	
+
 	glink_Build(&base_hdr, ID_CURALARM, len);
 
 	pthread_mutex_lock(&context.mutex);
@@ -1981,14 +2018,14 @@ static int32_t tms_AnalyseCurAlarm(struct tms_context *pcontext, int8_t *pdata, 
 	// 暗示本机IP就是201，不再继续发送，否则环回
 	printf("pcontext->fd %d\n", pcontext->fd);
 	// if (pcontext->fd == g_201fd) {
-		// printf("send to -> nodemanger\n");
-		tms_MergeCurAlarm(g_node_manger);
+	// printf("send to -> nodemanger\n");
+	tms_MergeCurAlarm(g_node_manger);
 	// }
 	// else {
-		// printf("send to -> 201\n");
-		// tms_MergeCurAlarm(g_201fd);	
+	// printf("send to -> 201\n");
+	// tms_MergeCurAlarm(g_201fd);
 	// }
-	
+
 
 	return 0;
 
@@ -2044,7 +2081,7 @@ int32_t tms_MergeCurAlarm(int dst_fd)
 	// // 防止自身环路
 	printf(" dst_fd %d\n", dst_fd);
 	// if (dst_fd == g_201fd) {
-		// return -1;
+	// return -1;
 	// }
 
 	char strout[32];
@@ -2138,10 +2175,10 @@ int32_t tms_MergeCurAlarm(int dst_fd)
 
 // 0x80000014	ID_GETOTDRDATA_14
 int32_t tms_GetOTDRData(
-	int fd, 
-	struct glink_addr *paddr,
-	struct tms_getotdrdata *pval,
-	unsigned long cmdid)
+    int fd,
+    struct glink_addr *paddr,
+    struct tms_getotdrdata *pval,
+    unsigned long cmdid)
 {
 
 }
@@ -2159,6 +2196,9 @@ static int32_t tms_AnalyseGetOTDRData(struct tms_context *pcontext, int8_t *pdat
 #ifdef HEBEI2_DBG
 	tms_Print_tms_get_otdrdata(potdr);
 #endif
+	if (false == IsValidPipe(potdr->pipe)) {
+		return -1;
+	}
 	printf("%s pcontext->fd %d\n", __FUNCTION__, pcontext->fd);
 	if (pcontext->ptcb->pf_OnGetOTDRData) {
 		pcontext->ptcb->pf_OnGetOTDRData(pcontext, potdr);
@@ -2296,6 +2336,9 @@ static int32_t tms_AnalyseGetStandardCurv(struct tms_context *pcontext, int8_t *
 	pval = (struct tms_getstandardcurv *)(pdata + GLINK_OFFSET_DATA);
 
 	pval->pipe = htonl(pval->pipe);
+	if (false == IsValidPipe(pval->pipe)) {
+		return -1;
+	}
 	if (pcontext->ptcb->pf_OnGetCycleTestCuv) {
 		pcontext->ptcb->pf_OnGetStandardCurv(pcontext, pval);
 	}
@@ -2775,7 +2818,7 @@ void tms_Init()
 #ifdef DBG_201IP
 	strcpy(g_attr._201_ip, "127.0.0.1");
 #else
-char *p;
+	char *p;
 	char ip[16];
 	int unuse, ip3;
 	struct itifo wan0ip;
@@ -2786,18 +2829,19 @@ char *p;
 	if (true == GetInterfaceInfo("wan0", &wan0ip)) {
 		goto _FindNetcard;
 	}
-_FindNetcard:;
+_FindNetcard:
+	;
 	p = inet_ntoa((struct in_addr)wan0ip.addr.sin_addr);
 	strcpy(ip, p);
 	sscanf(ip, "%d.%d.%d.%d", &unuse, &unuse, &ip3, &unuse );
-	
+
 	// 当ip是201结尾，就返回2、3通道告警，否则返回7、8通道
 	if (1 == ip3) {
 		strcpy(g_attr._201_ip, "192.168.1.201");
 	}
 	else {
 		strcpy(g_attr._201_ip, "192.168.0.201");
-	}	
+	}
 #endif
 }
 
@@ -2955,11 +2999,12 @@ int tms_connect()
 	if (true == GetInterfaceInfo("wan0", &wan0ip)) {
 		goto _FindNetcard;
 	}
-_FindNetcard:;
+_FindNetcard:
+	;
 	p = inet_ntoa((struct in_addr)wan0ip.addr.sin_addr);
 	strcpy(ip, p);
 	sscanf(ip, "%d.%d.%d.%d", &unuse, &unuse, &ip3, &unuse );
-	
+
 	// 当ip是201结尾，就返回2、3通道告警，否则返回7、8通道
 	if (1 == ip3) {
 		strcpy(g_attr._201_ip, "192.168.1.201");

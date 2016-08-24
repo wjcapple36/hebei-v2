@@ -1,5 +1,15 @@
 /*! \page workhis 河北2期项目 项目工作日志
 2016-08-22: Menglong Wu
+    * 简单过滤网管请求的通道信息，如不是本地通道则不做任何响应
+        - 0x20000000    ID_SETOTDRFPGAINFO
+        - 0x80000004    ID_FIBERSECTIONCFG
+        - 0x80000007    ID_GETSTATUSDATA
+        - 0x80000006    ID_GETCYCLETESTCUV
+        - 0x80000014    ID_GETOTDRDATA_14
+        - 0x80000015    ID_GETOTDRDATA_15
+        - 0x80000020    ID_GETSTANDARDCURV
+
+2016-08-22: Menglong Wu
     * 在陈依文那完成合并告警功能
         - 需要去除王强检测“返回板卡基本信息”里对原地址的检查，现在写死成192.168.1.196
         - 陈依文需要重新对两网卡缓存做分割，不能共用同一缓存
