@@ -21,6 +21,7 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 {
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	ret_host_basic_info(pcontext,NULL);
+	ret_total_curalarm2host();
 	return 0;
 }
 

@@ -1644,16 +1644,38 @@ int32_t find_alarm_on_fiber(int32_t ch,
 		//级别不相等或者距离相差超过300米判断为告警发生变化
 		if(event_alarm.first.lev != palarm->buf[i].lev || distance_space > 300)
 		{
-			palarm->chang = 1;
 			palarm->buf[i].ch = ch + ch_offset;
 			palarm->buf[i].lev = event_alarm.first.lev;
 			palarm->buf[i].pos[0] = event_alarm.first.pos;
 			palarm->buf[i].reserv = 1;
 			palarm->buf[i].sec = i + 1;
 			palarm->buf[i].type = 1;
+			palarm->buf[i].reserv = 0;
+			//如果是告警消失，则马上上报, 否则，仅仅是出现告警次数标记为1
+			if(palarm->buf[i].lev == FIBER_ALARM_LEV0)
+			{
+				palarm->buf[i].reserv = 0;
+				palarm->chang = 1;
+			}
+			else
+				palarm->buf[i].reserv = 1;
+
+
 		}
-		if(palarm->buf[i].lev > FIBER_ALARM_LEV0)
+		else if(palarm->buf[i].lev > FIBER_ALARM_LEV0)
+		{
+			palarm->buf[i].reserv++;
+			if(palarm->buf[i].reserv == ALARM_TRIGGER_NUM)
+				palarm->chang = 1;
+
+		}
+
+		//调试阶段，只找一个告警
+		if(palarm->buf[i].lev > FIBER_ALARM_LEV0 &&\
+			       	palarm->buf[i].reserv >= ALARM_TRIGGER_NUM){
 			alarm_num++;
+		}
+		
 
 	}
 	//更新的当前段的告警数目
@@ -1999,7 +2021,8 @@ int32_t get_ch_total_alarm(
 
 	for(i = 0; i < palarm->sec_num && i < SEC_NUM_IN_CH ;i++)
 	{
-		if(palarm->buf[i].lev > FIBER_ALARM_LEV0){
+		if(palarm->buf[i].lev > FIBER_ALARM_LEV0 &&\
+			       	palarm->buf[i].reserv >= ALARM_TRIGGER_NUM){
 			memcpy(&alarm_val[offset], &palarm->buf[i], sizeof(struct tms_alarmlist_val));
 			offset ++;
 		}
@@ -2030,7 +2053,9 @@ int32_t convert_ch_cyc_curv2host(
 {
 	int32_t ret, total_size;
 	line_val->pipe = ch + ch_offset;
-	line_val->datalen =  sizeof(struct tms_ret_otdrparam) + sizeof(struct tms_test_result) +\
+	//告警返回曲线长度测量参数，测量结果，数据点，事件点头，事件部分（只有这一部分可变）+ sizeof(int32_t)
+	//测量参数结构体中多出一个int类型的变量
+	line_val->datalen =  sizeof(struct tms_ret_otdrparam) - sizeof(int32_t)  + sizeof(struct tms_test_result) +\
 			       	sizeof(struct tms_hebei2_data_hdr) + sizeof(struct tms_hebei2_event_hdr) + \
 			       	sizeof(int16_t)*pcyc_curv->data.num + \
 				sizeof(struct tms_hebei2_event_val)*pcyc_curv->event.num + sizeof(int32_t);

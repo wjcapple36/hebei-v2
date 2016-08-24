@@ -162,6 +162,15 @@ int32_t OtdrUpdateParam_r(
 	//memset(&GroupEvent, 0, sizeof(GroupEvent));
 	memset(pOtdrState, 0, sizeof(OtdrStateVariable_t) );
 	memcpy(&pOtdrState->MeasureParam, pCHPara, sizeof(pOtdrState->MeasureParam));
+	/*
+	 * 激光器波长固定 0-7， 偶数是1310 奇数是1550 2016-08-24 以后变化，须增加
+	 * 一个根据ch获取通道的函数
+	*/
+	if(ch%2)
+		pOtdrState->MeasureParam.Lambda_nm = 1550;
+	else
+		pOtdrState->MeasureParam.Lambda_nm = 1310;
+
 
 	// 接收波长
 	pOtdrState->RcvLambda = pOtdrState->MeasureParam.Lambda_nm;
