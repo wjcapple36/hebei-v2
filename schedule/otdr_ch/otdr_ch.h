@@ -337,7 +337,14 @@ struct _tagVersion
 	char hw[12];
 	char soft[12];
 };
-
+//检测到网段发生改变，时在一个读取周期内再读一次，如果两次相同，检查网络ip
+//是否和网段一致
+#define CTRL_SW_IP_NUM  2
+struct _tagIpSwitchCtr
+{
+	int32_t chang;	//是否发生改变
+	int32_t flag; 	//网段标志
+};
 
 
 

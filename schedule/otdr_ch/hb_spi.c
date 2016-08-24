@@ -474,6 +474,11 @@ int32_t get_net_flag(struct _tagSpiDev *dev, int32_t *pflag)
 				__FUNCTION__, __LINE__, ret, spi_msg[ret]);
 	else
 		*pflag = rx[3]&0x0f;
+	//虽然返回0，但如果 flag0， 且不为1， 则认为不成功
+	if(!ret && *pflag != 0 && *pflag != 1){
+		printf("%s %d flag error, ret %d flag %d \n", __FUNCTION__, __LINE__, ret, *pflag);
+		ret = 1;
+	}
 	return ret;
 }
 int32_t get_dev_slot(struct _tagSpiDev *dev, int32_t *pslot)

@@ -125,7 +125,11 @@ int32_t OnConfigPipeState(struct tms_context *pcontext, struct tms_cfgpip_status
 	struct tms_ack ack;
 
 	ack.cmdid = pcontext->pgb->cmdid;
-	devMisc.ch_state.state = pval->status;
+	//第一机框，只八个通道，取低8位 第二个通道，取高8位
+	if(ch_offset == 1)
+		devMisc.ch_state.state = pval->status & 0x000000ff;
+	else
+		devMisc.ch_state.state = (pval->status & 0x0000ff00) >> 8;
 	ret = save_node_name_address(&devMisc);
 	if(ret != CMD_RET_OK){
 		ret = CMD_RET_CANT_SAVE;
@@ -135,7 +139,8 @@ int32_t OnConfigPipeState(struct tms_context *pcontext, struct tms_cfgpip_status
 	tms_AckEx(pcontext->fd, NULL, &ack);
 
 	// todo 该设备在本机框第几槽位，对应第几通道，写入配置文件
-	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	printf("%s():%d state local 0x%x rcv 0x%x ch_offset %d\n", __FUNCTION__, __LINE__,\
+		       	devMisc.ch_state, pval->status, ch_offset);
 	
 	return ret;
 }

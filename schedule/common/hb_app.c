@@ -10,7 +10,7 @@
 #include "hb_app.h"
 #include "program_run_log.h"
 #include "global.h"
-
+#include "netcard.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -32,7 +32,8 @@ struct _tagCHInfo chFpgaInfo;
 struct _tagDevMisc devMisc;
 //硬件版本号软件版本号
 struct _tagVersion DevVersion;
-
+//网段切换控制变量
+struct _tagIpSwitchCtr IPCtrl;
 /* --------------------------------------------------------------------------*/
 /**
  * @synopsis  initialize_sys_para 从文件中读取相关参数，并设立对应的标志
@@ -55,6 +56,8 @@ int32_t initialize_sys_para()
 	memset(&usrOtdrTest, 0, sizeof(struct _tagUsrOtdrTest));
 	//dev指针，设备地址，mod,bits,delay,speed
 	initial_spi_dev(&spiDev,"/dev/spidev1.0",0,8,0,20000000);
+	//初始化ip控制对象
+	memset(&IPCtrl, 0, sizeof(struct _tagIpSwitchCtr));
 	read_slot();
 	read_net_flag();
 
@@ -1033,16 +1036,75 @@ usr_exit:
 	return ret;
 
 }
-//读取网络标志，不成功就去死
+//读取网络标志，不成功就去死, 此函数不可重入，线程不安全，只在一个地方调用就可以了
 int32_t read_net_flag()
 {
-	int32_t ret, slot;
+	int32_t ret, flag;
+	int32_t i, slot;
 	char msg[NUM_CHAR_LOG_MSG] ={0};
-	ret = get_net_flag(&spiDev, &slot);
+	for(i = 0; i < 10;i++)
+	{
+		ret = get_net_flag(&spiDev, &flag);
+		if(!ret )
+			break;
+	}
+	if(ret)
+		goto usr_exit;
+	//根据通道偏移量判断槽位
+	slot = ch_offset > CH_NUM ? 1:0;
+	//网段标志与之前不同，设置为变化，只有发生了变化，并且与上次读到网段相同方检查本机IP
+	if(flag != IPCtrl.flag){
+		IPCtrl.flag = flag;
+		IPCtrl.chang = 1;
+	}
+	else if(flag == IPCtrl.flag && IPCtrl.chang)
+	{
+		IPCtrl.chang = 0;
+		check_local_ip(flag, slot);
+	}
+
 usr_exit:
 	if(ret != OP_OK){
 		exit_self(errno, __FUNCTION__, __LINE__, "get net flag error\0");
 	}
+	return ret;
+
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @synopsis  check_local_ip 根据网段标志和槽位检查本机IP
+ *
+ * @param flag 	网段标志 0 代表1网段 1 代表0网段
+ * @param slot	槽位标志 0 192.168.1.201   1 192.168.0.201
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t check_local_ip(int32_t flag, int32_t slot)
+{
+	char *p;
+	char ip[16] = {0}, hoped_ip[16] = {0}, hoped_gw[16];
+	int32_t  unuse, ip3, ret, net_sec;
+	struct itifo wan0ip;
+	ret = 0;
+	if (!GetInterfaceInfo("wan0", &wan0ip)) {
+		ret = 1;
+		printf("%s %d get interface info error \n", __FUNCTION__, __LINE__);
+		goto usr_exit;
+	}
+	p = inet_ntoa((struct in_addr)wan0ip.addr.sin_addr);
+	strcpy(ip, p);
+	sscanf(ip, "%d.%d.%d.%d", &unuse, &unuse, &ip3, &unuse );
+	//期望的本槽位的ip, 通过异或，flag 0 代表1网段，1， 代表0网段
+	net_sec = flag ^ 1;
+	snprintf(hoped_ip,16 , "192.168.%d.%d\0",net_sec, slot + 201);	
+	snprintf(hoped_gw,16 , "192.168.%d.1\0",net_sec);	
+
+	if(strcmp(ip, hoped_ip))
+		modifiy_eq_ip(hoped_ip,"255.255.255.0\0", hoped_gw);
+	
+		
+usr_exit:
 	return ret;
 
 }
@@ -1087,7 +1149,7 @@ int32_t get_test_result_from_algro(struct tms_test_result *pHost,const OTDR_Uplo
 	pHost->atten = pAlgro->MeasureParam.FiberAttenCoef;
 	pHost->loss = pAlgro->MeasureParam.FiberLoss;
 	pHost->range = pAlgro->MeasureParam.FiberLength;
-	
+
 	return ret;
 }
 /* --------------------------------------------------------------------------*/
@@ -1743,6 +1805,10 @@ int32_t ret_host_basic_info(
 	//通道使用状态
 	strcpy(otdr_ch_status.id, "PipeState\0");
 	otdr_ch_status.ch_status = devMisc.ch_state.state;
+	if(ch_offset == 1)
+		otdr_ch_status.ch_status = devMisc.ch_state.state & 0x000000ff;
+	else                             
+		otdr_ch_status.ch_status = (devMisc.ch_state.state << 8) & 0x0000ff00;
 
 
 	strcpy(otdr_crc_hdr.id, "OTDRInfo\0");
@@ -2102,6 +2168,7 @@ int32_t modifiy_eq_ip(const char ip[], const char mask[], const char gw[])
 	snprintf(set_ip, 128, "/app/freebox ip wan0 %s %s %s \0", ip, mask, gw);
 	system(set_ip);
 	printf("%s %d %s \n", __FUNCTION__, __LINE__, set_ip);
+	printf("%s %s %s \n", ip, mask, gw);
 	ret = OP_OK;
 	return ret;
 }

@@ -937,8 +937,8 @@ int32_t usr_delay(int32_t ch, int32_t time_ms)
 	sleep_time = 500;
 	ret = OP_OK;
 	count = time_ms / sleep_time;
-
-
+	//趁此间隙读取网段标志，同时作为活着的证明
+	read_net_flag();
 	while(count > 0)
 	{
 		if(usrOtdrTest.state == USR_OTDR_TEST_WAIT){

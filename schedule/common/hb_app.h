@@ -194,7 +194,8 @@ int32_t ret_host_statis_data(
 		int32_t ch, 
 		struct tms_context *pcontext,
 		struct _tagCHFiberSec *pchfiber_sec);
-
+//检查本机IP
+int32_t check_local_ip(int32_t flag, int32_t slot);
 
 #ifdef __cplusplus
 	}
