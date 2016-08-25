@@ -68,15 +68,24 @@ int (*fecho)(const char *__restrict __format, ...) = printf;
 
 static inline bool IsValidPipe (uint32_t pipe)
 {
-#if 1 || USE_ISVALIDPIPE
+// 定义PHONEY_CH_OFFSET宏，表示下面的ch_offset不起到任何作用，仅为编译
+#if defined(PHONEY_CH_OFFSET)
+	volatile int32_t ch_offset = 1;
+#else
+	// 否则使用hb_app.c里面的全局变量    ch_offset
+#endif
+
+
+// DO_NOT_ISVALIDPIPE 仿真代码不在乎 pipe是否有效，永远返回真
+#if defined(DO_NOT_ISVALIDPIPE)
+	return true;
+#else
 	if (pipe - ch_offset < 8) {
 		return true;
 	}
 	else {
 		return false;
 	}
-#else
-	return true;
 #endif
 }
 
@@ -1751,6 +1760,7 @@ int32_t tms_CurAlarm_V2(
 #if 0
 		glink_SendSerial(fd, (uint8_t *)&pret_otdrparam, sizeof(struct tms_ret_otdrparam) );
 #else
+		pret_otdrparam_p2 = (struct tms_ret_otdrparam_p2 *) & (pret_otdrparam_p2->range);
 		glink_SendSerial(fd, (uint8_t *)&pret_otdrparam_p2, sizeof(struct tms_ret_otdrparam_p2) );
 #endif
 		glink_SendSerial(fd, (uint8_t *)&ptest_result, sizeof(struct tms_test_result) );

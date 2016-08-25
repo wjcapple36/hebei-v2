@@ -226,13 +226,14 @@ int32_t OnConfigNodeTime(struct tms_context *pcontext)
   	char strout[64] = {0};        
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	ctime[19] = '\0';  
-	snprintf(strout, 64, "/bin/settime.sh \"%s\"", ctime);
+	snprintf(strout, 64, "/bin/settime.sh %s", ctime);
 	system(strout);
 	ack.cmdid =  pcontext->pgb->cmdid;
 	ack.errcode = 0;
-	OnGetBasicInfo(pcontext);
+	printf("%s %d %s \n", __FUNCTION__, __LINE__, strout);
 	// TODO set time
 	tms_AckEx(pcontext->fd, NULL,&ack);
+	ret_total_curalarm2host();
 	return 0;
 }
 int32_t OnCurAlarm(struct tms_context *pcontext)
