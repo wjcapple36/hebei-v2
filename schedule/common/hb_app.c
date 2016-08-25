@@ -1726,7 +1726,7 @@ int32_t refresh_cyc_curv_after_test(
 	offset = pResult->OtdrData.DataNum;
 	quick_lock(&pCycCurv->lock);
 	//获取测量参数和测量结果
-	memcpy(&pCycCurv->curv.para,&ret_otdr_para.range, sizeof(struct _tagUpOtdrPara));
+	memcpy(&pCycCurv->curv.para,&ret_otdr_para, sizeof(struct _tagUpOtdrPara));
 	memcpy(ptest_result->time, cur_time, TIME_STR_LEN);
 	//数据点
 	pCycCurv->curv.data.num = pResult->OtdrData.DataNum;

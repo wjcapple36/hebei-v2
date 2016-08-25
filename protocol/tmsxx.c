@@ -1619,8 +1619,10 @@ static int32_t tms_AnalyseConfigNodeTime(struct tms_context *pcontext, int8_t *p
 #ifdef HEBEI2_DBG
 	tms_DbgAckSuccess(pcontext, pdata, len);
 #endif
+	struct tms_confignodetime *pval = (struct tms_confignodetime *)(pdata + GLINK_OFFSET_DATA);
+
 	if (pcontext->ptcb->pf_OnConfigNodeTime) {
-		pcontext->ptcb->pf_OnConfigNodeTime(pcontext);
+		pcontext->ptcb->pf_OnConfigNodeTime(pcontext, pval);
 	}
 
 }

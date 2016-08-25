@@ -390,6 +390,12 @@ struct tms_otdrbaseinfo {
 	struct tms_fibersection_val *fiber_val;
 };
 // end 0x80000011
+
+// 0x80000012
+struct tms_confignodetime
+{
+	char time[20];
+};
 struct tms_get_otdrdata {
 	uint32_t pipe;
 	uint32_t range;
@@ -629,7 +635,7 @@ struct tms_callback {
 
 	int32_t (*pf_OnCheckoutResult)(struct tms_context *pcontext);
 	int32_t (*pf_OnOTDRBasicInfo)(struct tms_context *pcontext);
-	int32_t (*pf_OnConfigNodeTime)(struct tms_context *pcontext);
+	int32_t (*pf_OnConfigNodeTime)(struct tms_context *pcontext, struct tms_confignodetime *pval);
 	int32_t (*pf_OnCurAlarm)(struct tms_context *pcontext);
 	int32_t (*pf_OnGetOTDRData)(struct tms_context *pcontext, struct tms_get_otdrdata *pval);
 	int32_t (*pf_OnGetStandardCurv)(struct tms_context *pcontext, struct tms_getstandardcurv *pval);

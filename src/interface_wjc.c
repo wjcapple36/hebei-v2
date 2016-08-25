@@ -104,6 +104,9 @@ int32_t OnFiberSectionCfg(struct tms_context *pcontext,struct tms_fibersectioncf
 	ret = save_fiber_sec_para(ch, pval,&chFiberSec[ch],&otdrDev[ch] );
 	if(ret != CMD_RET_OK)
 		ret = CMD_RET_CANT_SAVE;
+	else
+		ret_total_curalarm2host();
+
 usr_exit:
 	ack.errcode = ret;
 	tms_AckEx(pcontext->fd, NULL,&ack);
@@ -219,12 +222,13 @@ int32_t OnOTDRBasicInfo(struct tms_context *pcontext)
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	return 0;
 }
-int32_t OnConfigNodeTime(struct tms_context *pcontext)
+int32_t OnConfigNodeTime(struct tms_context *pcontext,struct tms_confignodetime *pval)
 {
 	struct tms_ack ack;
 	char ctime[20] = {0};
   	char strout[64] = {0};        
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
+	memcpy(ctime, pval, 19);
 	ctime[19] = '\0';  
 	snprintf(strout, 64, "/bin/settime.sh %s", ctime);
 	system(strout);
