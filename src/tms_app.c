@@ -500,7 +500,7 @@ int32_t OnOTDRBasicInfo(struct tms_context *pcontext)
 	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
 	return 0;
 }
-int32_t OnConfigNodeTime(struct tms_context *pcontext)
+int32_t OnConfigNodeTime(struct tms_context *pcontext, struct tms_confignodetime *pval)
 {
 	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
 	// TODO set time
