@@ -70,8 +70,8 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	getsockname(pcontext->fd, &addr, &addrlen);
 	struct sockaddr_in *addr_in;
 	addr_in = (struct sockaddr_in *)&addr;
-	// snprintf(strout, 64, "%s", inet_ntoa(addr_in->sin_addr));
-	snprintf(strout, 64, "%s", "192.168.1.196");
+	snprintf(strout, 64, "%s", inet_ntoa(addr_in->sin_addr));
+	// snprintf(strout, 64, "%s", "192.168.1.196");
 	// printf("strout ip %s\n", strout);
 	strcpy(otdr_crc_hdr.addr, strout);
 	strcpy(otdr_crc_hdr.hw_ver, "1.2.3.4");
@@ -83,7 +83,7 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 		otdr_crc_val[i].dr = 40;
 		strcpy(otdr_crc_val[i].wdm, "what?");
 	}
-
+	printf("line %d\n", __LINE__);
 	strcpy(otdr_ch_status.id, "PipeState");
 	otdr_ch_status.ch_status = 0;
 	for (int i = 0; i < sizeof(active_pipe) / sizeof(active_pipe[0]); i++) {
@@ -95,7 +95,7 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 
 	otdr_param_hdr.count = sizeof(active_pipe) / sizeof(active_pipe[0]);
 	strcpy(otdr_param_hdr.id, "OTDRTestParaConfig");
-
+printf("line %d\n", __LINE__);
 	for (int i = 0; i < sizeof(active_pipe) / sizeof(active_pipe[0]); i++) {
 		otdr_param_val[i].pipe = active_pipe[i];
 		otdr_param_val[i].range = 10000;
@@ -107,7 +107,7 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 		otdr_param_val[i].none_reflect_threshold = 1.10;
 	}
 
-
+printf("line %d\n", __LINE__);
 	fiber_hdr.count = sizeof(active_pipe) / sizeof(active_pipe[0]);
 	strcpy(fiber_hdr.id, "FiberSectionConfig");
 	for (int i = 0; i < fiber_hdr.count; i++) {
@@ -130,10 +130,10 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 		fiber_val[i].level2 = 1.1;
 		fiber_val[i].listen_level = 1.1;
 	}
-
+printf("line %d\n", __LINE__);
 	tms_OTDRBasicInfo(pcontext, NULL, &val);
 #endif
-
+printf("line %d\n", __LINE__);
 	// 上报模拟告警
 	trace_dbg("上报模拟告警，节点管理器不支持逐条发送告警\n");
 
@@ -154,7 +154,7 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	struct tms_hebei2_event_hdr hebei2_event_hdr;
 	struct tms_hebei2_event_val hebei2_event_val[128];
 
-
+printf("line %d\n", __LINE__);
 	struct tms_ret_otdrparam    ret_otdrparam_2;
 	struct tms_test_result      test_result_2;
 	struct tms_hebei2_data_hdr  hebei2_data_hdr_2;
@@ -178,7 +178,7 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 	char ip[16];
 	int unuse, ip4;
 	struct itifo wan0ip;
-	
+	printf("line %d\n", __LINE__);
 	if (true == GetInterfaceInfo("eth4", &wan0ip)) {
 		goto _FindNetcard;
 	}
@@ -189,7 +189,7 @@ _FindNetcard:;
 	p = inet_ntoa((struct in_addr)wan0ip.addr.sin_addr);
 	strcpy(ip, p);
 	sscanf(ip, "%d.%d.%d.%d", &unuse, &unuse, &unuse, &ip4);
-	
+	printf("line %d\n", __LINE__);
 	// 当ip是201结尾，就返回2、3通道告警，否则返回7、8通道
 	if (201 == ip4) {
 		alarmlist_val[0].pipe = 2;
@@ -216,15 +216,15 @@ _FindNetcard:;
 	// End Debug
 
 
-
+printf("line %d\n", __LINE__);
 
 	strcpy(alarmlist_val[0].time, "2016-04-32 12:12:33");
 	strcpy(alarmlist_val[0].reserved0, "");;
-	alarmlist_val[0].location[0] = 0;
+	alarmlist_val[0].location[0] = 10;
 
 	strcpy(alarmlist_val[1].time, "2016-04-32 12:12:33");
 	strcpy(alarmlist_val[1].reserved0, "");;
-	alarmlist_val[1].location[0] = 0;
+	alarmlist_val[1].location[0] = 200;
 
 	alarmline_hdr.count = 2;
 	alarmline_val[0].pipe = 1;
@@ -236,7 +236,7 @@ _FindNetcard:;
 	    sizeof(hebei2_data_val) +
 	    sizeof(hebei2_event_hdr) +
 	    sizeof(hebei2_event_val) + 4;
-
+printf("line %d\n", __LINE__);
 	alarmline_val[1].pipe = 1;
 	alarmline_val[1].datalen =
 	    // sizeof(otdrdata) +
@@ -248,7 +248,7 @@ _FindNetcard:;
 	    sizeof(hebei2_event_val) + 4;
 
 
-
+printf("line %d\n", __LINE__);
 
 	// ************************************************************
 
@@ -268,7 +268,7 @@ _FindNetcard:;
 	ret_otdrparam.gi     = 1.1f;//pval->gi;
 	ret_otdrparam.end_threshold          = 1.1;
 	ret_otdrparam.none_reflect_threshold = 1.1;
-
+printf("line %d\n", __LINE__);
 	strcpy(test_result.result, "OTDRTestResultInfo");
 	test_result.range = 30000;
 	test_result.loss = 2;
@@ -278,7 +278,7 @@ _FindNetcard:;
 	strcpy((char *)hebei2_data_hdr.dpid, "OTDRData");
 	hebei2_data_hdr.count = 16000;
 	hebei2_data_hdr.count = 15000;
-
+printf("line %d\n", __LINE__);
 	tmp_data_val = hebei2_data_val;
 	for (int i = 0; i < 4000; i++) {
 		tmp_data_val->data = 40000 + i;
@@ -294,7 +294,7 @@ _FindNetcard:;
 	}
 	strcpy((char *)hebei2_event_hdr.eventid, "KeyEvents");
 	hebei2_event_hdr.count = 2;
-
+printf("line %d\n", __LINE__);
 	hebei2_event_val[0].distance   = 10;
 	hebei2_event_val[0].event_type = 0;
 	hebei2_event_val[0].att        = 3;
@@ -310,7 +310,7 @@ _FindNetcard:;
 	hebei2_event_val[1].link_loss  = 4;
 
 
-
+printf("line %d\n", __LINE__);
 
 
 
@@ -331,7 +331,7 @@ _FindNetcard:;
 	ret_otdrparam_2.gi     = 1.1f;//pval->gi;
 	ret_otdrparam_2.end_threshold          = 1.1;
 	ret_otdrparam_2.none_reflect_threshold = 1.1;
-
+printf("line %d\n", __LINE__);
 	strcpy(test_result_2.result, "OTDRTestResultInfo");
 	test_result_2.range = 30000;
 	test_result_2.loss = 2;
@@ -341,7 +341,7 @@ _FindNetcard:;
 	strcpy((char *)hebei2_data_hdr_2.dpid, "OTDRData");
 	hebei2_data_hdr_2.count = 16000;
 	hebei2_data_hdr_2.count = 15000;
-
+printf("line %d\n", __LINE__);
 	tmp_data_val = hebei2_data_val_2;
 	for (int i = 0; i < 4000; i++) {
 		tmp_data_val->data = 40000 + i;
@@ -355,6 +355,7 @@ _FindNetcard:;
 		tmp_data_val->data = 40000 + i;
 		tmp_data_val++;
 	}
+	printf("line %d\n", __LINE__);
 	strcpy((char *)hebei2_event_hdr_2.eventid, "KeyEvents");
 	hebei2_event_hdr_2.count = 2;
 
@@ -372,18 +373,13 @@ _FindNetcard:;
 	hebei2_event_val[1].reflect    = 4;
 	hebei2_event_val[1].link_loss  = 4;
 	// tms_CurAlarm_V2(pcontext->fd, NULL, &alarm);
-
+printf("line %d\n", __LINE__);
 	// tms_CurAlarm(pcontext->fd, NULL, &alarm);
 	// int fd = connect_first_card("127.0.0.1","6000");
-	if (g_201fd == 0) {
-		if (tms_connect() == 0) {
-			return -1;
-		}
-		
-	}
+
 	// pcontext->fd = g_201fd;
-	tms_CurAlarm_V2(g_201fd, NULL, &alarm);
-	// tms_CurAlarm_V2(pcontext->fd, NULL, &alarm);
+	// tms_CurAlarm_V2(g_201fd, NULL, &alarm);
+	tms_CurAlarm_V2(pcontext->fd, NULL, &alarm);
 	sleep(1);
 	// close(fd);
 	return 0;
