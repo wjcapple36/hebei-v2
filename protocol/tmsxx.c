@@ -1654,7 +1654,10 @@ static int32_t tms_AnalyseConfigNodeTime(struct tms_context *pcontext, int8_t *p
 	tms_DbgAckSuccess(pcontext, pdata, len);
 #endif
 	struct tms_confignodetime *pval = (struct tms_confignodetime *)(pdata + GLINK_OFFSET_DATA);
-
+	if (g_manger != 0) {
+		// close(g_manger);
+	}
+	g_manger = pcontext->fd;
 	if (pcontext->ptcb->pf_OnConfigNodeTime) {
 		pcontext->ptcb->pf_OnConfigNodeTime(pcontext, pval);
 	}
@@ -2066,6 +2069,7 @@ static int32_t tms_AnalyseCurAlarm(struct tms_context *pcontext, int8_t *pdata, 
 	// if (pcontext->fd == g_201fd) {
 	// printf("send to -> nodemanger\n");
 	tms_MergeCurAlarm(g_node_manger);
+	tms_MergeCurAlarm(g_manger);
 	// }
 	// else {
 	// printf("send to -> 201\n");
