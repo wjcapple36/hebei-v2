@@ -538,6 +538,39 @@ static void tms_OTDRConv_tms_fibersection_val(
 
 }
 
+static void tms_OTDRConv_tms_fibersection_val_0x80000004(
+    struct tms_fibersection_val *pout,
+    struct tms_fibersection_val *pin,
+    struct tms_fibersection_hdr *phdr)
+{
+	struct tms_fibersection_val *p32s, *p32d;
+	register int loop;
+
+	loop = phdr->count;
+	if (loop == 0) {
+		loop = 1;
+	}
+	// loop = loop * sizeof (struct tms_hebei2_event_val) >> 2;	// 计算有多少个4Byte数据
+	// printf("loop %d\n", loop);
+	p32d = (struct tms_fibersection_val *)pout;
+	p32s = (struct tms_fibersection_val *)pin;
+	for (register int i = 0; i < loop; i++) {
+		p32d->pipe_num	 = htonl(p32s->pipe_num);
+		p32d->fiber_num	 = htonl(p32s->fiber_num);
+		p32d->start_coor = htonl(p32s->start_coor);
+		p32d->end_coor	 = htonl(p32s->end_coor);
+
+		p32d->fibe_atten_init = htonf(p32s->fibe_atten_init);
+		p32d->level1 	      = htonf(p32s->level1);
+		p32d->level2 	      = htonf(p32s->level2);
+		p32d->listen_level    = htonf(p32s->listen_level);
+		p32d++;
+		p32s++;
+	}
+
+
+}
+
 static void tms_OTDRConv_tms_otdr_param(
     struct tms_otdr_param *pout,
     struct tms_otdr_param *pin)
@@ -1309,7 +1342,8 @@ static int32_t tms_AnalyseFiberSectionCfg(struct tms_context *pcontext, int8_t *
 	tms_OTDRConv_tms_fibersection_hdr(fiber_hdr, fiber_hdr);
 	// printf("hdr count %d\n", fiber_hdr->count);
 
-	tms_OTDRConv_tms_fibersection_val(fiber_val, fiber_val, fiber_hdr);
+	// tms_OTDRConv_tms_fibersection_val(fiber_val, fiber_val, fiber_hdr);
+	tms_OTDRConv_tms_fibersection_val_0x80000004(fiber_val, fiber_val, fiber_hdr);
 	// printf("pipe_num %d fiber_name %d route %s name %s %f %f\n", fiber_val->pipe_num,
 	// fiber_val->fiber_num,
 	// fiber_val->fiber_route,
@@ -1762,7 +1796,7 @@ int32_t tms_CurAlarm_V2(
 #if 0
 		glink_SendSerial(fd, (uint8_t *)&pret_otdrparam, sizeof(struct tms_ret_otdrparam) );
 #else
-		pret_otdrparam_p2 = (struct tms_ret_otdrparam_p2 *) & (pret_otdrparam_p2->range);
+		pret_otdrparam_p2 = (struct tms_ret_otdrparam_p2 *) & (pret_otdrparam->range);
 		glink_SendSerial(fd, (uint8_t *)&pret_otdrparam_p2, sizeof(struct tms_ret_otdrparam_p2) );
 #endif
 		glink_SendSerial(fd, (uint8_t *)&ptest_result, sizeof(struct tms_test_result) );

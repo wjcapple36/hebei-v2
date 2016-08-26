@@ -661,13 +661,16 @@ int32_t start_otdr_algro(
 	//保存算法运行期间的通道信息
 	pAlgroCHInfo->ch = ch;
 	pAlgroCHInfo->mod = pCHCtrl->mod;
+	
 	if(pAlgroCHInfo->mod == OTDR_TEST_MOD_USR){
 		pAlgroCHInfo->cmd = pUsrTest->cmd;
 		pAlgroCHInfo->src_addr = pUsrTest->src_addr;
-		get_usr_otdr_test_para((struct _tagCHPara *)(&OtdrState.MeasureParam), pUsrTest);
 
 	}
-
+	/*
+	pAlgroCHInfo->cmd = 0x80000014;
+	pAlgroCHInfo->src_addr = ADDR_HOST_NODE;
+	*/
 	pAlgroCHInfo->state = 1;
 	pAlgroCHInfo->resource_id = pCHState->resource_id;			
 	pthread_mutex_unlock(&mutex_otdr);

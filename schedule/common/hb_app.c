@@ -225,9 +225,12 @@ int32_t save_fiber_sec_para(int ch,
 	//如果段数目为0，那么就是清空该光线段为的配置信息
 	if(!secHead.sec_num )
 	{
-		ret = remove(file_path);
 		quick_lock(&pch_fiber_sec->lock);
-		free_fiber_sec_buf(pch_fiber_sec);
+		if(pch_fiber_sec->para.is_initialize)
+		{
+			ret = remove(file_path);
+			free_fiber_sec_buf(pch_fiber_sec);
+		}
 		potdr_dev->ch_ctrl.is_cfged = 0;
 		quick_unlock(&pch_fiber_sec->lock);
 		return ret;
@@ -618,8 +621,8 @@ int32_t free_fiber_sec_buf(struct _tagCHFiberSec *pCHFiberSec)
 	}
 	//释放统计数据缓冲区
 	if(pStatis->buf != NULL){
-		free(pStatis);
-		pAlarm->buf = NULL;
+		free(pStatis->buf);
+		pStatis->buf = NULL;
 	}
 
 	//初始化标志设为0
@@ -926,6 +929,10 @@ int32_t check_fiber_sec_para(const struct tms_fibersectioncfg *pfiber_sec_cfg)
 				       	__FUNCTION__ ,__LINE__, ch, ch_offset);
 			goto usr_exit;
 		}
+	}
+	if(tmp == 0){
+		printf("%s() %d : clean fiber sec cfg\n",__FUNCTION__ ,__LINE__);
+		goto usr_exit;
 	}
 	//检查量程
 	tmp = pfiber_sec_cfg->otdr_param->range;
@@ -1496,12 +1503,14 @@ int32_t get_inser_loss_diff(
 	float loss;
 	ret = OP_OK;
 	if(cur_loss < RSVD_FLOAT && std_loss < RSVD_FLOAT)
-		loss = fabs(cur_loss - std_loss);
+		loss = cur_loss - std_loss;
 	else if(cur_loss < RSVD_FLOAT)
 		loss = cur_loss;
 	else
 		ret = 1;
 
+	if(!ret)
+		*diff_loss = loss;
 	return ret;
 }
 int32_t get_alarm_lev(
@@ -1560,7 +1569,7 @@ int32_t find_alarm_on_fiber(int32_t ch,
 	struct _tagEventAlarm fiber_alarm, event_alarm;
 	struct _tagFiberSecCoord sec_coord;
 
-	int32_t match_num, offset;
+	int32_t match_num, offset, fiber_end_cur, not_deal;
 	OTDR_UploadAllData_t *AllEvent;
 	char *NextAddr;
 
@@ -1600,8 +1609,11 @@ int32_t find_alarm_on_fiber(int32_t ch,
 	pstatis->sec_num = pstd_fiber_hdr->count;
 	pstatis->counts++;
 	memset(&fiber_alarm, 0, sizeof(struct _tagEventAlarm));
+	i = AllEvent->Event.EventNum - 1;
+	fiber_end_cur = AllEvent->Event.EventPoint[i].EventXlabel;
 	//首先设定本段光纤告警不发生变化
 	palarm->chang = 0;
+	not_deal = 0;
 	for(i = 0; i < pstd_fiber_hdr->count;i++)
 	{
 		sec_coord.start = pstd_fiber_val[i].start_coor;
@@ -1609,7 +1621,7 @@ int32_t find_alarm_on_fiber(int32_t ch,
 		loss_sec = fabs(pResult->OtdrData.dB_x1000[sec_coord.start]- \
 				pResult->OtdrData.dB_x1000[sec_coord.end]);
 		loss_sec = loss_sec /1000.0;
-		loss_sec_diff = fabs(loss_sec - pstd_fiber_val[i].fibe_atten_init);
+		loss_sec_diff = loss_sec - pstd_fiber_val[i].fibe_atten_init;
 		//光纤段统计信息
 		pstatis->buf[i].attu = loss_sec;
 		memcpy(pstatis->buf[i].date, cur_time, sizeof(cur_time));
@@ -1627,6 +1639,20 @@ int32_t find_alarm_on_fiber(int32_t ch,
 				&event_alarm
 				);
 		event_alarm.first.sec = i;
+		//如果光纤在本段断裂，那么断裂位置即为告警位置
+		if(fiber_end_cur >= sec_coord.start && fiber_end_cur < sec_coord.end)
+		{
+			event_alarm.first.lev = FIBER_ALARM_LEV1;
+			event_alarm.first.pos = fiber_end_cur; 
+			cur_alarm_num = 1;
+		}
+		else if(fiber_end_cur < fiber_end_cur)
+		{
+			//断裂之后的光线段不保持原有状态,后面计数使用
+			not_deal = 1;
+		}
+
+		
 		//通过事件没有找到告警，但通过光纤段衰减值找到了告警
 		event_alarm.first.pos /= pOtdrState->Points_1m; 
 		if(!cur_alarm_num && loss_sec_lev > FIBER_ALARM_LEV0)
@@ -1637,12 +1663,9 @@ int32_t find_alarm_on_fiber(int32_t ch,
 			event_alarm.first.lev = loss_sec_lev;
 
 		}
-		//第一段，pos都是0
-		if(!i)
-			event_alarm.first.pos = 0;
 		distance_space = abs(event_alarm.first.pos - palarm->buf[i].pos[0]);
 		//级别不相等或者距离相差超过300米判断为告警发生变化
-		if(event_alarm.first.lev != palarm->buf[i].lev || distance_space > 300)
+		if(!not_deal &&(event_alarm.first.lev != palarm->buf[i].lev || distance_space > 300))
 		{
 			palarm->buf[i].ch = ch + ch_offset;
 			palarm->buf[i].lev = event_alarm.first.lev;
@@ -1662,7 +1685,7 @@ int32_t find_alarm_on_fiber(int32_t ch,
 
 
 		}
-		else if(palarm->buf[i].lev > FIBER_ALARM_LEV0)
+		else if(!not_deal&&(palarm->buf[i].lev > FIBER_ALARM_LEV0))
 		{
 			palarm->buf[i].reserv++;
 			if(palarm->buf[i].reserv == ALARM_TRIGGER_NUM)
@@ -1764,6 +1787,7 @@ int32_t ret_host_basic_info(
 		struct glink_addr *paddr)
 {
 	int32_t ret, cmd, i, offset, count_every_ch;
+	int32_t curv_offset;
 	//校验码，节点名称节点地址，硬件版本号，软件版本号
 	struct tms_otdr_crc_hdr     otdr_crc_hdr;
 	//通道的fpga信息，收到的时候，和读取的时候已经按格式存好
@@ -1809,6 +1833,7 @@ int32_t ret_host_basic_info(
 		}
 
 		offset = 0;
+		curv_offset = 0;
 		for(i = 0; i < CH_NUM;i++)
 		{
 			if(chFiberSec[i].para.is_initialize)
@@ -1817,9 +1842,10 @@ int32_t ret_host_basic_info(
 				memcpy(&pfiber_val[offset], chFiberSec[i].para.fiber_val,\
 						count_every_ch*sizeof(struct tms_fibersection_val));
 				offset += count_every_ch;
-				memcpy(&otdr_param_val[i].range, &chFiberSec[i].para.otdr_param.range,
+				memcpy(&otdr_param_val[curv_offset].range, &chFiberSec[i].para.otdr_param.range,
 						sizeof(struct tms_otdr_param_val) - 4);
-				otdr_param_val[i].pipe = chFiberSec[i].para.fiber_val[0].pipe_num; 
+				otdr_param_val[curv_offset].pipe = chFiberSec[i].para.fiber_val[0].pipe_num; 
+				curv_offset++;
 				otdr_param_hdr.count++;
 			}
 		}
