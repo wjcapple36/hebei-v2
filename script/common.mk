@@ -51,7 +51,7 @@ CS_FLAGS    =
 ifeq ("$(ARCH)", "x86")
 	INCLUDE_DIR	+= -I/usr/local/install/include
 	LFLAGS		+= -Wl,-rpath=./:lib-x86/
-	LIB_DIR 	+= -L/usr/local/install/lib -L./lib-$(ARCH) \
+	LIB_DIR 	+= -L/lib -L/usr/local/install/lib -L./lib-$(ARCH) \
 			   -L/lib/i386-linux-gnu/
 	CFLAGS		+= -DTARGET_X86
 endif

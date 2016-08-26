@@ -690,9 +690,9 @@ static void tms_OTDRConv_tms_alarmlist_val(
 		pout->fiber = htonl(pin->fiber);
 		pout->level = htonl(pin->level);
 		pout->type =  htonl(pin->type);
-		pout->location[0] = pin->location[0];
-		pout->location[1] = pin->location[1];
-		pout->location[2] = pin->location[2];
+		pout->location[0] = htonl(pin->location[0]);
+		pout->location[1] = htonl(pin->location[1]);
+		pout->location[2] = htonl(pin->location[2]);
 		pout->reserved1 = htonl(pin->reserved1);
 
 		memcpy(pout->time, pin->time, 20);
@@ -1673,7 +1673,6 @@ int32_t tms_CurAlarm_V2(
 {
 	struct tms_context context;
 	tms_SelectContextByFD(fd, &context);
-
 	struct tms_alarmlist_hdr    *alarmlist_hdr = val->alarmlist_hdr;
 	struct tms_alarmlist_val    *alarmlist_val = val->alarmlist_val;
 	struct tms_alarmline_hdr    *alarmline_hdr = val->alarmline_hdr;
@@ -1696,7 +1695,6 @@ int32_t tms_CurAlarm_V2(
 	int len, tlen;
 	struct glink_base  base_hdr;
 
-
 	// conver alarm struct
 	list_hdr_count = alarmlist_hdr->count;	// 保持原来的
 	alarmlist_hdr->count = htonl(alarmlist_hdr->count);
@@ -1704,7 +1702,6 @@ int32_t tms_CurAlarm_V2(
 	tms_OTDRConv_tms_alarmlist_val(alarmlist_val, alarmlist_val, list_hdr_count);
 	line_hdr_count	= alarmline_hdr->count;  // 保持原来的
 	alarmline_hdr->count = htonl(alarmline_hdr->count);
-
 
 
 	// conver otdr date
@@ -1739,7 +1736,6 @@ int32_t tms_CurAlarm_V2(
 
 		t_alarmline_val++;
 	}
-
 	len =
 	    // 告警头长度
 	    sizeof(struct tms_alarmlist_hdr) +
@@ -1771,7 +1767,6 @@ int32_t tms_CurAlarm_V2(
 	// 汇总长度
 	len += tlen;
 
-
 	// 每条告警曲线内容
 
 	tms_FillGlinkFrame(&base_hdr, paddr);
@@ -1784,7 +1779,6 @@ int32_t tms_CurAlarm_V2(
 	glink_SendSerial(fd, (uint8_t *)alarmlist_hdr, sizeof(struct tms_alarmlist_hdr) );
 	glink_SendSerial(fd, (uint8_t *)alarmlist_val, sizeof(struct tms_alarmlist_val) * list_hdr_count);
 	glink_SendSerial(fd, (uint8_t *)alarmline_hdr, sizeof(struct tms_alarmline_hdr) );
-
 	// 逐条发送OTDR告警数据
 	t_alarmline_val = alarmline_val;
 	for (int i = 0; i < line_hdr_count; i++) {
@@ -1809,6 +1803,7 @@ int32_t tms_CurAlarm_V2(
 		glink_SendSerial(fd, (uint8_t *)phebei2_event_val, sizeof(struct tms_hebei2_event_val) * htonl(phebei2_event_hdr->count));
 	}
 	glink_SendTail(fd);
+
 	pthread_mutex_unlock(&context.mutex);
 
 	printf("finish\n");
