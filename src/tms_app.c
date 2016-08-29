@@ -43,7 +43,8 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 
 	// 最大通道号有32个，通道号从1开始计数
 	// 只需要修改active_pipe里的通道就可构造相应的数据包
-	int active_pipe[] = {2, 3, 7, 8};
+	int active_pipe[] = {1,2,3,4,5,6,7,8};
+	// int active_pipe[] = {9,10,11,12,13,14,15,16};//报告乱码
 
 	trace_dbg("节点管理器存在缺陷，具体描述查看源码\n");
 	// 节点管理器存在缺陷
@@ -144,7 +145,10 @@ printf("line %d\n", __LINE__);
 	struct tms_alarmlist_val    alarmlist_val[10];
 	struct tms_alarmline_hdr    alarmline_hdr;
 	struct tms_alarmline_val    alarmline_val[8];
-
+	const  int c_alarmcount=8;
+	const int c_alarm_pipe[] = {1,2,3,4,5,6,7,8};
+	// const int c_alarm_pipe[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
+	// const int c_alarm_pipe[] = {9,10,11,12,13,14,15,16};
 
 	struct tms_ret_otdrdata otdrdata;
 	struct tms_ret_otdrparam    ret_otdrparam;
@@ -162,6 +166,179 @@ printf("line %d\n", __LINE__);
 	struct tms_hebei2_event_hdr hebei2_event_hdr_2;
 	struct tms_hebei2_event_val hebei2_event_val_2[128];
 
+
+	struct tms_ret_otdrparam    *pret_otdrparam, all_ret_otdrparam[16];
+	struct tms_test_result      *ptest_result, all_test_result[16];
+	struct tms_hebei2_data_hdr  *phebei2_data_hdr, all_hebei2_data_hdr[16];
+	struct tms_hebei2_data_val  *phebei2_data_val, all_hebei2_data_val[16][1024 * 32];
+	struct tms_hebei2_event_hdr *phebei2_event_hdr, all_hebei2_event_hdr[16];
+	struct tms_hebei2_event_val *phebei2_event_val, all_hebei2_event_val[16][128];
+
+
+	// End Debug
+#if 1
+
+	// ************************************************************
+	alarm.alarmlist_hdr = &alarmlist_hdr;
+	alarm.alarmlist_val = &alarmlist_val[0];
+	alarm.alarmline_hdr = &alarmline_hdr;
+	alarm.alarmline_val = &alarmline_val[0];
+
+	alarmlist_hdr.count = c_alarmcount;
+
+	// Debug
+	// 根据IP通知当前告警
+	// 
+	char *p;
+	char ip[16];
+	int unuse, ip4;
+	struct itifo wan0ip;
+	printf("line %d\n", __LINE__);
+	if (true == GetInterfaceInfo("eth4", &wan0ip)) {
+		goto _FindNetcard;
+	}
+	if (true == GetInterfaceInfo("wan0", &wan0ip)) {
+		goto _FindNetcard;
+	}
+_FindNetcard:;
+	p = inet_ntoa((struct in_addr)wan0ip.addr.sin_addr);
+	strcpy(ip, p);
+	sscanf(ip, "%d.%d.%d.%d", &unuse, &unuse, &unuse, &ip4);
+	printf("line %d\n", __LINE__);
+	// 当ip是201结尾，就返回2、3通道告警，否则返回7、8通道
+	if (201 == ip4) {
+		for (int i = 0; i < c_alarmcount; i++) {
+			alarmlist_val[i].pipe = c_alarm_pipe[i];
+			alarmlist_val[i].fiber = c_alarm_pipe[i];
+			alarmlist_val[i].level =  1;
+			alarmlist_val[i].type = 1;
+		}
+		
+	}
+	else {
+		for (int i = 0; i < c_alarmcount; i++) {
+			alarmlist_val[i].pipe = c_alarm_pipe[i];
+			alarmlist_val[i].fiber = c_alarm_pipe[i];
+			alarmlist_val[i].level = 1;
+			alarmlist_val[i].type = 1;
+		}
+	}
+	// End Debug
+
+
+printf("line %d\n", __LINE__);
+
+	for (int i = 0;i < c_alarmcount; i++) {
+		strcpy(alarmlist_val[i].time, "2016-04-32 12:12:33");
+		strcpy(alarmlist_val[i].reserved0, "");;
+		alarmlist_val[i].location[0] = 10 + (i * 1);
+	}
+	
+
+	alarmline_hdr.count = c_alarmcount;
+
+	for (int i = 0;i < c_alarmcount; i++) {
+		alarmline_val[i].pipe = c_alarm_pipe[i];
+		alarmline_val[i].datalen =
+		    // sizeof(otdrdata) +
+		    sizeof(ret_otdrparam) +
+		    sizeof(test_result) +
+		    sizeof(hebei2_data_hdr) +
+		    sizeof(hebei2_data_val) +
+		    sizeof(hebei2_event_hdr) +
+		    sizeof(hebei2_event_val) + 4;
+	}
+
+
+	for (int i = 0;i < c_alarmcount;i++) {
+		alarmline_val[i].ret_otdrparam    = &all_ret_otdrparam[i];
+		alarmline_val[i].test_result      = &all_test_result[i];
+		alarmline_val[i].hebei2_data_hdr  = &all_hebei2_data_hdr[i];
+		alarmline_val[i].hebei2_data_val  = &all_hebei2_data_val[i];
+		alarmline_val[i].hebei2_event_hdr = &all_hebei2_event_hdr[i];
+		alarmline_val[i].hebei2_event_val = &all_hebei2_event_val[i];
+	}
+	
+
+
+	// ret_otdrparam.pipe   = pval->pipe;
+	for (int i = 0;i < c_alarmcount;i++) {
+		all_ret_otdrparam[i].range  = 30000 + i;//pval->range;
+		all_ret_otdrparam[i].wl     = 1550;
+		all_ret_otdrparam[i].pw     = 40;
+		all_ret_otdrparam[i].time   = 1234;
+		all_ret_otdrparam[i].gi     = 1.1f;//pval->gi;
+		all_ret_otdrparam[i].end_threshold          = 1.1;
+		all_ret_otdrparam[i].none_reflect_threshold = 1.1;
+	}
+printf("line %d\n", __LINE__);
+
+	for (int i = 0;i < c_alarmcount;i++) {
+		strcpy(all_test_result[i].result, "OTDRTestResultInfo");
+		all_test_result[i].range = 30000 + i;
+		all_test_result[i].loss = 2;
+		all_test_result[i].atten = 2;
+		strcpy(all_test_result[i].time, "2016-03-02 22:11:31");
+	}
+	
+	for (int i = 0;i < c_alarmcount;i++) {
+		strcpy((char *)all_hebei2_data_hdr[i].dpid, "OTDRData");
+		all_hebei2_data_hdr[i].count = 16000;
+		all_hebei2_data_hdr[i].count = 15000;
+	}
+
+printf("line %d\n", __LINE__);
+	
+	for (int i = 0;i < c_alarmcount;i++) {
+		tmp_data_val = all_hebei2_data_val[i];
+		for (int i = 0; i < 4000; i++) {
+			tmp_data_val->data = 40000 + i;
+			tmp_data_val++;
+		}
+		for (int i = 4000; i < 8000; i++) {
+			tmp_data_val->data = 40000 - i;
+			tmp_data_val++;
+		}
+		for (int i = 8000; i < 16000; i++) {
+			tmp_data_val->data = 40000 + i;
+			tmp_data_val++;
+		}
+	}
+	printf("line %d\n", __LINE__);
+
+	for (int i = 0;i < c_alarmcount;i++) {
+		strcpy((char *)all_hebei2_event_hdr[i].eventid, "KeyEvents");
+		all_hebei2_event_hdr[i].count = 2;
+	}
+	for (int i = 0;i < c_alarmcount;i++) {
+		all_hebei2_event_val[i][0].distance   = 20+i;
+		all_hebei2_event_val[i][0].event_type = 0;
+		all_hebei2_event_val[i][0].att        = 3;
+		all_hebei2_event_val[i][0].loss       = 3;
+		all_hebei2_event_val[i][0].reflect    = 3;
+		all_hebei2_event_val[i][0].link_loss  = 3;
+
+		all_hebei2_event_val[i][1].distance   = 900 + i;
+		all_hebei2_event_val[i][1].event_type = 3;
+		all_hebei2_event_val[i][1].att        = 4;
+		all_hebei2_event_val[i][1].loss       = 4;
+		all_hebei2_event_val[i][1].reflect    = 4;
+		all_hebei2_event_val[i][1].link_loss  = 4;
+	}
+	// tms_CurAlarm_V2(pcontext->fd, NULL, &alarm);
+printf("line %d\n", __LINE__);
+	// tms_CurAlarm(pcontext->fd, NULL, &alarm);
+	// int fd = connect_first_card("127.0.0.1","6000");
+
+	// pcontext->fd = g_201fd;
+	// tms_CurAlarm_V2(g_201fd, NULL, &alarm);
+	int fd = connect_first_card("127.0.0.1","6000");
+	tms_CurAlarm_V2(pcontext->fd, NULL, &alarm);
+	// tms_CurAlarm_V2(fd, NULL, &alarm);
+	sleep(1);
+
+
+#else
 
 	// ************************************************************
 	alarm.alarmlist_hdr = &alarmlist_hdr;
@@ -375,14 +552,16 @@ printf("line %d\n", __LINE__);
 	// tms_CurAlarm_V2(pcontext->fd, NULL, &alarm);
 printf("line %d\n", __LINE__);
 	// tms_CurAlarm(pcontext->fd, NULL, &alarm);
-	// int fd = connect_first_card("127.0.0.1","6000");
+	int fd = connect_first_card("127.0.0.1","6000");
 
 	// pcontext->fd = g_201fd;
 	// tms_CurAlarm_V2(g_201fd, NULL, &alarm);
 	tms_CurAlarm_V2(pcontext->fd, NULL, &alarm);
+	// tms_CurAlarm_V2(fd, NULL, &alarm);
 	sleep(1);
 	// close(fd);
 	return 0;
+	#endif
 }
 
 int32_t OnGetNodeTime(struct tms_context *pcontext)
