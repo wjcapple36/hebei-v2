@@ -242,18 +242,21 @@ int32_t process_every_ch(
 	       	struct _tagOtdrDev * pOtdrDev,
 		struct _tagUsrOtdrTest *pUsrTest,
 		struct _tagSpiDev *pspi_dev,
-		struct _tagOtdrAlgroPara *pAlgroPara);
+		struct _tagOtdrAlgroPara *pAlgroPara,
+		const struct _tagCHFiberSec *pFiberSec);
 int32_t first_process(
 		int32_t ch,
 	       	struct _tagOtdrDev * pOtdrDev,
 		struct _tagUsrOtdrTest *pUsrTest,
-		struct _tagSpiDev *pspi_dev);
+		struct _tagSpiDev *pspi_dev,
+		const struct _tagCHFiberSec *pFiberSec);
 int32_t agin_process(
 		int32_t ch,
 		struct _tagOtdrDev * pOtdrDev,
 		struct _tagUsrOtdrTest *pUsrTest,
 		struct _tagSpiDev *pspi_dev,
-		struct _tagOtdrAlgroPara *pAlgroPara			
+		struct _tagOtdrAlgroPara *pAlgroPara,			
+		const struct _tagCHFiberSec *pFiberSec
 		);
 
 int32_t initial_otdr_dev(struct _tagOtdrDev *dev);
@@ -300,7 +303,7 @@ int32_t tsk_schedule(void *arg)
 				ch = usrOtdrTest.ch % CH_NUM;
 				usrOtdrTest.initial = USR_TEST_INITIALED;
 			}
-			ret = process_every_ch(ch,&otdrDev[ch],&usrOtdrTest, &spiDev, &OtdrAlgroPara);
+			ret = process_every_ch(ch,&otdrDev[ch],&usrOtdrTest, &spiDev, &OtdrAlgroPara,&chFiberSec[ch]);
 
 			//点名测量，当前通道测量未完成，当前通道--，for循环中++，仍然表示的是当前通道
 			//bkup_ch 保存的仍然是当前通道号
@@ -336,7 +339,8 @@ int32_t process_every_ch(
 		struct _tagOtdrDev * pOtdrDev,
 		struct _tagUsrOtdrTest *pUsrTest,
 		struct _tagSpiDev *spi_dev,
-		struct _tagOtdrAlgroPara *pAlgroPara)
+		struct _tagOtdrAlgroPara *pAlgroPara,
+		const struct _tagCHFiberSec *pFiberSec)
 {
 	uint32_t cmd;
 	struct _tagCHCtrl *pCHCtrl;
@@ -369,9 +373,9 @@ int32_t process_every_ch(
 	}
 
 	if(!pOtdrDev->ch_ctrl.send_num)
-		ret = first_process( ch, pOtdrDev, pUsrTest,spi_dev);
+		ret = first_process( ch, pOtdrDev, pUsrTest,spi_dev, pFiberSec);
 	else
-		ret = agin_process( ch, pOtdrDev, pUsrTest,spi_dev, pAlgroPara);
+		ret = agin_process( ch, pOtdrDev, pUsrTest,spi_dev, pAlgroPara, pFiberSec);
 
 usr_exit:
 	//切换通道前，将本通道初始化
@@ -387,15 +391,18 @@ int32_t first_process(
 		int32_t ch,
 		struct _tagOtdrDev * pOtdrDev,
 		struct _tagUsrOtdrTest *pUsrTest,
-		struct _tagSpiDev *spi_dev)
+		struct _tagSpiDev *spi_dev,
+		const struct _tagCHFiberSec *pFiberSec)
 {
 	int32_t ret;
 	struct _tagCHPara appoint_para;
 	struct _tagCHPara *pCHPara;
 	struct _tagCHCtrl *pCHCtrl;
+	struct _tagCHState *pCHState;
 	struct tms_ack ack;
 	pCHPara = &pOtdrDev->ch_para;
 	pCHCtrl = &pOtdrDev->ch_ctrl;
+	pCHState = &pOtdrDev->ch_state;
 
 	ret = OP_OK;
 	if( pCHCtrl->mod == OTDR_TEST_MOD_USR){
@@ -403,8 +410,13 @@ int32_t first_process(
 		get_usr_otdr_test_para(pCHPara,pUsrTest);
 		ret = pre_measure(ch, pOtdrDev,pCHPara);
 	}
-	else
+	else{
+		if(pCHCtrl->refresh_para){
+			pCHCtrl->refresh_para = 0;
+			get_ch_para_from_fiber_sec(pCHPara,pFiberSec);
+		}
 		ret = pre_measure(ch, pOtdrDev, NULL);
+	}
 
 	if(ret != OP_OK){
 		goto usr_exit;
@@ -439,7 +451,8 @@ int32_t agin_process(
 		struct _tagOtdrDev * pOtdrDev,
 		struct _tagUsrOtdrTest *pUsrTest,
 		struct _tagSpiDev *pspi_dev,
-		struct _tagOtdrAlgroPara *pAlgroPara)
+		struct _tagOtdrAlgroPara *pAlgroPara,
+		const struct _tagCHFiberSec *pFiberSec)
 {
 	int32_t ret, is_ack, counts;
 	int32_t test_time_ms;
@@ -460,9 +473,19 @@ int32_t agin_process(
 	pOtdrCtl = &pOtdrDev->otdr_ctrl;
 	ret = OP_OK;
 	is_ack = 1;
+	//如果是用户点名测量，重新定位测量参数，否则，检查是否需要更新参数
 	if( pCHCtrl->mod == OTDR_TEST_MOD_USR)
 		pCHPara = &pOtdrDev->appoint_para;
-	
+	else if(pCHCtrl->refresh_para)
+	{
+		is_ack = 0;
+		ret = RET_SWITCH_CH;
+		printf("%s %s() %d ,ch is need refresh para \n",\
+				__FILENAME__, __FUNCTION__, __LINE__);
+		goto usr_exit;
+	}
+
+
 	pCHCtrl->accum_ms += SPI_OP_SPACE_MS;
 	pCHCtrl->one_time_ms += SPI_OP_SPACE_MS;
 	//每次休眠一秒， 如果累积到fpga的测试时间之后才去读，否则直接返回
@@ -635,6 +658,14 @@ int32_t start_otdr_algro(
 	pOtdrCtl = &pOtdrDev->otdr_ctrl;
 	pAlgroCHInfo = pAlgroPara->pCHInfo;
 
+	if( pCHCtrl->mod != OTDR_TEST_MOD_USR && pCHCtrl->refresh_para)
+	{
+		ret = RET_SWITCH_CH;
+		printf("%s %s() %d ,ch is need refresh para \n",\
+				__FILENAME__, __FUNCTION__, __LINE__);
+		goto usr_exit;
+	}
+
 	//说明算法没有处理完成，7s的时间没有处理完，说明有问题
 	if(ALGO_READY_FLAG_START_NEW == pAlgroPara->pCtrl->OtdrAlgoReadyFlag)
 		pCHState->algro_collid_num++;
@@ -676,5 +707,6 @@ int32_t start_otdr_algro(
 	pthread_mutex_unlock(&mutex_otdr);
 	//启动算法处理
 	pAlgroPara->pCtrl->OtdrAlgoReadyFlag = ALGO_READY_FLAG_START_NEW ;
+usr_exit:
 	return ret;
 }

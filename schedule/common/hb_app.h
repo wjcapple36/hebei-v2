@@ -118,6 +118,15 @@ int32_t get_curv_start_point(int32_t Sigma,
 		int32_t input[],
 	       	OtdrCtrlVariable_t *pOtdrCtrl,
 		OtdrStateVariable_t *pOtdrState);
+//查找告警
+int32_t find_alarm_on_fiber(int32_t ch,
+		OTDR_UploadAllData_t *pResult,
+		OtdrCtrlVariable_t *pOtdrCtl,
+		OtdrStateVariable_t *pOtdrState,
+		struct _tagCHFiberSec *pFibersec,
+		struct _tagAlgroCHInfo *pAlgroCHInfo,
+		struct _tagOtdrDev *pOtdrDev
+	       	);
 //通过事件点比较获取光纤段之间的告警
 int32_t get_fiber_alarm_from_event(
 		struct _tagFiberSecCoord *pSecCoord,

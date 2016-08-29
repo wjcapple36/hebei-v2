@@ -327,6 +327,8 @@ int32_t save_fiber_sec_para(int ch,
 		psec_cfg->is_initialize = 1;
 		psec_cfg->error_num = 0;
 		potdr_dev->ch_ctrl.is_cfged = 1;
+		potdr_dev->ch_ctrl.refresh_para = 1;
+		potdr_dev->ch_state.resource_id++;
 	}
 		
 	quick_unlock(&pch_fiber_sec->lock);
@@ -1551,7 +1553,9 @@ int32_t find_alarm_on_fiber(int32_t ch,
 		OTDR_UploadAllData_t *pResult,
 		OtdrCtrlVariable_t *pOtdrCtl,
 		OtdrStateVariable_t *pOtdrState,
-		struct _tagCHFiberSec *pFibersec
+		struct _tagCHFiberSec *pFibersec,
+		struct _tagAlgroCHInfo *pAlgroCHInfo,
+		struct _tagOtdrDev *pOtdrDev
 	       	)
 {
 	struct _tagFiberSecCfg  *ppara;
@@ -1600,8 +1604,17 @@ int32_t find_alarm_on_fiber(int32_t ch,
 			sizeof(AllEvent->MeasureParam) - sizeof(AllEvent->OtdrData));
 	palarm->chang = 0;	
 	quick_unlock(&pFibersec->lock);
-	if(!pFibersec->para.is_initialize)
+	if(!pFibersec->para.is_initialize){
+		printf("%s %d ch %d  is not initiallize %d \n",\
+			       	__FUNCTION__,__LINE__, ch, pFibersec->para.is_initialize);
 		goto usr_exit;
+	}
+	//如果光线段参数在获取锁之后发生了变化，那么就放弃本次操作
+	if(pAlgroCHInfo->resource_id != pOtdrDev->ch_state.resource_id){
+		printf("%s %d ch %d  resource is chang local id  %d  newst id %d \n",\
+			__FUNCTION__,__LINE__, ch,pAlgroCHInfo->resource_id, pOtdrDev->ch_state.resource_id);
+		goto usr_exit;
+	}
 	//开始查找事件点
 	alarm_num = 0;
 	pstatis->state = 1;

@@ -71,7 +71,9 @@ int32_t tsk_OtdrAlgo(void * arg)
 					&MeasureResult,
 					&OtdrCtrl,
 					&OtdrState,
-					&chFiberSec[ch]
+					&chFiberSec[ch],
+					&algroCHInfo,
+					&otdrDev[ch]
 					);
 
 		}
