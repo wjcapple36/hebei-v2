@@ -229,7 +229,8 @@ extern "C" {
 #define		ID_GETSTANDARDCURV	0x80000020	///	获取标准曲线格式
 #define		ID_ERROR	0x80000021	///	监测模块传回的错误代码的信息格式
 
-
+#define ADDR_MANGER (0x3e)		// 网管地址
+#define ADDR_NODE_MANGER (0x1e) 	//节点管理器地址
 // end hebei 2
 
 // hebei2

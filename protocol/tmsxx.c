@@ -1209,14 +1209,19 @@ static int32_t tms_AnalyseGetBasicInfo(struct tms_context *pcontext, int8_t *pda
 #ifdef HEBEI2_DBG
 	tms_DbgAckSuccess(pcontext, pdata, len);
 #endif
+	struct glink_base *pbase_hdr;
+	pbase_hdr = (struct glink_base *)(pdata + sizeof(int32_t));
+
 	// TODO 如果之前已经有网管连接，则断开
 	// 但之前好保证识别网管与节点管理器之间不会冲突
-	printf("old g_node_manger %d\n", g_node_manger);
-	if (g_node_manger != 0) {
-		// close(g_node_manger);
+	if (pbase_hdr->src == ADDR_NODE_MANGER) {
+		if (g_node_manger != 0 && g_node_manger != pcontext->fd) {
+			// close(g_node_manger);
+		}
+		g_node_manger = pcontext->fd;	
 	}
-	g_node_manger = pcontext->fd;
-	printf("new g_node_manger %d\n", g_node_manger);
+	else {
+	}
 
 	hb2_dbg("Warning 应该返回什么内容，协议里没详细说明\n");
 	if (pcontext->ptcb->pf_OnGetBasicInfo) {
@@ -1654,11 +1659,17 @@ static int32_t tms_AnalyseConfigNodeTime(struct tms_context *pcontext, int8_t *p
 	tms_DbgAckSuccess(pcontext, pdata, len);
 #endif
 	struct tms_confignodetime *pval = (struct tms_confignodetime *)(pdata + GLINK_OFFSET_DATA);
-	if (g_manger != 0) {
-		// close(g_manger);
+	struct glink_base *pbase_hdr;
+	pbase_hdr = (struct glink_base *)(pdata + sizeof(int32_t));
+
+	if (pbase_hdr->src == ADDR_MANGER) {
+		if (g_manger != 0 && g_manger != pcontext->fd) {
+			// close(g_manger);
+		}
+		g_manger = pcontext->fd;
 	}
-	g_manger = pcontext->fd;
-	printf("g_manger %d\n", g_manger);
+	else {
+	}
 	if (pcontext->ptcb->pf_OnConfigNodeTime) {
 		pcontext->ptcb->pf_OnConfigNodeTime(pcontext, pval);
 	}
@@ -1744,7 +1755,6 @@ int32_t tms_CurAlarm_V2(
 		tms_OTDRConv_tms_hebei2_data_val(phebei2_data_val, phebei2_data_val, data_hdr_count);
 		
 		event_hdr_count = phebei2_event_hdr->count;
-		printf("phebei2_event_hdr->count %d\n", phebei2_event_hdr->count);
 		tms_OTDRConv_tms_hebei2_event_hdr(phebei2_event_hdr, phebei2_event_hdr);
 		
 		printf("distance %d event_type %d \n", phebei2_event_val->distance, phebei2_event_val->event_type);
@@ -1780,8 +1790,6 @@ int32_t tms_CurAlarm_V2(
 		    sizeof(struct tms_hebei2_data_val) * htonl(phebei2_data_hdr->count) +
 		    sizeof(struct tms_hebei2_event_hdr) +
 		    sizeof(struct tms_hebei2_event_val) * htonl(phebei2_event_hdr->count);
-		    printf("htonl(phebei2_event_hdr->count) %d \n", htonl(phebei2_event_hdr->count));
-		   printf("tlen = %d\n", tlen);
 		   t_alarmline_val++;
 
 	}
@@ -2195,7 +2203,6 @@ int32_t tms_MergeCurAlarm(int dst_fd)
 			hb2_dbg("count %d\n", count_alarmlist_hdr);
 		}
 	}
-	printf("count %d %d----\n", alarmlist_hdr.count , alarmline_hdr.count);
 	// alarmlist_hdr.count = 4;
 	// alarmline_hdr.count = 4;
 
