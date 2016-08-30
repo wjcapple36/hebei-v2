@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 
-
+void DebugAlarm(struct tms_context *pcontext);
 
 int32_t OnGetBasicInfo(struct tms_context *pcontext)
 {
@@ -134,6 +134,11 @@ printf("line %d\n", __LINE__);
 printf("line %d\n", __LINE__);
 	tms_OTDRBasicInfo(pcontext, NULL, &val);
 #endif
+	DebugAlarm(pcontext);
+	return 0;
+}
+void DebugAlarm(struct tms_context *pcontext)
+{
 printf("line %d\n", __LINE__);
 	// 上报模拟告警
 	trace_dbg("上报模拟告警，节点管理器不支持逐条发送告警\n");
@@ -145,8 +150,8 @@ printf("line %d\n", __LINE__);
 	struct tms_alarmlist_val    alarmlist_val[10];
 	struct tms_alarmline_hdr    alarmline_hdr;
 	struct tms_alarmline_val    alarmline_val[8];
-	const  int c_alarmcount=8;
-	const int c_alarm_pipe[] = {1,2,3,4,5,6,7,8};
+	const  int c_alarmcount=7;
+	const int c_alarm_pipe[] = {2,3,4,5,6,7,8};
 	// const int c_alarm_pipe[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
 	// const int c_alarm_pipe[] = {9,10,11,12,13,14,15,16};
 
@@ -209,7 +214,7 @@ _FindNetcard:;
 	if (201 == ip4) {
 		for (int i = 0; i < c_alarmcount; i++) {
 			alarmlist_val[i].pipe = c_alarm_pipe[i];
-			alarmlist_val[i].fiber = c_alarm_pipe[i];
+			alarmlist_val[i].fiber = 1;//c_alarm_pipe[i];
 			alarmlist_val[i].level =  1;
 			alarmlist_val[i].type = 1;
 		}
@@ -218,7 +223,7 @@ _FindNetcard:;
 	else {
 		for (int i = 0; i < c_alarmcount; i++) {
 			alarmlist_val[i].pipe = c_alarm_pipe[i];
-			alarmlist_val[i].fiber = c_alarm_pipe[i];
+			alarmlist_val[i].fiber = 1;//c_alarm_pipe[i];
 			alarmlist_val[i].level = 1;
 			alarmlist_val[i].type = 1;
 		}
@@ -235,19 +240,20 @@ printf("line %d\n", __LINE__);
 	}
 	
 
+	// 曲线头
 	alarmline_hdr.count = c_alarmcount;
 
-	for (int i = 0;i < c_alarmcount; i++) {
-		alarmline_val[i].pipe = c_alarm_pipe[i];
-		alarmline_val[i].datalen =
-		    // sizeof(otdrdata) +
-		    sizeof(ret_otdrparam) +
-		    sizeof(test_result) +
-		    sizeof(hebei2_data_hdr) +
-		    sizeof(hebei2_data_val) +
-		    sizeof(hebei2_event_hdr) +
-		    sizeof(hebei2_event_val) + 4;
+	// 事件头
+	for (int i = 0;i < c_alarmcount;i++) {
+		strcpy((char *)all_hebei2_event_hdr[i].eventid, "KeyEvents");
+		if (i == 0) {
+			all_hebei2_event_hdr[i].count = 3;
+		}
+		else {
+			all_hebei2_event_hdr[i].count = 2;
+		}
 	}
+
 
 
 	for (int i = 0;i < c_alarmcount;i++) {
@@ -287,10 +293,25 @@ printf("line %d\n", __LINE__);
 		all_hebei2_data_hdr[i].count = 15000;
 	}
 
+	// 计算长度，因为需要用到事件头
+	for (int i = 0;i < c_alarmcount; i++) {
+		alarmline_val[i].pipe = c_alarm_pipe[i];
+		alarmline_val[i].datalen =
+		    // sizeof(otdrdata) +
+		    sizeof(struct tms_ret_otdrparam_p2) + sizeof(int32_t) + 
+		    sizeof(struct tms_test_result) +
+		    sizeof(struct tms_hebei2_data_hdr) +
+		    sizeof(struct tms_hebei2_data_val) * all_hebei2_data_hdr[i].count +
+		    sizeof(struct tms_hebei2_event_hdr)  +
+		    sizeof(struct tms_hebei2_event_val) * all_hebei2_event_hdr[i].count;
+		   printf("alarmline_val[i].datalen %d %d %d\n", alarmline_val[i].datalen,
+		   	all_hebei2_data_hdr[i].count,
+all_hebei2_event_hdr[i].count);
+	}
 printf("line %d\n", __LINE__);
 	
 	for (int i = 0;i < c_alarmcount;i++) {
-		tmp_data_val = all_hebei2_data_val[i];
+		tmp_data_val = &all_hebei2_data_val[i][0];
 		for (int i = 0; i < 4000; i++) {
 			tmp_data_val->data = 40000 + i;
 			tmp_data_val++;
@@ -304,26 +325,40 @@ printf("line %d\n", __LINE__);
 			tmp_data_val++;
 		}
 	}
+
 	printf("line %d\n", __LINE__);
 
 	for (int i = 0;i < c_alarmcount;i++) {
-		strcpy((char *)all_hebei2_event_hdr[i].eventid, "KeyEvents");
-		all_hebei2_event_hdr[i].count = 2;
-	}
-	for (int i = 0;i < c_alarmcount;i++) {
-		all_hebei2_event_val[i][0].distance   = 20+i;
+		all_hebei2_event_val[i][0].distance   = 30+i;
 		all_hebei2_event_val[i][0].event_type = 0;
 		all_hebei2_event_val[i][0].att        = 3;
 		all_hebei2_event_val[i][0].loss       = 3;
 		all_hebei2_event_val[i][0].reflect    = 3;
 		all_hebei2_event_val[i][0].link_loss  = 3;
 
-		all_hebei2_event_val[i][1].distance   = 900 + i;
+		all_hebei2_event_val[i][1].distance   = 800 + i;
 		all_hebei2_event_val[i][1].event_type = 3;
 		all_hebei2_event_val[i][1].att        = 4;
 		all_hebei2_event_val[i][1].loss       = 4;
 		all_hebei2_event_val[i][1].reflect    = 4;
 		all_hebei2_event_val[i][1].link_loss  = 4;
+
+		if (all_hebei2_event_hdr[i].count == 3) {
+			all_hebei2_event_val[i][2].distance   = 1000 + i;
+			all_hebei2_event_val[i][2].event_type = 3;
+			all_hebei2_event_val[i][2].att        = 4;
+			all_hebei2_event_val[i][2].loss       = 4;
+			all_hebei2_event_val[i][2].reflect    = 4;
+			all_hebei2_event_val[i][2].link_loss  = 4;
+
+			all_hebei2_event_val[i][1].distance   = 800 + i;
+			all_hebei2_event_val[i][1].event_type = 2;
+			all_hebei2_event_val[i][1].att        = 4;
+			all_hebei2_event_val[i][1].loss       = 4;
+			all_hebei2_event_val[i][1].reflect    = 4;
+			all_hebei2_event_val[i][1].link_loss  = 4;
+		}
+		
 	}
 	// tms_CurAlarm_V2(pcontext->fd, NULL, &alarm);
 printf("line %d\n", __LINE__);
@@ -679,7 +714,8 @@ int32_t OnConfigNodeTime(struct tms_context *pcontext, struct tms_confignodetime
 {
 	trace_dbg(" % s(): % d\n", __FUNCTION__, __LINE__);
 	// TODO set time
-	OnGetBasicInfo(pcontext);
+	// OnGetBasicInfo(pcontext);
+	DebugAlarm(pcontext);
 	return 0;
 }
 int32_t OnCurAlarm(struct tms_context *pcontext)
