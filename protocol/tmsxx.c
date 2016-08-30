@@ -1658,6 +1658,7 @@ static int32_t tms_AnalyseConfigNodeTime(struct tms_context *pcontext, int8_t *p
 		// close(g_manger);
 	}
 	g_manger = pcontext->fd;
+	printf("g_manger %d\n", g_manger);
 	if (pcontext->ptcb->pf_OnConfigNodeTime) {
 		pcontext->ptcb->pf_OnConfigNodeTime(pcontext, pval);
 	}
@@ -1712,6 +1713,7 @@ int32_t tms_CurAlarm_V2(
 	// conver otdr date
 	t_alarmline_val = alarmline_val;
 	for (int i = 0; i < line_hdr_count; i++) {
+		printf("t_ datalen %d\n", t_alarmline_val->datalen);
 		t_alarmline_val->pipe = htonl(t_alarmline_val->pipe);
 		t_alarmline_val->datalen = htonl(t_alarmline_val->datalen);
 
@@ -1738,11 +1740,9 @@ int32_t tms_CurAlarm_V2(
 		data_hdr_count = phebei2_data_hdr->count;
 		printf("phebei2_data_hdr->count %d\n", phebei2_data_hdr->count);
 		tms_OTDRConv_tms_hebei2_data_hdr(phebei2_data_hdr, phebei2_data_hdr);
-		
-		
-		
-		// tms_OTDRConv_tms_hebei2_data_val(phebei2_data_val, phebei2_data_val, data_hdr_count);
 
+		tms_OTDRConv_tms_hebei2_data_val(phebei2_data_val, phebei2_data_val, data_hdr_count);
+		
 		event_hdr_count = phebei2_event_hdr->count;
 		printf("phebei2_event_hdr->count %d\n", phebei2_event_hdr->count);
 		tms_OTDRConv_tms_hebei2_event_hdr(phebei2_event_hdr, phebei2_event_hdr);
@@ -1780,6 +1780,9 @@ int32_t tms_CurAlarm_V2(
 		    sizeof(struct tms_hebei2_data_val) * htonl(phebei2_data_hdr->count) +
 		    sizeof(struct tms_hebei2_event_hdr) +
 		    sizeof(struct tms_hebei2_event_val) * htonl(phebei2_event_hdr->count);
+		    printf("htonl(phebei2_event_hdr->count) %d \n", htonl(phebei2_event_hdr->count));
+		   printf("tlen = %d\n", tlen);
+		   t_alarmline_val++;
 
 	}
 	// 汇总长度
@@ -1826,6 +1829,7 @@ int32_t tms_CurAlarm_V2(
 	glink_SendTail(fd);
 	pthread_mutex_unlock(&context.mutex);
 
+	printf("CurAlarm fd %d\n", fd);
 	printf("finish\n");
 	return 0;
 }
@@ -2329,7 +2333,7 @@ int32_t tms_RetOTDRData(
 	tms_OTDRConv_tms_hebei2_data_hdr(pmem_hebei2_data_hdr, pmem_hebei2_data_hdr);
 
 	tms_OTDRConv_tms_hebei2_data_val(&pmem_hebei2_data_val[0], &pmem_hebei2_data_val[0], data_hdr_count);
-
+			
 	event_hdr_count = pmem_hebei2_event_hdr->count;
 	tms_OTDRConv_tms_hebei2_event_hdr(pmem_hebei2_event_hdr, pmem_hebei2_event_hdr);
 
