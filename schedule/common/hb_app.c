@@ -1638,7 +1638,8 @@ int32_t find_alarm_on_fiber(int32_t ch,
 		//光纤段统计信息
 		pstatis->buf[i].attu = loss_sec;
 		memcpy(pstatis->buf[i].date, cur_time, sizeof(cur_time));
-		pstatis->buf[i].sec = ch + 1;
+		pstatis->buf[i].sec = i + 1;
+		pstatis->buf[i].ch = ch + ch_offset;
 		//光纤段衰减值产生的告警级别,如果通过事件找不到告警，则判断此值
 		loss_sec_lev = get_alarm_lev(loss_sec_diff,&pstd_fiber_val[i]);
 		memset(&event_alarm, 0, sizeof(struct _tagEventAlarm));
@@ -1652,21 +1653,28 @@ int32_t find_alarm_on_fiber(int32_t ch,
 				&event_alarm
 				);
 		event_alarm.first.sec = i;
-		//如果光纤在本段断裂，那么断裂位置即为告警位置
-		if(fiber_end_cur >= sec_coord.start && fiber_end_cur < sec_coord.end)
+		/*
+		 * 描述：如果断点落在段之间，那么断点即为告警位置，断点以后的段的告警不再处理
+		 * 判断条件为:(i == 0 And [0,start]) or [start, end), 断点即为告警位置，且一级告警
+		*/
+		if((i == 0 && fiber_end_cur <= sec_coord.start)||\
+			(fiber_end_cur >= sec_coord.start && fiber_end_cur < sec_coord.end))
 		{
 			event_alarm.first.lev = FIBER_ALARM_LEV1;
 			event_alarm.first.pos = fiber_end_cur; 
 			cur_alarm_num = 1;
 		}
-		else if(fiber_end_cur < fiber_end_cur)
+		else if(fiber_end_cur < sec_coord.start)
 		{
-			//断裂之后的光线段不保持原有状态,后面计数使用
+			//断点之后的光线段不再找告警
 			not_deal = 1;
 		}
 
 		
 		//通过事件没有找到告警，但通过光纤段衰减值找到了告警
+		if(i == 0 && event_alarm.first.pos == sec_coord.start)
+			event_alarm.first.pos = 0;
+
 		event_alarm.first.pos /= pOtdrState->Points_1m; 
 		if(!cur_alarm_num && loss_sec_lev > FIBER_ALARM_LEV0)
 		{
@@ -1757,6 +1765,7 @@ int32_t refresh_cyc_curv_after_test(
 
 	
 	get_test_para_from_algro(&ret_otdr_para, pResult);
+	ret_otdr_para.pipe = ch + ch_offset;
 	ptest_result = (struct tms_test_result *)(&pCycCurv->curv.result);
 	event_count = 0;
 	offset = pResult->OtdrData.DataNum;
@@ -2184,12 +2193,13 @@ usr_exit:
 	fiber_alarm.alarmlist_hdr = &alarmlist_hdr;
 	fiber_alarm.alarmlist_val = alarmlist_val;
 	//曲线发给201，由201综合打包发送到cu
-	tms_CurAlarm_V2(g_201fd,NULL,&fiber_alarm);
-	/*
+	//tms_CurAlarm_V2(g_201fd,NULL,&fiber_alarm);
+	
 	ret = get_context_by_dst(ADDR_HOST_NODE, &context);
 	
 	if(!ret)
-		tms_CurAlarm_V2(g_201fd,NULL,&fiber_alarm);
+		tms_CurAlarm_V2(context.fd,NULL,&fiber_alarm);
+	/*
 	ret = get_context_by_dst(ADDR_HOST_SERVER, &context);
 	if(!ret)
 		tms_CurAlarm_V2(&context.fd,NULL,&fiber_alarm);
@@ -2276,7 +2286,6 @@ int32_t ret_host_cyc_curv(
 		printf("%s %d ch %d cyc curve not exist \n", __FUNCTION__, __LINE__, ch + ch_offset);
 		goto usr_exit;
 	}
-	ret_otdrparam.pipe = ch + ch_offset;
 
 
 	ret = get_ret_curv_cmd(pcontext->pgb->cmdid, &cmd);
@@ -2295,7 +2304,7 @@ int32_t ret_host_cyc_curv(
 	hebei2_otdrdata.test_result = test_result;
 
 	quick_lock(&pcyc_curv->lock);
-	memcpy(&ret_otdrparam.range, &pcyc_curv->curv.para, sizeof(struct _tagUpOtdrPara));
+	memcpy(&ret_otdrparam, &pcyc_curv->curv, sizeof(struct _tagUpOtdrPara));
 	tms_RetOTDRData(pcontext->fd, NULL, &hebei2_otdrdata, cmd);		
 
 	quick_unlock(&pcyc_curv->lock);

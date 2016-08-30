@@ -230,7 +230,7 @@ int32_t OnConfigNodeTime(struct tms_context *pcontext,struct tms_confignodetime 
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	memcpy(ctime, pval, 19);
 	ctime[19] = '\0';  
-	snprintf(strout, 64, "/bin/settime.sh %s", ctime);
+	snprintf(strout, 64, "/bin/settime.sh \" %s\"", ctime);
 	system(strout);
 	ack.cmdid =  pcontext->pgb->cmdid;
 	ack.errcode = 0;
