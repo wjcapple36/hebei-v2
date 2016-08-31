@@ -1111,7 +1111,6 @@ static int32_t tms_DbgAckSuccess(struct tms_context *pcontext, int8_t *pdata, in
 	ack.errcode = 0;
 	ack.cmdid   = htonl(pbase_hdr->cmdid);
 
-	printf("%s pcontext->fd %d\n", __FUNCTION__, pcontext->fd);
 	tms_AckEx(pcontext->fd, NULL, &ack);
 	// tms_AckEx(g_201fd, NULL, &ack);
 
@@ -2981,6 +2980,7 @@ extern struct ep_t ep;
 struct _ep_find_val {
 	int fd;
 	struct tms_context *context;
+	bool isfind;
 };
 int _ep_find(struct ep_con_t *ppconNode, void *ptr)
 {
@@ -2990,9 +2990,9 @@ int _ep_find(struct ep_con_t *ppconNode, void *ptr)
 	struct _ep_find_val *pval = (struct _ep_find_val *)ptr;
 
 
-	//
 	if(pcontext->fd == pval->fd) {
 		pval->fd = pcontext->fd;
+		pval->isfind = true;
 		memcpy(pval->context, pcontext, sizeof(struct tms_context));
 		return -1;
 	}
@@ -3001,13 +3001,17 @@ int _ep_find(struct ep_con_t *ppconNode, void *ptr)
 int32_t  tms_SelectContextByFD(int fd, struct tms_context *context)
 {
 	struct _ep_find_val val;
+	int ret;
 
 	assert(context != NULL);
 
 	val.fd = fd;
 	val.context = context;
+	
+	val.isfind = false;
 	ep_Ergodic(&ep, _ep_find, &val);
-	if (context->fd == val.fd) {
+
+	if (val.isfind) {
 		return 1;
 	}
 	return 0;
