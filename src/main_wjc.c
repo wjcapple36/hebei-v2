@@ -25,7 +25,7 @@
 #include "minishell_core.h"
 
 #include "ossocket.h"
-
+#include "version.h"
 
 
 
@@ -388,7 +388,20 @@ extern void ep_Callback(struct ep_t *pep);
 // 	addr.s_addr = *(unsigned long *)host->h_addr;
 // 	printf("Server IP Address:%s\r\n" , inet_ntoa(addr));  
 // }
-
+void version()
+{
+	printf("Macro:\n"
+			"\tPRJ_NAME      %s\n"
+			"\tPRJ_VERSION    %s\n"
+			"\tPRJ_PATCHLEVEL %s\n"
+			"\tPRJ_SUBLEVEL   %s\n"
+			"\tBUILD_DATE    %s\n",
+			PRJ_NAME,
+			PRJ_VERSION,
+			PRJ_PATCHLEVEL,
+			PRJ_SUBLEVEL,
+			BUILD_DATE);
+}
 int main(int argc, char const *argv[])
 {	
 	// dns();
@@ -416,8 +429,13 @@ int main(int argc, char const *argv[])
 	// end del
 
 	// signal(SIGSEGV, sig_handle);
-	
+
 	// return 0;
+
+	if(argc == 2 && strcmp(argv[1], "-v") == 0) {
+		version();
+		return 0;
+	}
 	ThreadRunServerAndShell(&ep);
 	initialize_sys_para();
 	while(1) {
