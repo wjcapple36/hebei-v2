@@ -32,6 +32,7 @@ extern "C" {
 #define ADDR_HOST_NODE			0x0000001e
 #define ADDR_HOST_CLIENT		0x0000002e
 #define ADDR_HOST_SERVER		0x0000003e
+#define ADDR_LOCAL			0x0000000e
 //定义一些其他关键变量
 #define MAX_RANG_M	180000
 #define OUTPUT_USR_MSG   1

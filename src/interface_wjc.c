@@ -64,6 +64,11 @@ int32_t OnNameAndAddress(struct tms_context *pcontext, struct tms_nameandaddr *p
 {
 	struct tms_ack ack;
 	int32_t ret;
+	struct glink_addr addr;
+	addr.dst = pcontext->pgb->src;
+	addr.src = ADDR_LOCAL;
+	addr.pkid = pcontext->pgb->pkid;
+
 	//该回调函数缺乏输入节点名称，需要woo配合修改
 	ack.cmdid = pcontext->pgb->cmdid;
 	memcpy(&devMisc.name, pval,sizeof(struct _tagDevNameAddr));
@@ -73,7 +78,7 @@ int32_t OnNameAndAddress(struct tms_context *pcontext, struct tms_nameandaddr *p
 	       ret = CMD_RET_CANT_SAVE;
 
 	ack.errcode = ret;
-	tms_AckEx(pcontext->fd, NULL, &ack);	
+	tms_AckEx(pcontext->fd, &addr, &ack);	
 
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	return 0;
@@ -92,6 +97,11 @@ int32_t OnFiberSectionCfg(struct tms_context *pcontext,struct tms_fibersectioncf
 {
 	int32_t ret,ch;
 	struct tms_ack ack;
+	struct glink_addr addr;
+	addr.dst = pcontext->pgb->src;
+	addr.src = ADDR_LOCAL;
+	addr.pkid = pcontext->pgb->pkid;
+
 
 	ack.cmdid = pcontext->pgb->cmdid;
 
@@ -109,7 +119,7 @@ int32_t OnFiberSectionCfg(struct tms_context *pcontext,struct tms_fibersectioncf
 
 usr_exit:
 	ack.errcode = ret;
-	tms_AckEx(pcontext->fd, NULL,&ack);
+	tms_AckEx(pcontext->fd, &addr, &ack);
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	return ret;
 }
@@ -127,6 +137,11 @@ int32_t OnConfigPipeState(struct tms_context *pcontext, struct tms_cfgpip_status
 {
 	int32_t ret;
 	struct tms_ack ack;
+	struct glink_addr addr;
+	addr.dst = pcontext->pgb->src;
+	addr.src = ADDR_LOCAL;
+	addr.pkid = pcontext->pgb->pkid;
+
 
 	ack.cmdid = pcontext->pgb->cmdid;
 	//第一机框，只八个通道，取低8位 第二个通道，取高8位
@@ -140,7 +155,7 @@ int32_t OnConfigPipeState(struct tms_context *pcontext, struct tms_cfgpip_status
 		printf("%s %d can't save para, ret %d \n", __FUNCTION__, __LINE__,ret);
 	}
 	ack.errcode = ret;
-	tms_AckEx(pcontext->fd, NULL, &ack);
+	tms_AckEx(pcontext->fd, &addr, &ack);
 
 	// todo 该设备在本机框第几槽位，对应第几通道，写入配置文件
 	printf("%s():%d state local 0x%x rcv 0x%x ch_offset %d\n", __FUNCTION__, __LINE__,\
@@ -152,6 +167,11 @@ int32_t OnGetCycleTestCuv(struct tms_context *pcontext, struct tms_getcyctestcuv
 {
 	int ret, ch;
 	struct tms_ack ack;
+	struct glink_addr addr;
+	addr.dst = pcontext->pgb->src;
+	addr.src = ADDR_LOCAL;
+	addr.pkid = pcontext->pgb->pkid;
+
 	ack.cmdid = pcontext->pgb->cmdid;
 	ret = CMD_RET_OK;
 	ch = pval->pipe - ch_offset;
@@ -167,7 +187,7 @@ int32_t OnGetCycleTestCuv(struct tms_context *pcontext, struct tms_getcyctestcuv
 	printf("\tget pipe status %d\n", pval->pipe);
 usr_exit:
 	if(ret)
-		tms_AckEx(pcontext->fd,NULL, &ack);
+		tms_AckEx(pcontext->fd, &addr, &ack);
 	return ret;
 }
 /* --------------------------------------------------------------------------*/
@@ -184,6 +204,11 @@ int32_t OnGetStatusData(struct tms_context *pcontext, struct tms_getstatus_data 
 {
 	int ret, ch;
 	struct tms_ack ack;
+	struct glink_addr addr;
+	addr.dst = pcontext->pgb->src;
+	addr.src = ADDR_LOCAL;
+	addr.pkid = pcontext->pgb->pkid;
+
 	ack.cmdid = pcontext->pgb->cmdid;
 	ret = CMD_RET_OK;
 	ch = pval->pipe - ch_offset;
@@ -199,7 +224,7 @@ int32_t OnGetStatusData(struct tms_context *pcontext, struct tms_getstatus_data 
 	printf("\tget pipe status %d\n", pval->pipe);
 usr_exit:
 	if(ret)
-		tms_AckEx(pcontext->fd,NULL, &ack);
+		tms_AckEx(pcontext->fd,&addr, &ack);
 	return 0;
 }
 int32_t OnStatusData(struct tms_context *pcontext)
@@ -227,6 +252,11 @@ int32_t OnConfigNodeTime(struct tms_context *pcontext,struct tms_confignodetime 
 	struct tms_ack ack;
 	char ctime[20] = {0};
   	char strout[64] = {0};        
+	struct glink_addr addr;
+	addr.dst = pcontext->pgb->src;
+	addr.src = ADDR_LOCAL;
+	addr.pkid = pcontext->pgb->pkid;
+
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	memcpy(ctime, pval, 19);
 	ctime[19] = '\0';  
@@ -236,7 +266,7 @@ int32_t OnConfigNodeTime(struct tms_context *pcontext,struct tms_confignodetime 
 	ack.errcode = 0;
 	printf("%s %d %s \n", __FUNCTION__, __LINE__, strout);
 	// TODO set time
-	tms_AckEx(pcontext->fd, NULL,&ack);
+	tms_AckEx(pcontext->fd, &addr, &ack);
 	ret_total_curalarm2host();
 	return 0;
 }
@@ -259,6 +289,11 @@ int32_t OnGetOTDRData(struct tms_context *pcontext,struct tms_get_otdrdata *pget
 {
 	int ret;
 	struct tms_ack ack;
+	struct glink_addr addr;
+	addr.dst = pcontext->pgb->src;
+	addr.src = ADDR_LOCAL;
+	addr.pkid = pcontext->pgb->pkid;
+
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	ack.cmdid = pcontext->pgb->cmdid;
 	
@@ -281,7 +316,7 @@ int32_t OnGetOTDRData(struct tms_context *pcontext,struct tms_get_otdrdata *pget
 	
 usr_exit:
 	ack.errcode = ret;
-	tms_AckEx(pcontext->fd,NULL, &ack);
+	tms_AckEx(pcontext->fd,&addr, &ack);
 	return ret;
 }
 
@@ -299,23 +334,37 @@ int32_t OnGetStandardCurv(struct tms_context *pcontext, struct tms_getstandardcu
 {
 	int ret, ch;
 	struct tms_ack ack;
+	struct glink_addr addr;
+	addr.dst = pcontext->pgb->src;
+	addr.src = ADDR_LOCAL;
+	addr.pkid = pcontext->pgb->pkid;
+
 	ack.cmdid = pcontext->pgb->cmdid;
+
 	ret = CMD_RET_OK;
 	ch = pval->pipe - ch_offset;
 	printf("%s %d ch %d \n", __FUNCTION__, __LINE__, pval->pipe);
 	if(ch < 0 || ch > CH_NUM)
 	{
 		ret = CMD_RET_PARA_INVLADE;
+		ack.errcode = ret;
 		goto usr_exit;
 	}
 	ret_host_std_curv(pcontext, &chFiberSec[ch],ch);
 usr_exit:
+	if(ret)
+		tms_AckEx(pcontext->fd,&addr, &ack);
 	return 0;
 }
 int32_t OnSetOTDRFPGAInfo(struct tms_context *pcontext, struct tms_setotdrfpgainfo *pval)
 {
 	int32_t ret, ch,i, is_same;
 	struct tms_ack ack;
+	struct glink_addr addr;
+	addr.dst = pcontext->pgb->src;
+	addr.src = ADDR_LOCAL;
+	addr.pkid = pcontext->pgb->pkid;
+
 	ack.cmdid = pcontext->pgb->cmdid;
 
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
@@ -351,7 +400,7 @@ int32_t OnSetOTDRFPGAInfo(struct tms_context *pcontext, struct tms_setotdrfpgain
 		ret = CMD_RET_CANT_SAVE;
 usr_exit:
 	ack.errcode = ret;
-	tms_AckEx(pcontext->fd,NULL,&ack);
+	tms_AckEx(pcontext->fd,&addr,&ack);
 
 	return ret;
 

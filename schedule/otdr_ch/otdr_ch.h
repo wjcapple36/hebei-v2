@@ -345,7 +345,11 @@ struct _tagIpSwitchCtr
 	int32_t chang;	//是否发生改变
 	int32_t flag; 	//网段标志
 };
-
+struct _tagCtrlPkid
+{
+	int16_t pkid;
+	QUICK_LOCK lock;
+};
 
 
 //#pragma pack () /*恢复默认的对其方式*/

@@ -205,7 +205,8 @@ int32_t ret_host_statis_data(
 		struct _tagCHFiberSec *pchfiber_sec);
 //检查本机IP
 int32_t check_local_ip(int32_t flag, int32_t slot);
-
+//获取pkid
+int16_t get_pkid();
 #ifdef __cplusplus
 	}
 #endif

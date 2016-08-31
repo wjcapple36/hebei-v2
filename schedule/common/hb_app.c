@@ -34,6 +34,8 @@ struct _tagDevMisc devMisc;
 struct _tagVersion DevVersion;
 //网段切换控制变量
 struct _tagIpSwitchCtr IPCtrl;
+//pkid 控制
+struct _tagCtrlPkid ctrlPkid;
 /* --------------------------------------------------------------------------*/
 /**
  * @synopsis  initialize_sys_para 从文件中读取相关参数，并设立对应的标志
@@ -60,8 +62,10 @@ int32_t initialize_sys_para()
 	memset(&IPCtrl, 0, sizeof(struct _tagIpSwitchCtr));
 	read_slot();
 	read_net_flag();
+	ctrlPkid.pkid = 0x200;
+	quick_lock_init(&ctrlPkid.lock);
 
- 	create_usr_tsk();
+	create_usr_tsk();
 	return ret;
 }
 /* --------------------------------------------------------------------------*/
@@ -205,10 +209,10 @@ usr_exit:
  */
 /* ----------------------------------------------------------------------------*/
 int32_t save_fiber_sec_para(int ch,
-	       	struct tms_fibersectioncfg *pfiber_sec,
-	       	struct _tagCHFiberSec *pch_fiber_sec,
+		struct tms_fibersectioncfg *pfiber_sec,
+		struct _tagCHFiberSec *pch_fiber_sec,
 		struct _tagOtdrDev *potdr_dev
-	       	)
+		)
 {
 	int ret, counts, tmp;
 	char file_path[FILE_PATH_LEN] = {0};
@@ -917,7 +921,7 @@ int32_t check_fiber_sec_para(const struct tms_fibersectioncfg *pfiber_sec_cfg)
 	if(tmp < 0){
 		ret = CMD_RET_PARA_INVLADE;
 		printf("%s() %d : sec num error %d ch_offset %d\n",\
-				       	__FUNCTION__ ,__LINE__, tmp, ch_offset);
+					__FUNCTION__ ,__LINE__, tmp, ch_offset);
 		goto usr_exit;
 	}
 
@@ -928,7 +932,7 @@ int32_t check_fiber_sec_para(const struct tms_fibersectioncfg *pfiber_sec_cfg)
 		if(ch < ch_offset || ch > (ch_offset + CH_NUM)){
 			ret = CMD_RET_PARA_INVLADE;
 			printf("%s() %d : ch error %d ch_offset %d\n",\
-				       	__FUNCTION__ ,__LINE__, ch, ch_offset);
+					__FUNCTION__ ,__LINE__, ch, ch_offset);
 			goto usr_exit;
 		}
 	}
@@ -941,7 +945,7 @@ int32_t check_fiber_sec_para(const struct tms_fibersectioncfg *pfiber_sec_cfg)
 	if(tmp <= 0 || tmp > MAX_RANG_M){
 		ret = CMD_RET_PARA_INVLADE;
 		printf("%s() %d : range over flow %d \n",\
-				       	__FUNCTION__ ,__LINE__, tmp);
+					__FUNCTION__ ,__LINE__, tmp);
 		goto usr_exit;
 	}
 
@@ -964,7 +968,7 @@ int32_t create_usr_tsk()
 	ret = 0; 
 	pthread_mutex_init(&mutex_otdr, NULL);
 	ret = pthread_create(&tsk_schedule_info.tidp, NULL,\
-		       	tsk_schedule,(void *)(&tsk_schedule_info));
+			tsk_schedule,(void *)(&tsk_schedule_info));
 	if(ret != 0){
 		exit_self(errno, __FUNCTION__, __LINE__, "creat tsk schedule erro\0");
 	}
@@ -1020,10 +1024,17 @@ int32_t get_context_by_dst(int32_t dst, struct tms_context *pcontext)
 int32_t hb_Ret_Ack(int32_t dst, struct tms_ack ack)
 {
 	struct tms_context dst_context;
+	struct glink_addr addr;
 	int32_t ret;
+	addr.src = ADDR_LOCAL;
+	addr.dst = dst;
+	addr.pkid = 0;
+
 	ret = get_context_by_dst(dst, &dst_context);
-	if(!ret)
-		ret =  tms_AckEx(dst_context.fd,NULL, &ack);
+	if(!ret){
+		addr.pkid = dst_context.pgb->pkid;
+		ret =  tms_AckEx(dst_context.fd, &addr, &ack);
+	}
 	
 	return ret;
 }
@@ -1085,7 +1096,7 @@ usr_exit:
 /**
  * @synopsis  check_local_ip 根据网段标志和槽位检查本机IP
  *
- * @param flag 	网段标志 0 代表1网段 1 代表0网段
+ * @param flag	网段标志 0 代表1网段 1 代表0网段
  * @param slot	槽位标志 0 192.168.1.201   1 192.168.0.201
  *
  * @returns   
@@ -1217,6 +1228,7 @@ int32_t send_otdr_data_host(OTDR_UploadAllData_t *pResult, struct _tagAlgroCHInf
 	struct tms_context contxt; 
 	int8_t cur_time[TIME_STR_LEN] = {0};
 	const char* pFormatTime = "%Y-%m-%d %H:%M:%S";
+	struct glink_addr addr;
 
         //获取当前时间
         get_sys_time(cur_time, 0, pFormatTime);
@@ -1228,6 +1240,9 @@ int32_t send_otdr_data_host(OTDR_UploadAllData_t *pResult, struct _tagAlgroCHInf
 		printf("%s %d, ask context error \n", __FUNCTION__, __LINE__);
 		goto usr_exit;
 	}
+	addr.src = ADDR_LOCAL;
+	addr.dst = pCHInfo->src_addr;
+	addr.pkid = contxt.pgb->pkid;
 	ret = get_ret_curv_cmd(pCHInfo->cmd, &ret_cmd);
 	if(ret){
 		printf("%s %d,requre curv cmd error cmd %d ret %d  \n", __FUNCTION__, __LINE__,\
@@ -1269,7 +1284,7 @@ int32_t send_otdr_data_host(OTDR_UploadAllData_t *pResult, struct _tagAlgroCHInf
 	hebei2_otdrdata.ret_otdrparam = &ret_otdrparam;
 	hebei2_otdrdata.test_result = &test_result;
 	hebei2_event_hdr.count = event_count;
-	tms_RetOTDRData(contxt.fd, NULL, &hebei2_otdrdata, ret_cmd);		
+	tms_RetOTDRData(contxt.fd, &addr, &hebei2_otdrdata, ret_cmd);		
 
 
 	if(event_count> 10)
@@ -1285,10 +1300,10 @@ usr_exit:
 /**
  * @synopsis  exit_self 自我了断， 发现严重错误，那就死吧
  *
- * @param err_code 	错误码
- * @param function[] 	哪个函数把程序搞死了
+ * @param err_code	错误码
+ * @param function[]	哪个函数把程序搞死了
  * @param line		哪一行出现了问题
- * @param msg[] 	死之前的遗言
+ * @param msg[]		死之前的遗言
  *
  * @returns		无所谓了吧
  */
@@ -1353,7 +1368,7 @@ int32_t get_ret_curv_cmd(int32_t in_cmd, int32_t *ret_cmd)
 /* ----------------------------------------------------------------------------*/
 int32_t get_curv_start_point(int32_t Sigma,
 		int32_t input[],
-	       	OtdrCtrlVariable_t *pOtdrCtrl,
+		OtdrCtrlVariable_t *pOtdrCtrl,
 		OtdrStateVariable_t *pOtdrState)
 {
 	int iPointDis, i;
@@ -1408,7 +1423,7 @@ int32_t get_curv_start_point(int32_t Sigma,
  * @param pstd_event_val	标准事件
  * @param AllEvent		当前曲线的事件点
  * @param pOtdrState		当前曲线状态变量
- * @param 			事件告警，含第一个告警和最严重告警
+ * @param			事件告警，含第一个告警和最严重告警
  *
  * @returns   
  */
@@ -1490,9 +1505,9 @@ int32_t get_fiber_alarm_from_event(
  * @synopsis  get_inser_loss_diff 获取两个事件点插损差值。如果插损值都存在那么是
  *				  两者差值，如果只有当前值存在，那么就以差值返回
  *				  如果当前事件点没有插损值，则返回失败
- * @param cur_loss	 	当前事件的插损
+ * @param cur_loss		当前事件的插损
  * @param std_loss		标准事件插损
- * @param 			返回的插损值
+ * @param			返回的插损值
  *
  * @returns   
  */
@@ -1546,7 +1561,7 @@ int32_t get_alarm_lev(
  * @param pResult	测试曲线
  * @param pOtdrCtl	otdr控制变量
  * @param pOtdrState	otdr状态变量
- * @param 		本通道光纤段配置参数
+ * @param		本通道光纤段配置参数
  *
  * @returns   
  */
@@ -1558,7 +1573,7 @@ int32_t find_alarm_on_fiber(int32_t ch,
 		struct _tagCHFiberSec *pFibersec,
 		struct _tagAlgroCHInfo *pAlgroCHInfo,
 		struct _tagOtdrDev *pOtdrDev
-	       	)
+		)
 {
 	struct _tagFiberSecCfg  *ppara;
 	struct _tagFiberStatisData *pstatis;
@@ -1608,7 +1623,7 @@ int32_t find_alarm_on_fiber(int32_t ch,
 	quick_unlock(&pFibersec->lock);
 	if(!pFibersec->para.is_initialize){
 		printf("%s %d ch %d  is not initiallize %d \n",\
-			       	__FUNCTION__,__LINE__, ch, pFibersec->para.is_initialize);
+				__FUNCTION__,__LINE__, ch, pFibersec->para.is_initialize);
 		goto usr_exit;
 	}
 	//如果光线段参数在获取锁之后发生了变化，那么就放弃本次操作
@@ -1718,7 +1733,7 @@ int32_t find_alarm_on_fiber(int32_t ch,
 
 		//调试阶段，只找一个告警
 		if(palarm->buf[i].lev > FIBER_ALARM_LEV0 &&\
-			       	palarm->buf[i].reserv >= ALARM_TRIGGER_NUM){
+				palarm->buf[i].reserv >= ALARM_TRIGGER_NUM){
 			alarm_num++;
 		}
 		
@@ -1781,7 +1796,7 @@ int32_t refresh_cyc_curv_after_test(
 	NextAddr = (char *)(&pResult->OtdrData.dB_x1000[offset]);
 
 	AllEvent = (OTDR_UploadAllData_t*)(NextAddr - 8 - sizeof(AllEvent->MeasureParam)\
-		       	- sizeof(AllEvent->OtdrData));
+			- sizeof(AllEvent->OtdrData));
 	event_count = AllEvent->Event.EventNum;
 	
 	//获取事件点
@@ -1828,6 +1843,10 @@ int32_t ret_host_basic_info(
 
 
 	struct tms_otdrbaseinfo baseinfo;
+	struct glink_addr addr;
+	addr.src = ADDR_LOCAL;
+	addr.dst = pcontext->pgb->src;
+	addr.pkid = pcontext->pgb->pkid;
 	
 	ack.cmdid = pcontext->pgb->cmdid;
 	ack.errcode = OP_OK;
@@ -1900,7 +1919,7 @@ int32_t ret_host_basic_info(
 
 
 
-	tms_OTDRBasicInfo(pcontext,NULL,&baseinfo);
+	tms_OTDRBasicInfo(pcontext,&addr,&baseinfo);
 	if(pfiber_val != NULL)
 		free(pfiber_val);
 
@@ -1911,7 +1930,7 @@ int32_t ret_host_basic_info(
  * @synopsis  get_host_curv_from_algro 将算法得出的结果转换成协议格式
  *
  * @param pResult	算法结果
- * @param 		协议格式
+ * @param		协议格式
  *
  * @returns   
  */
@@ -1973,7 +1992,7 @@ usr_exit:
  * @param ch		通道
  * @param count		告警数目
  * @param pResult	测量结果
- * @param 		告警缓冲区
+ * @param		告警缓冲区
  *
  * @returns   
  */
@@ -1981,7 +2000,7 @@ usr_exit:
 int32_t ret_cur_alarm2host(
 		int32_t ch, 
 		int32_t count,
-	       	OTDR_UploadAllData_t *pResult,
+		OTDR_UploadAllData_t *pResult,
 		struct _tagAlarm alarm_buf[]
 		)
 {
@@ -2027,8 +2046,8 @@ int32_t ret_cur_alarm2host(
 	alarmline_val.pipe = ch + 1;
 	//测量参数， 测量结果，数据头，
 	alarmline_val.datalen = sizeof(struct tms_ret_otdrparam) + sizeof(struct tms_test_result) +\
-			       	sizeof(struct tms_hebei2_data_hdr) + sizeof(struct tms_hebei2_event_hdr) + \
-			       	sizeof(int16_t)*hebei2_data_hdr.count + \
+				sizeof(struct tms_hebei2_data_hdr) + sizeof(struct tms_hebei2_event_hdr) + \
+				sizeof(int16_t)*hebei2_data_hdr.count + \
 				sizeof(struct tms_hebei2_event_val)*hebei2_event_hdr.count;
 	cur_alarm.alarmline_hdr = &alarmline_hdr;
 	cur_alarm.alarmline_val = (struct tms_alarmline_val *)alarm_buf;
@@ -2047,9 +2066,9 @@ int32_t ret_cur_alarm2host(
  * @synopsis  get_ch_total_alarm 获取某通道的全部告警
  *
  * @param arm_val[]	告警缓冲区
- * @param 		通道配置参数
+ * @param		通道配置参数
  *
- * @returns  		返回告警数目 
+ * @returns		返回告警数目 
  */
 /* ----------------------------------------------------------------------------*/
 int32_t get_ch_total_alarm(
@@ -2072,7 +2091,7 @@ int32_t get_ch_total_alarm(
 	for(i = 0; i < palarm->sec_num && i < SEC_NUM_IN_CH ;i++)
 	{
 		if(palarm->buf[i].lev > FIBER_ALARM_LEV0 &&\
-			       	palarm->buf[i].reserv >= ALARM_TRIGGER_NUM){
+				palarm->buf[i].reserv >= ALARM_TRIGGER_NUM){
 			memcpy(&alarm_val[offset], &palarm->buf[i], sizeof(struct tms_alarmlist_val));
 			offset ++;
 		}
@@ -2090,7 +2109,7 @@ usr_exit:
  *		否则，获取每个通道的cyc资源锁只能哈哈了
  * @param ch		通道
  * @param line_val[]	host格式
- * @param 		本地格式
+ * @param		本地格式
  *
  * @returns   
  */
@@ -2106,8 +2125,8 @@ int32_t convert_ch_cyc_curv2host(
 	//告警返回曲线长度测量参数，测量结果，数据点，事件点头，事件部分（只有这一部分可变）+ sizeof(int32_t)
 	//测量参数结构体中多出一个int类型的变量
 	line_val->datalen =  sizeof(struct tms_ret_otdrparam) - sizeof(int32_t)  + sizeof(struct tms_test_result) +\
-			       	sizeof(struct tms_hebei2_data_hdr) + sizeof(struct tms_hebei2_event_hdr) + \
-			       	sizeof(int16_t)*pcyc_curv->data.num + \
+				sizeof(struct tms_hebei2_data_hdr) + sizeof(struct tms_hebei2_event_hdr) + \
+				sizeof(int16_t)*pcyc_curv->data.num + \
 				sizeof(struct tms_hebei2_event_val)*pcyc_curv->event.num + sizeof(int32_t);
 	//将参数值拷贝过去
 	//memcpy(&line_val->ret_otdrparam.range,   &pcyc_curv->para ,sizeof(struct _tagUpOtdrPara ));
@@ -2140,6 +2159,10 @@ int32_t ret_total_curalarm2host()
 	struct tms_alarmline_val	alarmline_val[CH_NUM];
 	struct _tagUpOtdrCurv *curv_buf;
 	struct tms_context context;
+	struct glink_addr addr;
+
+	addr.src = ADDR_LOCAL;
+	addr.pkid = get_pkid();
 	
 	curv_buf = NULL;
 	alloc_size = 0;
@@ -2199,13 +2222,16 @@ usr_exit:
 	
 	ret = get_context_by_dst(ADDR_HOST_NODE, &context);
 	
-	if(!ret)
+	if(!ret){
+		addr.dst = context.pgb->src;
 		tms_CurAlarm_V2(context.fd,NULL,&fiber_alarm);
+	}
 	/*
 	ret = get_context_by_dst(ADDR_HOST_SERVER, &context);
-	if(!ret)
-		tms_CurAlarm_V2(&context.fd,NULL,&fiber_alarm);
-
+	if(!ret){
+		addr.dst = context.pgb->src;
+		tms_CurAlarm_V2(context.fd,NULL,&fiber_alarm);
+	}
 	*/
 
 	if(curv_buf)
@@ -2275,6 +2301,11 @@ int32_t ret_host_cyc_curv(
 	struct tms_hebei2_data_val	*hebei2_data_val;
 	struct tms_hebei2_event_hdr	*hebei2_event_hdr;
 	struct tms_hebei2_event_val	*hebei2_event_val;
+	struct glink_addr addr;
+
+	addr.dst = pcontext->pgb->src;
+	addr.src = ADDR_LOCAL;
+	addr.pkid = pcontext->pgb->pkid;
 	
 	test_result = (struct tms_test_result *)&pcyc_curv->curv.result;
 	hebei2_data_hdr = (struct tms_hebei2_data_hdr *)pcyc_curv->curv.data.id;
@@ -2295,7 +2326,7 @@ int32_t ret_host_cyc_curv(
 	{
 		ret = CMD_RET_OTHRER_ERROR;
 		printf("%s %d ch %d get ret cmd error cmd 0x%x \n",\
-			       	__FUNCTION__, __LINE__, ch + ch_offset, pcontext->pgb->cmdid);
+				__FUNCTION__, __LINE__, ch + ch_offset, pcontext->pgb->cmdid);
 		goto usr_exit;
 	}
 	hebei2_otdrdata.hebei2_data_hdr = hebei2_data_hdr;
@@ -2307,7 +2338,7 @@ int32_t ret_host_cyc_curv(
 
 	quick_lock(&pcyc_curv->lock);
 	memcpy(&ret_otdrparam, &pcyc_curv->curv, sizeof(struct _tagUpOtdrPara));
-	tms_RetOTDRData(pcontext->fd, NULL, &hebei2_otdrdata, cmd);		
+	tms_RetOTDRData(pcontext->fd, &addr, &hebei2_otdrdata, cmd);		
 
 	quick_unlock(&pcyc_curv->lock);
 usr_exit:
@@ -2344,6 +2375,11 @@ int32_t ret_host_std_curv(
 	struct tms_hebei2_event_hdr	*hebei2_event_hdr;
 	struct tms_hebei2_event_val	*hebei2_event_val;
 	struct _tagFiberSecCfg *pfiber_sec_cfg;
+	struct glink_addr addr;
+
+	addr.dst = pcontext->pgb->src;
+	addr.src = ADDR_LOCAL;
+	addr.pkid = pcontext->pgb->pkid;
 	
 	is_lock = 0;
 	ret = get_ret_curv_cmd(pcontext->pgb->cmdid, &cmd);
@@ -2378,7 +2414,7 @@ int32_t ret_host_std_curv(
 	}
 	//测量参数, not copy otdr_id[20] 
 	memcpy(&ret_otdrparam.range, &pfiber_sec_cfg->otdr_param.range, sizeof(struct tms_otdr_param) - 20);
-	tms_RetOTDRData(pcontext->fd, NULL, &hebei2_otdrdata, cmd);		
+	tms_RetOTDRData(pcontext->fd, &addr, &hebei2_otdrdata, cmd);		
 
 usr_exit:
 
@@ -2410,6 +2446,11 @@ int32_t ret_host_statis_data(
 	struct tms_getstatus_data_hdr statis_hdr;
 	struct tms_getstatus_data_val *val;
 	struct tms_ack ack;
+	struct glink_addr addr;
+
+	addr.dst = pcontext->pgb->src;
+	addr.src = ADDR_LOCAL;
+	addr.pkid = pcontext->pgb->pkid;
 	is_lock = 0;
 	ret = OP_OK;
 	ack.cmdid = pcontext->pgb->cmdid;
@@ -2423,7 +2464,7 @@ int32_t ret_host_statis_data(
 	}
 	statis_hdr.count = pchfiber_sec->statis.sec_num;
 	val = (	struct tms_getstatus_data_val *)pchfiber_sec->statis.buf;
-	tms_RetStatusData(pcontext,NULL,&statis_hdr,val,statis_hdr.count);
+	tms_RetStatusData(pcontext,&addr, &statis_hdr,val,statis_hdr.count);
 
 usr_exit:
 	if(is_lock)
@@ -2432,6 +2473,14 @@ usr_exit:
 	if(ret)
 		hb_Ret_Ack(pcontext->pgb->src, ack);
 	return ret;
+}
+int16_t get_pkid()
+{
+	quick_lock(&ctrlPkid.lock);
+	ctrlPkid.pkid++;
+	quick_unlock(&ctrlPkid.lock);
+	return ctrlPkid.pkid;
+
 }
 
 //按照C风格编译
