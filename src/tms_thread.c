@@ -130,7 +130,7 @@ void *ThreadConnectCU(void *arg)
 		if (g_201fd == 0) {
 			tms_connect();
 		}
-		ep_Ergodic(&ep, epcb_Tick, NULL);
+		// ep_Ergodic(&ep, epcb_Tick, NULL);
 		sleep(15);
 	}
 
