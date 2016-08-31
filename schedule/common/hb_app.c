@@ -989,7 +989,6 @@ int32_t create_usr_tsk()
 int32_t get_context_by_dst(int32_t dst, struct tms_context *pcontext)
 {
 	int ret;
-	ret = 2;
 	switch(dst)
 	{
 		case ADDR_HOST_NODE:
@@ -999,11 +998,14 @@ int32_t get_context_by_dst(int32_t dst, struct tms_context *pcontext)
 		       ret = tms_SelectMangerContext(pcontext);
 		       break;
 		default:
+		       ret = 2;
 		       break;
 	}
-	//大部分函数返回0，代表成功，此处有意外，上述两个调用返回1代表成功
+	//上述两个函数 1 代表成功， 0失败。转换成0代表成功，其他代表失败
 	if(ret == 1)
 		ret = 0;
+	else 
+		ret = 3;
 	return ret;
 }
 /* --------------------------------------------------------------------------*/
