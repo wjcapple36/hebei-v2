@@ -312,7 +312,10 @@ int32_t tms_Update(
     uint8_t *pdata)
 {
 	struct tms_context context;
-	tms_SelectContextByFD(fd, &context);
+	if (0 == tms_SelectContextByFD(fd, &context) ) {
+		return -1;
+	}
+
 	struct tms_dev_update_hdr hdr;
 	// uint8_t *pfdata;
 	struct tms_dev_md5 md5;
@@ -1684,7 +1687,10 @@ int32_t tms_CurAlarm_V2(
     struct tms_curalarm *val)
 {
 	struct tms_context context;
-	tms_SelectContextByFD(fd, &context);
+	
+	if (0 == tms_SelectContextByFD(fd, &context) ) {
+		return -1;
+	}
 
 	struct tms_alarmlist_hdr    *alarmlist_hdr = val->alarmlist_hdr;
 	struct tms_alarmlist_val    *alarmlist_val = val->alarmlist_val;
@@ -1724,7 +1730,6 @@ int32_t tms_CurAlarm_V2(
 	// conver otdr date
 	t_alarmline_val = alarmline_val;
 	for (int i = 0; i < line_hdr_count; i++) {
-		printf("t_ datalen %d\n", t_alarmline_val->datalen);
 		t_alarmline_val->pipe = htonl(t_alarmline_val->pipe);
 		t_alarmline_val->datalen = htonl(t_alarmline_val->datalen);
 
@@ -1743,13 +1748,9 @@ int32_t tms_CurAlarm_V2(
 		    (struct tms_ret_otdrparam *)pret_otdrparam,
 		    (struct tms_ret_otdrparam *)pret_otdrparam);
 
-		printf("\nid %s ", ptest_result->result);
-		printf("range %f  ", ptest_result->range);
-		printf("loss %f\n", ptest_result->loss);
 		tms_OTDRConv_tms_test_result(ptest_result, ptest_result);
 
 		data_hdr_count = phebei2_data_hdr->count;
-		printf("phebei2_data_hdr->count %d\n", phebei2_data_hdr->count);
 		tms_OTDRConv_tms_hebei2_data_hdr(phebei2_data_hdr, phebei2_data_hdr);
 
 		tms_OTDRConv_tms_hebei2_data_val(phebei2_data_val, phebei2_data_val, data_hdr_count);
@@ -1757,7 +1758,6 @@ int32_t tms_CurAlarm_V2(
 		event_hdr_count = phebei2_event_hdr->count;
 		tms_OTDRConv_tms_hebei2_event_hdr(phebei2_event_hdr, phebei2_event_hdr);
 		
-		printf("distance %d event_type %d \n", phebei2_event_val->distance, phebei2_event_val->event_type);
 		tms_OTDRConv_tms_hebei2_event_val(phebei2_event_val, phebei2_event_val, event_hdr_count);
 
 
@@ -1863,7 +1863,9 @@ int32_t tms_CurAlarm(
 	uint32_t event_hdr_count;
 
 	struct tms_context context;
-	tms_SelectContextByFD(fd, &context);
+	if (0 == tms_SelectContextByFD(fd, &context) ) {
+		return -1;
+	}
 
 	printf("%d\n", __LINE__);
 	memcpy(&alarmlist_hdr, val->alarmlist_hdr, sizeof(struct tms_alarmlist_hdr));
@@ -1961,9 +1963,8 @@ int32_t tms_CurAlarm(
 	 自动重连
 	 重连失败则退出
 	 */
-	printf("201 fd = %d\n", g_201fd);
 	if (g_201fd == 0) {
-		printf("201 !!! reconnect\n");
+		printf("201 !!! reconnectreconnect\n");
 		if (tms_connect() == 0) {
 			return -1;
 		}
@@ -2055,7 +2056,7 @@ static int32_t tms_AnalyseCurAlarm(struct tms_context *pcontext, int8_t *pdata, 
 	* 描述有几条告警
 	*/
 	snprintf(strout, 32, "%s/alias%d", RAM_DIR, card_id);
-	printf("strout %s\n", strout);
+	// printf("strout %s\n", strout);
 	FILE *fp;
 	fp = fopen((char *)strout, "wa");
 	fprintf(fp, "%d %d", count_alarmlist_hdr, count_alarmline_hdr);
@@ -2064,7 +2065,7 @@ static int32_t tms_AnalyseCurAlarm(struct tms_context *pcontext, int8_t *pdata, 
 
 	// 保存告警头
 	snprintf(strout, 32, "%s/alarm%d", RAM_DIR, card_id);
-	printf("strout %s\n", strout);
+	// printf("strout %s\n", strout);
 	fp = fopen((char *)strout, "wa");
 	fwrite(  (char *)palarmlist_val,
 	         sizeof(char),
@@ -2080,7 +2081,7 @@ static int32_t tms_AnalyseCurAlarm(struct tms_context *pcontext, int8_t *pdata, 
 
 	// 保存告警曲线
 	snprintf(strout, 32, "%s/otdr%d", RAM_DIR, card_id);
-	printf("strout %s\n", strout);
+	// printf("strout %s\n", strout);
 	fp = fopen((char *)strout, "wa");
 
 	// 写入该数据包末尾几乎全部数据，但不能写入末尾的EE EE FF FF，跳过末尾4byte
@@ -2153,10 +2154,6 @@ void sendonefile(int fd, char *file)
 
 int32_t tms_MergeCurAlarm(int dst_fd)
 {
-	struct tms_context context;
-	tms_SelectContextByFD(dst_fd, &context);
-	// // 防止自身环路
-	printf(" dst_fd %d\n", dst_fd);
 	// if (dst_fd == g_201fd) {
 	// return -1;
 	// }
@@ -2179,7 +2176,6 @@ int32_t tms_MergeCurAlarm(int dst_fd)
 		if (fp) {
 			fseek(fp, 0, SEEK_END);
 			len_file += ftell(fp);
-			hb2_dbg("%s f len %d\n", strout, (int)ftell(fp));
 			fclose(fp);
 		}
 
@@ -2189,7 +2185,6 @@ int32_t tms_MergeCurAlarm(int dst_fd)
 		if (fp) {
 			fseek(fp, 0, SEEK_END);
 			len_file += ftell(fp);
-			hb2_dbg("%s f len %d\n", strout, (int)ftell(fp));
 			fclose(fp);
 		}
 	}
@@ -2200,15 +2195,17 @@ int32_t tms_MergeCurAlarm(int dst_fd)
 			fscanf(fp, "%d %d", &count_alarmlist_hdr, &count_alarmline_hdr);
 			alarmlist_hdr.count += count_alarmlist_hdr;
 			alarmline_hdr.count += count_alarmline_hdr;
-			hb2_dbg("count %d\n", count_alarmlist_hdr);
 		}
 	}
-	// alarmlist_hdr.count = 4;
-	// alarmline_hdr.count = 4;
-
 	alarmlist_hdr.count = htonl(alarmlist_hdr.count);
 	alarmline_hdr.count = htonl(alarmline_hdr.count);
 
+
+	struct tms_context context;
+	if (0 == tms_SelectContextByFD(dst_fd, &context) ) {
+		return -1;
+	}
+	// // 防止自身环路
 
 	// 发送合并数据
 	int len = sizeof(struct tms_alarmlist_hdr) +
@@ -2232,14 +2229,14 @@ int32_t tms_MergeCurAlarm(int dst_fd)
 
 	for (int i = 1; i <= MAX_CARD_1U; i++) {
 		snprintf(strout, 32, "%s/alarm%d", RAM_DIR, i);
-		printf("strout %s\n", strout);
+		// printf("strout %s\n", strout);
 		sendonefile(fd, strout);
 	}
 	printf("sizeof(struct tms_alarmline_hdr) %d\n", sizeof(struct tms_alarmline_hdr));
 	glink_SendSerial(fd, (uint8_t *)&alarmline_hdr, sizeof(struct tms_alarmline_hdr) );
 	for (int i = 1; i <= MAX_CARD_1U; i++) {
 		snprintf(strout, 32, "%s/otdr%d", RAM_DIR, i);
-		printf("strout %s\n", strout);
+		// printf("strout %s\n", strout);
 		sendonefile(fd, strout);
 	}
 	// snprintf(strout, 32, "%s/tmp%d", RAM_DIR, 1);
@@ -2290,7 +2287,9 @@ int32_t tms_RetOTDRData(
     unsigned long cmdid)
 {
 	struct tms_context context;
-	tms_SelectContextByFD(fd, &context);
+	if (0 == tms_SelectContextByFD(fd, &context) ) {
+		return -1;
+	}
 
 	struct tms_ret_otdrparam     *pmem_ret_otdrparam;/*ret_otdrparam,*/
 	struct tms_ret_otdrparam_p1     *pmem_ret_otdrparam_p1;
@@ -2440,7 +2439,9 @@ int32_t tms_AckEx(
 {
 	struct tms_context context;
 	struct tms_ack ack;
-	tms_SelectContextByFD(fd, &context);
+	if (0 == tms_SelectContextByFD(fd, &context) ) {
+		return -1;
+	}
 	ack.errcode  = htonl(pack->errcode);
 	ack.cmdid 	 = htonl(pack->cmdid);
 	// ack.reserve1 = htonl(pack->reserve1);
@@ -2707,7 +2708,6 @@ int32_t tms_Analyse(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 	uint32_t cmdid, cmdh, cmdl;
 	struct glink_base *pbase_hdr;// glinkbase;
 	struct tms_analyse_array *pwhichArr = NULL;
-	printf("%s() fd %d\n", __FUNCTION__, pcontext->fd);
 #ifdef CONFIG_ACK_DEVICE
 	tms_AckDevice(pcontext, pdata, len);
 #endif
@@ -2989,7 +2989,6 @@ int _ep_find(struct ep_con_t *ppconNode, void *ptr)
 
 	struct _ep_find_val *pval = (struct _ep_find_val *)ptr;
 
-	printf("fd %d\n", pcontext->fd);
 
 	//
 	if(pcontext->fd == pval->fd) {
@@ -3060,7 +3059,6 @@ void tms_RemoveAnyMangerContext(int fd)
 
 int tms_connect()
 {
-	hb2_dbg("%s() %d\n", __FUNCTION__, __LINE__);
 #ifdef DBG_201IP
 	g_201fd = connect_first_card("127.0.0.1", "6000"); //debug
 #else

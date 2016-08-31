@@ -45,8 +45,8 @@ void NotifyCU(int fd)
  * @brief	穷举所有网络连接并发送心跳，自连接同样发送，自身不处理心跳
  * @param	null
  * @retval	null
- * @remarks	
- * @see	
+ * @remarks
+ * @see
  */
 
 int epcb_Tick(struct ep_con_t *ppconNode, void *ptr)
@@ -126,10 +126,14 @@ void *ThreadConnectCU(void *arg)
 
 		sleep(1);
 #endif
-		// ep_Ergodic(&ep, epcb_Tick, NULL);
+		// 自动重链201
+		if (g_201fd == 0) {
+			tms_connect();
+		}
+		ep_Ergodic(&ep, epcb_Tick, NULL);
 		sleep(15);
 	}
-	
+
 
 	return NULL;
 }
