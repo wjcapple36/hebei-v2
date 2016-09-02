@@ -60,21 +60,25 @@ int32_t tsk_OtdrAlgo(void * arg)
 		}
 		if(OtdrCtrl.FindEvent){
 			ch = algroCHInfo.ch;
-			send_otdr_data_host(&MeasureResult, &algroCHInfo);
-			refresh_cyc_curv_after_test(
-					 ch,
-					&MeasureResult, 
-					&otdrDev[ch].curv
-					);
-			 find_alarm_on_fiber(
-					 ch,
-					&MeasureResult,
+			if(algroCHInfo.mod == OTDR_TEST_MOD_USR)
+				send_otdr_data_host(&MeasureResult, &algroCHInfo);
+			else 
+			{
+				refresh_cyc_curv_after_test(
+						ch,
+						&MeasureResult, 
+						&otdrDev[ch].curv
+						);
+				find_alarm_on_fiber(
+						ch,
+						&MeasureResult,
 					&OtdrCtrl,
 					&OtdrState,
 					&chFiberSec[ch],
 					&algroCHInfo,
 					&otdrDev[ch]
 					);
+			}
 
 		}
 

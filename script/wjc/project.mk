@@ -20,7 +20,7 @@ LFLAGS		+= -lreadline -lpthread -lhistory   -ltermcap -lminishell-ex -lepollserv
 # -lsqlite3
 LIB_DIR 	+= 
 
-CFLAGS  += -DHEBEI2_DBG -g 
+CFLAGS  += -g 
 CFLAGS	+= -DPRINT_CMD_NAME_DBG 
 CFLAGS	+= -DTRACE_DBG 
 
