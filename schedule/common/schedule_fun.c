@@ -355,8 +355,8 @@ void OtdrStateInit_r(OtdrStateVariable_t  *pOtdrState)
 	pOtdrState->Points_1m = 2*pOtdrState->MeasureParam.n * pOtdrState->RealSampleRate_Hz /C;
 	if(MeasureLength_m > 60000)
 	{
-		if(PulseWidth_ns > 10240)           pOtdrState->MinNoiseAmp = -8;
-		else if(PulseWidth_ns > 5120)       pOtdrState->MinNoiseAmp = -7;
+		if(PulseWidth_ns > 10000)           pOtdrState->MinNoiseAmp = -8;
+		else if(PulseWidth_ns > 5000)       pOtdrState->MinNoiseAmp = -7;
 		else if(PulseWidth_ns > 2560)       pOtdrState->MinNoiseAmp = -6;
 		else                                pOtdrState->MinNoiseAmp = -5;
 	}

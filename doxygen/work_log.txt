@@ -1,4 +1,8 @@
 /*! \page workhis 河北2期项目 项目工作日志
+2016-09-01: Menglong Wu
+    - 添加对网管客户端、网管、节点管理器三个设备识别支持
+        - tms_SelectMangerClientContext
+
 2016-08-22: Menglong Wu
     * 简单过滤网管请求的通道信息，如不是本地通道则不做任何响应
         - 0x20000000    ID_SETOTDRFPGAINFO

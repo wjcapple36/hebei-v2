@@ -231,6 +231,7 @@ extern "C" {
 
 #define ADDR_MANGER (0x3e)		// 网管地址
 #define ADDR_NODE_MANGER (0x1e) 	//节点管理器地址
+#define ADDR_MANGER_CLIENT (0x2e) 	//网管客户端
 // end hebei 2
 
 // hebei2
@@ -746,7 +747,7 @@ int32_t tms_Transmit2Manager(struct tms_context *pcontext, int8_t *pdata, int32_
 int32_t  tms_SelectContextByFD(int fd, struct tms_context *context);
 int32_t tms_SelectMangerContext(struct tms_context *context);
 int32_t tms_SelectNodeMangerContext(struct tms_context *context);
-
+int32_t tms_SelectMangerClientContext(struct tms_context *context);
 
 int32_t tms_OTDRBasicInfo(
     struct tms_context *pcontext,

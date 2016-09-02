@@ -32,6 +32,7 @@ extern "C" {
 #define MAX_CARD_1U (2) // 河北2期项目每个1U设备最多只有2块板卡
 // #define MAX_CARD_1U (1) // 河北2期项目每个1U设备最多只有2块板卡
 int g_manger = 0, g_node_manger = 0;
+int g_manger_client = 0;
 char unuse1[1000] = {0};
 int g_201fd = 0;
 char unuse2[1000] = {0};
@@ -68,7 +69,7 @@ int (*fecho)(const char *__restrict __format, ...) = printf;
 
 static inline bool IsValidPipe (uint32_t pipe)
 {
-// 定义PHONEY_CH_OFFSET宏，表示下面的ch_offset不起到任何作用，仅为编译
+	// 定义PHONEY_CH_OFFSET宏，表示下面的ch_offset不起到任何作用，仅为编译
 #if defined(PHONEY_CH_OFFSET)
 	volatile int32_t ch_offset = 1;
 #else
@@ -76,7 +77,7 @@ static inline bool IsValidPipe (uint32_t pipe)
 #endif
 
 
-// DO_NOT_ISVALIDPIPE 仿真代码不在乎 pipe是否有效，永远返回真
+	// DO_NOT_ISVALIDPIPE 仿真代码不在乎 pipe是否有效，永远返回真
 #if defined(DO_NOT_ISVALIDPIPE)
 	return true;
 #else
@@ -1220,7 +1221,7 @@ static int32_t tms_AnalyseGetBasicInfo(struct tms_context *pcontext, int8_t *pda
 		if (g_node_manger != 0 && g_node_manger != pcontext->fd) {
 			// close(g_node_manger);
 		}
-		g_node_manger = pcontext->fd;	
+		g_node_manger = pcontext->fd;
 	}
 	else {
 	}
@@ -1686,7 +1687,7 @@ int32_t tms_CurAlarm_V2(
     struct tms_curalarm *val)
 {
 	struct tms_context context;
-	
+
 	if (0 == tms_SelectContextByFD(fd, &context) ) {
 		return -1;
 	}
@@ -1713,12 +1714,12 @@ int32_t tms_CurAlarm_V2(
 	int len, tlen;
 	struct glink_base  base_hdr;
 
-	
+
 	printf("alarmlist_hdr->count %d\n", alarmlist_hdr->count);
 	// conver alarm struct
 	list_hdr_count = alarmlist_hdr->count;	// 保持原来的
 	alarmlist_hdr->count = htonl(alarmlist_hdr->count);
-	
+
 	printf("alarmlist_val->fiber %d pipe %d\n", alarmlist_val->fiber, alarmlist_val->pipe);
 	tms_OTDRConv_tms_alarmlist_val(alarmlist_val, alarmlist_val, list_hdr_count);
 	line_hdr_count	= alarmline_hdr->count;  // 保持原来的
@@ -1753,10 +1754,10 @@ int32_t tms_CurAlarm_V2(
 		tms_OTDRConv_tms_hebei2_data_hdr(phebei2_data_hdr, phebei2_data_hdr);
 
 		tms_OTDRConv_tms_hebei2_data_val(phebei2_data_val, phebei2_data_val, data_hdr_count);
-		
+
 		event_hdr_count = phebei2_event_hdr->count;
 		tms_OTDRConv_tms_hebei2_event_hdr(phebei2_event_hdr, phebei2_event_hdr);
-		
+
 		tms_OTDRConv_tms_hebei2_event_val(phebei2_event_val, phebei2_event_val, event_hdr_count);
 
 
@@ -1778,18 +1779,18 @@ int32_t tms_CurAlarm_V2(
 	for (int i = 0; i < line_hdr_count; i++) {
 		phebei2_data_hdr  = t_alarmline_val->hebei2_data_hdr;
 		phebei2_event_hdr = t_alarmline_val->hebei2_event_hdr;
-		tlen += 8 + 
+		tlen += 8 +
 #if 0
-		    sizeof(struct tms_ret_otdrparam) +
+		        sizeof(struct tms_ret_otdrparam) +
 #else
-		    sizeof(struct tms_ret_otdrparam_p2) +
+		        sizeof(struct tms_ret_otdrparam_p2) +
 #endif
-		    sizeof(struct tms_test_result) +
-		    sizeof(struct tms_hebei2_data_hdr) +
-		    sizeof(struct tms_hebei2_data_val) * htonl(phebei2_data_hdr->count) +
-		    sizeof(struct tms_hebei2_event_hdr) +
-		    sizeof(struct tms_hebei2_event_val) * htonl(phebei2_event_hdr->count);
-		   t_alarmline_val++;
+		        sizeof(struct tms_test_result) +
+		        sizeof(struct tms_hebei2_data_hdr) +
+		        sizeof(struct tms_hebei2_data_val) * htonl(phebei2_data_hdr->count) +
+		        sizeof(struct tms_hebei2_event_hdr) +
+		        sizeof(struct tms_hebei2_event_val) * htonl(phebei2_event_hdr->count);
+		t_alarmline_val++;
 
 	}
 	// 汇总长度
@@ -1832,7 +1833,7 @@ int32_t tms_CurAlarm_V2(
 		glink_SendSerial(fd, (uint8_t *)phebei2_event_val, sizeof(struct tms_hebei2_event_val) * htonl(phebei2_event_hdr->count));
 		t_alarmline_val++;
 	}
-	
+
 	glink_SendTail(fd);
 	pthread_mutex_unlock(&context.mutex);
 
@@ -2338,7 +2339,7 @@ int32_t tms_RetOTDRData(
 	tms_OTDRConv_tms_hebei2_data_hdr(pmem_hebei2_data_hdr, pmem_hebei2_data_hdr);
 
 	tms_OTDRConv_tms_hebei2_data_val(&pmem_hebei2_data_val[0], &pmem_hebei2_data_val[0], data_hdr_count);
-			
+
 	event_hdr_count = pmem_hebei2_event_hdr->count;
 	tms_OTDRConv_tms_hebei2_event_hdr(pmem_hebei2_event_hdr, pmem_hebei2_event_hdr);
 
@@ -2691,6 +2692,28 @@ struct tms_analyse_array sg_analyse_0x8000xxxx[] = {
 	// {	tms_AnalyseUnuse	,8},//	0x80000096	ID_RET_OLP_INFO
 
 };
+
+/**
+ * @brief	根据原地址（本地字节序）识别来的连接究竟是什么类型的设备
+	节点管理器、网管客户端、网管
+ */
+static void tms_WhoAreYou(struct tms_context *context,uint32_t srcaddr)
+{
+	switch(srcaddr) {
+	case ADDR_MANGER:
+		g_manger = context->fd;
+		break;
+	case ADDR_NODE_MANGER:
+		g_node_manger = context->fd;
+		break;
+	case ADDR_MANGER_CLIENT:
+		g_manger_client = context->fd;
+		break;
+	default:
+		printf("Unknow srcaddr %x\n", srcaddr);
+	}
+}
+
 /**
  * @brief	分析TMSxx协议数据帧，传递到该函数的数据必须是一个合法的glink帧结构
  * @param[in]	pcontext TMSxx 设备上下文描述 struct tms_context
@@ -2743,6 +2766,8 @@ int32_t tms_Analyse(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 	pbase_hdr->cmdid 	= htonl(pbase_hdr->cmdid);
 	// pbase_hdr->datalen 	= htonl(pbase_hdr->datalen);
 	pcontext->pgb = pbase_hdr;
+
+	tms_WhoAreYou(pcontext, pbase_hdr->src);
 
 	// printf("----------id %x len %x-----------\n", pbase_hdr->cmdid,glinkbase.datalen);
 	// PrintfMemory((uint8_t*)pdata,20);
@@ -3007,7 +3032,7 @@ int32_t  tms_SelectContextByFD(int fd, struct tms_context *context)
 
 	val.fd = fd;
 	val.context = context;
-	
+
 	val.isfind = false;
 	ep_Ergodic(&ep, _ep_find, &val);
 
@@ -3045,6 +3070,21 @@ int32_t tms_SelectNodeMangerContext(struct tms_context *context)
 	return 0;
 }
 
+
+int32_t tms_SelectMangerClientContext(struct tms_context *context)
+{
+	struct tms_context con;
+	int ret;
+
+	ret = tms_SelectContextByFD(g_manger_client, &con);
+
+	if (ret) {
+		memcpy(context, &con, sizeof(struct tms_context));
+		return 1;
+	}
+	return 0;
+}
+
 // 在远方断开连接后调用该函数，判断是否是网管
 void tms_RemoveAnyMangerContext(int fd)
 {
@@ -3057,6 +3097,9 @@ void tms_RemoveAnyMangerContext(int fd)
 	}
 	else if (fd == g_201fd) {
 		g_201fd = 0;
+	}
+	else if (fd == g_manger_client) {
+		g_manger_client = 0;
 	}
 }
 

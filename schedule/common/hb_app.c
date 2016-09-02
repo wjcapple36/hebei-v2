@@ -1001,6 +1001,8 @@ int32_t get_context_by_dst(int32_t dst, struct tms_context *pcontext)
 		case ADDR_HOST_SERVER:
 		       ret = tms_SelectMangerContext(pcontext);
 		       break;
+		case ADDR_HOST_CLIENT:
+		       ret = tms_SelectMangerClientContext(pcontext);
 		default:
 		       ret = 2;
 		       break;
@@ -1444,7 +1446,7 @@ int32_t get_fiber_alarm_from_event(
 	int32_t alarm_lev, ret, is_find_event;
 	float cur_inloss, std_inloss, diff_loss;
 
-	limit_pt = pOtdrState->M;
+	limit_pt = 4*pOtdrState->M;
 	std_event_num = pstd_event_hdr->count;
 	cur_event_num = AllEvent->Event.EventNum;
 
@@ -1596,7 +1598,7 @@ int32_t find_alarm_on_fiber(int32_t ch,
 
 	float loss_sec, loss_sec_diff; 
 	int32_t loss_sec_lev, distance_space;
-	int32_t ret, i, j;
+	int32_t ret, i, j, error_range;
 	int32_t alarm_num, cur_alarm_num;
 	char cur_time[20] ={0};
 	const char* pFormatTime = "%Y-%m-%d %H:%M:%S";
@@ -1632,6 +1634,7 @@ int32_t find_alarm_on_fiber(int32_t ch,
 			__FUNCTION__,__LINE__, ch,pAlgroCHInfo->resource_id, pOtdrDev->ch_state.resource_id);
 		goto usr_exit;
 	}
+	error_range = pOtdrState->M *4 / pOtdrState->Points_1m;
 	//开始查找事件点
 	alarm_num = 0;
 	pstatis->state = 1;
@@ -1655,7 +1658,7 @@ int32_t find_alarm_on_fiber(int32_t ch,
 		//光纤段统计信息
 		pstatis->buf[i].attu = loss_sec;
 		memcpy(pstatis->buf[i].date, cur_time, sizeof(cur_time));
-		pstatis->buf[i].sec = i + 1;
+		pstatis->buf[i].sec = pstd_fiber_val[i].fiber_num;
 		pstatis->buf[i].ch = ch + ch_offset;
 		//光纤段衰减值产生的告警级别,如果通过事件找不到告警，则判断此值
 		loss_sec_lev = get_alarm_lev(loss_sec_diff,&pstd_fiber_val[i]);
@@ -1702,16 +1705,14 @@ int32_t find_alarm_on_fiber(int32_t ch,
 
 		}
 		distance_space = abs(event_alarm.first.pos - palarm->buf[i].pos[0]);
+		palarm->buf[i].pos[0] = event_alarm.first.pos;
 		//级别不相等或者距离相差超过300米判断为告警发生变化
-		if(!not_deal &&(event_alarm.first.lev != palarm->buf[i].lev || distance_space > 300))
+		if(!not_deal &&(event_alarm.first.lev != palarm->buf[i].lev || distance_space > error_range))
 		{
 			palarm->buf[i].ch = ch + ch_offset;
 			palarm->buf[i].lev = event_alarm.first.lev;
-			palarm->buf[i].pos[0] = event_alarm.first.pos;
-			palarm->buf[i].reserv = 1;
-			palarm->buf[i].sec = i + 1;
+			palarm->buf[i].sec = pstd_fiber_val[i].fiber_num;
 			palarm->buf[i].type = 1;
-			palarm->buf[i].reserv = 0;
 			//如果是告警消失，则马上上报, 否则，仅仅是出现告警次数标记为1
 			if(palarm->buf[i].lev == FIBER_ALARM_LEV0)
 			{
@@ -2218,14 +2219,15 @@ usr_exit:
 	fiber_alarm.alarmlist_hdr = &alarmlist_hdr;
 	fiber_alarm.alarmlist_val = alarmlist_val;
 	//曲线发给201，由201综合打包发送到cu
-	//tms_CurAlarm_V2(g_201fd,NULL,&fiber_alarm);
-	
+	tms_CurAlarm_V2(g_201fd,NULL,&fiber_alarm);
+	/*	
 	ret = get_context_by_dst(ADDR_HOST_NODE, &context);
 	
 	if(!ret){
 		addr.dst = context.pgb->src;
 		tms_CurAlarm_V2(context.fd,NULL,&fiber_alarm);
 	}
+	*/
 	/*
 	ret = get_context_by_dst(ADDR_HOST_SERVER, &context);
 	if(!ret){
