@@ -82,6 +82,8 @@ int32_t initialize_otdr_dev(struct _tagOtdrDev *pOtdrDev,
 		int32_t ch_num);
 //初始化光纤段参数
 int32_t initialize_fiber_sec_cfg();
+//初始化系统IP
+int32_t initial_system_ip();
 //更新通道参数
 int32_t get_ch_para_from_fiber_sec(struct _tagCHPara *pCHPara, 
 		const struct _tagCHFiberSec *FiberSec);

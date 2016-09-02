@@ -61,7 +61,8 @@ int32_t initialize_sys_para()
 	//初始化ip控制对象
 	memset(&IPCtrl, 0, sizeof(struct _tagIpSwitchCtr));
 	read_slot();
-	read_net_flag();
+	//系统启动要检查IP
+	initial_system_ip();
 	ctrlPkid.pkid = 0x200;
 	quick_lock_init(&ctrlPkid.lock);
 
@@ -1096,6 +1097,38 @@ usr_exit:
 }
 /* --------------------------------------------------------------------------*/
 /**
+ * @synopsis  initial_systme_ip 系统初始化IP
+ *
+ * @returns   
+ */
+/* ----------------------------------------------------------------------------*/
+int32_t initial_system_ip()
+{
+	int32_t ret, flag;
+	int32_t i, slot;
+	char msg[NUM_CHAR_LOG_MSG] ={0};
+	for(i = 0; i < 10;i++)
+	{
+		ret = get_net_flag(&spiDev, &flag);
+		if(!ret )
+			break;
+	}
+	if(ret)
+		goto usr_exit;
+	//根据通道偏移量判断槽位
+	slot = ch_offset > CH_NUM ? 1:0;
+	check_local_ip(flag, slot);
+	
+usr_exit:
+	if(ret != OP_OK){
+		exit_self(errno, __FUNCTION__, __LINE__, "get net flag error\0");
+	}
+	return ret;
+
+}
+
+/* --------------------------------------------------------------------------*/
+/**
  * @synopsis  check_local_ip 根据网段标志和槽位检查本机IP
  *
  * @param flag	网段标志 0 代表1网段 1 代表0网段
@@ -1123,7 +1156,8 @@ int32_t check_local_ip(int32_t flag, int32_t slot)
 	net_sec = flag ^ 1;
 	snprintf(hoped_ip,16 , "192.168.%d.%d\0",net_sec, slot + 201);	
 	snprintf(hoped_gw,16 , "192.168.%d.1\0",net_sec);	
-
+	
+	printf("%s %d cur ip %s hoped ip %s\n", __FUNCTION__, __LINE__,ip, hoped_ip);
 	if(strcmp(ip, hoped_ip))
 		modifiy_eq_ip(hoped_ip,"255.255.255.0\0", hoped_gw);
 	
