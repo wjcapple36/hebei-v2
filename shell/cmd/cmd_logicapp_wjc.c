@@ -103,10 +103,22 @@ static int do_get_fpga_info(void *ptr, int argc, char **argv)
 		ret = get_net_flag(&spiDev, &op);
 	else if(argc >= 2 && strcmp(argv[1], "slot") == 0)
 		ret = get_dev_slot(&spiDev, &op);
-	else if(argc >= 2 && strcmp(argv[1], "alarm1") == 0)
+	else if(argc >= 2 && strcmp(argv[1], "alarm1") == 0){
+		if(argc == 3)
+			op = atoi(argv[2]);
+		else
+			op = 0;
+		printf("%s %d alarm occur ch %d \n", __FUNCTION__, __LINE__, op);
 		ret = alarm_find(&spiDev, op);
-	else if(argc >= 2 && strcmp(argv[1], "alarm0") == 0)
+	}
+	else if(argc >= 2 && strcmp(argv[1], "alarm0") == 0){
+		if(argc == 3)
+			op = atoi(argv[2]);
+		else
+			op = 0;
+		printf("%s %d alarm fade ch %d \n", __FUNCTION__, __LINE__, op);
 		ret = alarm_disappear(&spiDev, op);
+	}
 	else if(argc >= 2 && strcmp(argv[1], "commu_0") == 0)
 		ret = set_card_commu_state(&spiDev, 0);
 	else if(argc >= 2 && strcmp(argv[1], "commu_1") == 0)

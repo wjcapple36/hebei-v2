@@ -47,6 +47,8 @@ int32_t initialize_sys_para()
 {
 	int32_t ret, slot;
 	ret = OP_OK;
+	//dev指针，设备地址，mod,bits,delay,speed
+	initial_spi_dev(&spiDev,"/dev/spidev1.0",0,8,0,20000000);
 	//如果配置文件不存在则创建
 	creat_folder(cfg_path);
 	//如果日志文件不存在则创建
@@ -56,8 +58,6 @@ int32_t initialize_sys_para()
 	read_ch_fpga_info(&chFpgaInfo, CH_NUM);
 	read_node_name_address(&devMisc);
 	memset(&usrOtdrTest, 0, sizeof(struct _tagUsrOtdrTest));
-	//dev指针，设备地址，mod,bits,delay,speed
-	initial_spi_dev(&spiDev,"/dev/spidev1.0",0,8,0,20000000);
 	//初始化ip控制对象
 	memset(&IPCtrl, 0, sizeof(struct _tagIpSwitchCtr));
 	read_slot();
@@ -87,6 +87,7 @@ int32_t initialize_fiber_sec_cfg()
 	
 	for(i = 0; i < CH_NUM;i++)
 	{
+		alarm_disappear(&spiDev,i);
 		quick_lock_init(&chFiberSec[i].lock);
 		memset(&chFiberSec[i].para,0, sizeof(struct _tagFiberSecCfg));		
 		memset(&chFiberSec[i].alarm,0, sizeof(struct _tagSecFiberAlarm));		
@@ -225,7 +226,7 @@ int32_t save_fiber_sec_para(int ch,
 	secHead.data_num = pfiber_sec->otdr_hdr->count;
 	secHead.event_num = pfiber_sec->event_hdr->count;
 	ret = OP_OK;
-
+	fp = NULL;
 	snprintf(file_path,FILE_PATH_LEN , "%s%s_%d.cfg",cfg_path, file_fiber_sec,ch);
 	//如果段数目为0，那么就是清空该光线段为的配置信息
 	if(!secHead.sec_num )
@@ -238,6 +239,7 @@ int32_t save_fiber_sec_para(int ch,
 		}
 		potdr_dev->ch_ctrl.is_cfged = 0;
 		quick_unlock(&pch_fiber_sec->lock);
+		alarm_disappear(&spiDev,ch);
 		return ret;
 	}
 
@@ -337,6 +339,7 @@ int32_t save_fiber_sec_para(int ch,
 	}
 		
 	quick_unlock(&pch_fiber_sec->lock);
+	alarm_disappear(&spiDev,ch);
 
 usr_exit:
 	if(fp != NULL)
@@ -1004,6 +1007,7 @@ int32_t get_context_by_dst(int32_t dst, struct tms_context *pcontext)
 		       break;
 		case ADDR_HOST_CLIENT:
 		       ret = tms_SelectMangerClientContext(pcontext);
+		       break;
 		default:
 		       ret = 2;
 		       break;
@@ -1778,6 +1782,10 @@ int32_t find_alarm_on_fiber(int32_t ch,
 	palarm->alarm_num = alarm_num;
 	ret = OP_OK;
 //	ret_cur_alarm2host(ch, 1, pResult, &fiber_alarm.first);
+	if(palarm->alarm_num > 0)
+		alarm_find(&spiDev, ch);
+	else
+		alarm_disappear(&spiDev, ch);
 
 usr_exit:
 	quick_unlock(&pFibersec->lock);
