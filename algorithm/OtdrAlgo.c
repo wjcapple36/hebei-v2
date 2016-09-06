@@ -89,15 +89,12 @@ void DeleteOsc(Int32 input[], Int32 DataLen, Int32 sat)
     Int32 j, t, peakValue, osc;
     Int32 SatStartPos, SatEndPos;
     
-#if 0
+#if	1 
 
-    if((OtdrState.MeasureParam.PulseWidth_ns <= 640) && (OtdrCtrl.EnableDeleteJitter))   exit = 0;
-	if(exit || (OtdrState.MeasureParam.MeasureLength_m > 60000))    return;
     
 /************************************* ????量??确?????????? **************************************/
     k = OtdrState.RealSampleRate_MHz / CLK_100MHz;
-    if(k < 1)   return;
-	interval = MAX(OtdrState.M, 4*k);
+    interval = MAX(OtdrState.M, 4*k);
     
 /************************************** ??平???????竦床?平 ***************************************/
     printf("smoothing sat");

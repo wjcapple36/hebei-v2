@@ -1730,7 +1730,7 @@ int32_t find_alarm_on_fiber(int32_t ch,
 
 		
 		//通过事件没有找到告警，但通过光纤段衰减值找到了告警
-		if(i == 0 && event_alarm.first.pos == sec_coord.start)
+		if(i == 0 && abs (event_alarm.first.pos - sec_coord.start) < 4*pOtdrState->M)
 			event_alarm.first.pos = 0;
 
 		event_alarm.first.pos /= pOtdrState->Points_1m; 
@@ -2261,15 +2261,15 @@ usr_exit:
 	fiber_alarm.alarmlist_hdr = &alarmlist_hdr;
 	fiber_alarm.alarmlist_val = alarmlist_val;
 	//曲线发给201，由201综合打包发送到cu
-	tms_CurAlarm_V2(g_201fd,NULL,&fiber_alarm);
-	/*	
+	//tms_CurAlarm_V2(g_201fd,NULL,&fiber_alarm);
+		
 	ret = get_context_by_dst(ADDR_HOST_NODE, &context);
 	
 	if(!ret){
 		addr.dst = context.pgb->src;
 		tms_CurAlarm_V2(context.fd,NULL,&fiber_alarm);
 	}
-	*/
+	
 	/*
 	ret = get_context_by_dst(ADDR_HOST_SERVER, &context);
 	if(!ret){

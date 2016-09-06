@@ -1609,7 +1609,8 @@ Int32 GetCurveSaturatePoint(const OTDR_ChannelData_t *OtdrData, Int32 DataLen)
             }
             MaxValue(An, i, j, &temp, NULL, DATA_TYPE_INT);
             count = GetCount(An, i, j, temp, 1);
-            
+	    printf("%s %d count = %d max = %d i = %d j = %d th = %d tmp = %d \n", \
+			   __FUNCTION__, __LINE__, count, maxcount,i,j ,Threshold,temp); 
             if(count >= maxcount)
             {
                 LastSaturate = 1;
