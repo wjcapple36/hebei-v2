@@ -448,7 +448,7 @@ int32_t GetSaturateThreshold_r(const int32_t input[], OtdrStateVariable_t *pOtdr
     
     if(count < maxcount)
     {
-
+#if 0
         acc = OtdrCtrl.AccCountOnce-2;
         if(pOtdrState->MeasureParam.MeasureLength_m == 5000)  acc = OtdrCtrl.AccCountOnce-4;
         acc = acc * (pOtdrState->TotalMeasureTime / TIMES_COUNT_ONCE);
@@ -461,6 +461,7 @@ int32_t GetSaturateThreshold_r(const int32_t input[], OtdrStateVariable_t *pOtdr
             printf(", but I find it in anther way\n");
         }
         else    printf("\n");
+#endif
     }
     else
     {
