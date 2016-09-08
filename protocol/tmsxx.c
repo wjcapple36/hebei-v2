@@ -91,6 +91,7 @@ static inline bool IsValidPipe (uint32_t pipe)
 }
 
 extern struct ep_t ep;
+extern struct ep_t ep201;
 int connect_first_card(char *str_addr, char *str_port)
 {
 	printf("%s\n", __FUNCTION__);
@@ -106,7 +107,7 @@ int connect_first_card(char *str_addr, char *str_port)
 	port     = (unsigned short)atoi(str_port);
 
 	printf("Request connect %s:%d\n", pstrAddr, port);
-	if (0 == ep_Connect(&ep, &client, pstrAddr, port)) {
+	if (0 == ep_Connect(&ep201, &client, pstrAddr, port)) {
 		// if (0 == ep_Connect(&ep,&client, "127.0.0.1", 6000)) {
 		printf("client %s:%d\n",
 		       inet_ntoa(client.loc_addr.sin_addr),
@@ -144,6 +145,7 @@ void PrintfMemory(uint8_t *buf, uint32_t len)
 
 
 static int32_t tms_AnalyseUnuse(struct tms_context *pcontext, int8_t *pdata, int32_t len);
+static int32_t tms_DbgAckSuccess(struct tms_context *pcontext, int8_t *pdata, int32_t len);
 // static int32_t tms_Transmit2Dev(struct tms_context *pcontext, int8_t *pdata, int32_t len);
 // static int32_t tms_Transmit2Manager(struct tms_context *pcontext, int8_t *pdata, int32_t len);
 
@@ -305,37 +307,31 @@ static int32_t tms_AnalyseTick(struct tms_context *pcontext, int8_t *pdata, int3
 int32_t tms_Update(
     int fd,
     struct glink_addr *paddr,
-    int32_t frame,
-    int32_t slot,
-    int32_t type,
-    uint8_t (*target)[16],
+    char *fname,
     int32_t flen,
     uint8_t *pdata)
 {
+	printf("LINE: %d\n",__LINE__);
 	struct tms_context context;
 	if (0 == tms_SelectContextByFD(fd, &context) ) {
+		printf("LINE: %d\n",__LINE__);
 		return -1;
 	}
 
-	struct tms_dev_update_hdr hdr;
+	struct tms_hebei2_update_hdr ver_hdr;
 	// uint8_t *pfdata;
-	struct tms_dev_md5 md5;
+	struct tms_hebei2_update_md5 md5;
 	int len;
 
 	// Step 1.分配内存并各指针指向相应内存
-	len = sizeof(struct tms_dev_update_hdr) + flen + sizeof(struct tms_dev_md5);
-
+	len = sizeof(struct tms_hebei2_update_hdr) + flen + sizeof(struct tms_hebei2_update_md5);
+printf("LINE: %d\n",__LINE__);
 	printf("Send bin file:\n"
-	       "\tf%d/s%d/t%d\n"
-	       "\tlen   :%d Byte\n"
-	       "\ttarget:%s\n",
-	       frame, slot, type, flen, target[0]);
+		"\tname   :%s\n"
+	       "\tlen   :%d Byte\n",
+	       fname, flen);
 	// Step 2.各字段复制
-	hdr.frame = htonl(frame);
-	hdr.slot  = htonl(slot);
-	hdr.type  = htonl(type);
-	memcpy(hdr.target, &target[0][0], 16);
-	hdr.flen  = htonl(flen);
+	ver_hdr.flen  = htonl(flen);
 
 	//TODO MD5
 	// memcpy(md5.md5, "12345", sizeof("12345"));//debug
@@ -365,94 +361,92 @@ int32_t tms_Update(
 		// tms_SelectFdByAddr(paddr->dst);
 
 	}
+	printf("LINE: %d fd %d\n",__LINE__, fd);
 	glink_Build(&base_hdr, ID_UPDATE, len);
-	pthread_mutex_lock(&context.mutex);
+	// pthread_mutex_lock(&context.mutex);
 	glink_SendHead(fd, &base_hdr);
-	glink_SendSerial(fd, (uint8_t *)&hdr,   sizeof(struct tms_dev_update_hdr));
+	glink_SendSerial(fd, (uint8_t *)&ver_hdr,   sizeof(struct tms_hebei2_update_hdr));
 	glink_SendSerial(fd, (uint8_t *)pdata, flen);
-	glink_SendSerial(fd, (uint8_t *)&md5,   sizeof(struct tms_dev_md5));
+	glink_SendSerial(fd, (uint8_t *)&md5,   sizeof(struct tms_hebei2_update_md5));
 	glink_SendTail(fd);
-	pthread_mutex_unlock(&context.mutex);
+	printf("LINE: %d\n",__LINE__);
+	// pthread_mutex_unlock(&context.mutex);
 	return 0;
-#if 0
-	uint8_t *pmem;
-	struct tms_dev_update_hdr *pver_hdr;
-	uint8_t *pfdata;
-	struct tms_dev_md5 *pmd5;
-	int len;
 
-	printf("flen = %d\n", flen);
-	// Step 1.分配内存并各指针指向相应内存
-	len = sizeof(struct tms_dev_update_hdr) + flen + sizeof(struct tms_dev_md5);
-
-	pmem = (uint8_t *)malloc(len);
-	if (pmem == NULL) {
-		return -1;
-	}
-	pver_hdr = (struct tms_dev_update_hdr *)(pmem);
-	pfdata   = (uint8_t *)(pmem + sizeof(struct tms_dev_update_hdr));
-	pmd5     = (struct tms_dev_md5 *)(pmem + sizeof(struct tms_dev_update_hdr) + flen);
-
-	// Step 2.各字段复制
-	pver_hdr->frame = htonl(frame);
-	pver_hdr->slot  = htonl(slot);
-	pver_hdr->type  = htonl(type);
-	memcpy(pver_hdr->target, &target[0][0], 16);
-	pver_hdr->flen  = htonl(flen);
-
-	memcpy(pfdata, pdata, flen);
-	//TODO MD5
-	memcpy(pmd5->md5, "12345", sizeof("12345"));//debug
-
-	// Step 3. 发送
-	struct glink_base  base_hdr;
-	int ret;
-
-	tms_FillGlinkFrame(&base_hdr, paddr);
-	if (0 == fd) {
-		// fd =
-		// tms_SelectFdByAddr(&base_hdr.dst);
-	}
-	glink_Build(&base_hdr, ID_UPDATE, len);
-	ret = glink_Send(fd, NULL, &base_hdr, pmem, len);
-	return ret;
-#endif
 }
 
 //0x10000001
 static int32_t tms_AnalyseUpdate(struct tms_context *pcontext, int8_t *pdata, int32_t len)
 {
 	// todo 通知ui
-	struct tms_dev_update_hdr *pver_hdr;
-	// uint8_t *pfdata;
-	struct tms_dev_md5 *pmd5;
+	struct tms_hebei2_update_hdr *pver_hdr;
+	char *pfile;
+	struct tms_hebei2_update_md5 *pmd5;
+	char strmd5[17];
 
-	pver_hdr = (struct tms_dev_update_hdr *)(pdata + GLINK_OFFSET_DATA);
-	// pfdata   = (uint8_t*)(pdata + GLINK_OFFSET_DATA + sizeof(struct tms_dev_update_hdr));
-	pmd5     = (struct tms_dev_md5 *)(pdata + GLINK_OFFSET_DATA + sizeof(struct tms_dev_update_hdr) + htonl(pver_hdr->flen));
-
-
-
-	pver_hdr->frame = htonl(pver_hdr->frame);
-	pver_hdr->slot  = htonl(pver_hdr->slot);
-	pver_hdr->type  = htonl(pver_hdr->type);
+	pver_hdr = (struct tms_hebei2_update_hdr *)(pdata + GLINK_OFFSET_DATA);
 	pver_hdr->flen  = htonl(pver_hdr->flen);
+
+	pfile = (char*)(pver_hdr + 1);
+	pmd5 = (struct tms_hebei2_update_md5*)(pfile + pver_hdr->flen);
+	memcpy(strmd5, pmd5->md5, 16);
+	strmd5[16] = '\0';
 
 	printf("tms_AnalyseUpdate\n");
 
 	printf("Send bin file:\n"
-	       "\tf%d/s%d/t%d\n"
+		"\tName :%s\n"
 	       "\tlen   :%d Byte\n"
-	       "\ttarget:%s\n",
-	       pver_hdr->frame, pver_hdr->slot, pver_hdr->type, pver_hdr->flen, pver_hdr->target);
-	printf("\tmd5: %s\n\n", pmd5->md5);
+	       "\tmd5   :%s\n",
+	       pver_hdr->fname, pver_hdr->flen, strmd5);
 
-	// printf("val:f%d/s%x/t%d\n", pver_hdr->frame, pver_hdr->slot, pver_hdr->type);
-	// printf("\tlen %d\n\n", pver_hdr->flen);
-	// PrintfMemory(pfdata, pver_hdr->flen);
-	// printf("\tmd5 %s\n", pmd5->md5);
-	//TODO MD5
-	// fun(, , pdata);
+
+	FILE *fp = fopen("/tmp/tmp.elf", "wb");
+	fwrite(pfile, 1, pver_hdr->flen, fp);
+	fclose(fp);
+
+
+
+	// 本地计算MD5
+	char strout[256];
+	int ret;
+
+	fp = popen("md5sum /tmp/tmp.elf", "r");
+	ret = fread( strout, sizeof(char), sizeof(strout) - 1, fp);
+	fclose(fp);
+
+
+	strout[ret] = '\0';
+	strout[16] = '\0';
+	
+
+	// 比较MD5
+	ret = strncmp(strout, strmd5, 16);
+	if (0 == ret) {
+		// 传输完后断开链接
+		close(pcontext->fd);
+
+
+		system("cp /tmp/tmp.elf /app/wjc.elf");
+		system("chmod +x /app/wjc.elf");
+		printf("升级成功\n");
+		sleep(1);
+		system("sync");
+		sleep(3);
+#ifndef TARGET_X86
+		printf("重启\n");
+		system("reboot");
+#endif
+
+	}
+	
+	
+
+
+
+
+	
+
 
 	return 0;
 }
@@ -1217,14 +1211,14 @@ static int32_t tms_AnalyseGetBasicInfo(struct tms_context *pcontext, int8_t *pda
 
 	// TODO 如果之前已经有网管连接，则断开
 	// 但之前好保证识别网管与节点管理器之间不会冲突
-	if (pbase_hdr->src == ADDR_NODE_MANGER) {
-		if (g_node_manger != 0 && g_node_manger != pcontext->fd) {
-			// close(g_node_manger);
-		}
-		g_node_manger = pcontext->fd;
-	}
-	else {
-	}
+	// if (pbase_hdr->src == ADDR_NODE_MANGER) {
+	// 	if (g_node_manger != 0 && g_node_manger != pcontext->fd) {
+	// 		// close(g_node_manger);
+	// 	}
+	// 	g_node_manger = pcontext->fd;
+	// }
+	// else {
+	// }
 
 	hb2_dbg("Warning 应该返回什么内容，协议里没详细说明\n");
 	if (pcontext->ptcb->pf_OnGetBasicInfo) {
@@ -1665,14 +1659,14 @@ static int32_t tms_AnalyseConfigNodeTime(struct tms_context *pcontext, int8_t *p
 	struct glink_base *pbase_hdr;
 	pbase_hdr = (struct glink_base *)(pdata + sizeof(int32_t));
 
-	if (pbase_hdr->src == ADDR_MANGER) {
-		if (g_manger != 0 && g_manger != pcontext->fd) {
-			// close(g_manger);
-		}
-		g_manger = pcontext->fd;
-	}
-	else {
-	}
+	// if (pbase_hdr->src == ADDR_MANGER) {
+	// 	if (g_manger != 0 && g_manger != pcontext->fd) {
+	// 		// close(g_manger);
+	// 	}
+	// 	g_manger = pcontext->fd;
+	// }
+	// else {
+	// }
 	if (pcontext->ptcb->pf_OnConfigNodeTime) {
 		pcontext->ptcb->pf_OnConfigNodeTime(pcontext, pval);
 	}
@@ -1805,6 +1799,7 @@ int32_t tms_CurAlarm_V2(
 	pthread_mutex_lock(&context.mutex);
 	glink_SendHead(fd, &base_hdr);
 
+
 	// 发送告警头
 	glink_SendSerial(fd, (uint8_t *)alarmlist_hdr, sizeof(struct tms_alarmlist_hdr) );
 	glink_SendSerial(fd, (uint8_t *)alarmlist_val, sizeof(struct tms_alarmlist_val) * list_hdr_count);
@@ -1819,6 +1814,11 @@ int32_t tms_CurAlarm_V2(
 		phebei2_data_val  = t_alarmline_val->hebei2_data_val;
 		phebei2_event_hdr = t_alarmline_val->hebei2_event_hdr;
 		phebei2_event_val = t_alarmline_val->hebei2_event_val;
+		printf("pipe %d pw %d range %d\n", 
+			htonl(pret_otdrparam->pipe), 
+			htonl(pret_otdrparam->pw),
+			htonl(pret_otdrparam->range));
+	
 #if 0
 		glink_SendSerial(fd, (uint8_t *)&pret_otdrparam, sizeof(struct tms_ret_otdrparam) );
 #else
@@ -1829,10 +1829,13 @@ int32_t tms_CurAlarm_V2(
 		glink_SendSerial(fd, (uint8_t *)ptest_result, sizeof(struct tms_test_result) );
 		glink_SendSerial(fd, (uint8_t *)phebei2_data_hdr, sizeof(struct tms_hebei2_data_hdr) );
 		glink_SendSerial(fd, (uint8_t *)phebei2_data_val, sizeof(struct tms_hebei2_data_val) * htonl(phebei2_data_hdr->count));
+
 		glink_SendSerial(fd, (uint8_t *)phebei2_event_hdr, sizeof(struct tms_hebei2_event_hdr) );
 		glink_SendSerial(fd, (uint8_t *)phebei2_event_val, sizeof(struct tms_hebei2_event_val) * htonl(phebei2_event_hdr->count));
 		t_alarmline_val++;
+		// sleep(2);	
 	}
+
 
 	glink_SendTail(fd);
 	pthread_mutex_unlock(&context.mutex);
@@ -2475,7 +2478,7 @@ int32_t tms_AckEx(
 
 static struct tms_analyse_array sg_analyse_0x1000xxxx[] = {
 	{	tms_AnalyseUnuse, 1}, //	0x10000000	ID_TICK
-	// 	// {	tms_AnalyseUpdate	, PROCCESS_2DEV_AND_COPY2USE}, //	0x10000001	ID_UPDATE
+	{	tms_AnalyseUpdate	, 0}, //	0x10000001	ID_UPDATE
 	// 	// {	tms_AnalyseTrace	, 1}, //	0x10000002	ID_TRACE0
 	// 	// {	tms_AnalyseTrace	, 1}, //	0x10000003	ID_TRACE1
 	// 	// {	tms_AnalyseTrace	, 1}, //	0x10000004	ID_TRACE2
@@ -2697,17 +2700,52 @@ struct tms_analyse_array sg_analyse_0x8000xxxx[] = {
  * @brief	根据原地址（本地字节序）识别来的连接究竟是什么类型的设备
 	节点管理器、网管客户端、网管
  */
-static void tms_WhoAreYou(struct tms_context *context,uint32_t srcaddr)
+static void tms_WhoAreYou(struct tms_context *pcontext,uint32_t srcaddr)
 {
+	struct tms_context tcontext;
+
 	switch(srcaddr) {
 	case ADDR_MANGER:
-		g_manger = context->fd;
+		if (g_manger != 0 && g_manger != pcontext->fd) {
+			if (0 == tms_SelectContextByFD(g_manger, &tcontext) ) {
+				printf("LINE: %d\n",__LINE__);
+				return ;
+			}
+			pthread_mutex_lock(&tcontext.mutex);
+			g_manger = pcontext->fd;
+			pthread_mutex_unlock(&tcontext.mutex);
+		}
+		else {
+			g_manger = pcontext->fd;	
+		}
 		break;
 	case ADDR_NODE_MANGER:
-		g_node_manger = context->fd;
+		if (g_node_manger != 0 && g_node_manger != pcontext->fd) {
+			if (0 == tms_SelectContextByFD(g_node_manger, &tcontext) ) {
+				printf("LINE: %d\n",__LINE__);
+				return ;
+			}
+			pthread_mutex_lock(&tcontext.mutex);
+			g_node_manger = pcontext->fd;
+			pthread_mutex_unlock(&tcontext.mutex);
+		}
+		else {
+			g_node_manger = pcontext->fd;	
+		}
 		break;
 	case ADDR_MANGER_CLIENT:
-		g_manger_client = context->fd;
+		if (g_manger_client != 0 && g_manger_client != pcontext->fd) {
+			if (0 == tms_SelectContextByFD(g_manger_client, &tcontext) ) {
+				printf("LINE: %d\n",__LINE__);
+				return ;
+			}
+			pthread_mutex_lock(&tcontext.mutex);
+			g_manger_client = pcontext->fd;
+			pthread_mutex_unlock(&tcontext.mutex);
+		}
+		else {
+			g_manger_client = pcontext->fd;	
+		}
 		break;
 	default:
 		printf("Unknow srcaddr %x\n", srcaddr);
@@ -3009,11 +3047,11 @@ struct _ep_find_val {
 };
 int _ep_find(struct ep_con_t *ppconNode, void *ptr)
 {
+
 	struct tmsxx_app *papp = (struct tmsxx_app *)ppconNode->ptr;
 	struct tms_context *pcontext = (struct tms_context *)&papp->context;
 
 	struct _ep_find_val *pval = (struct _ep_find_val *)ptr;
-
 
 	if(pcontext->fd == pval->fd) {
 		pval->fd = pcontext->fd;
@@ -3035,6 +3073,11 @@ int32_t  tms_SelectContextByFD(int fd, struct tms_context *context)
 
 	val.isfind = false;
 	ep_Ergodic(&ep, _ep_find, &val);
+
+	if (val.isfind) {
+		return 1;
+	}
+	ep_Ergodic(&ep201, _ep_find, &val);
 
 	if (val.isfind) {
 		return 1;
@@ -3089,17 +3132,49 @@ int32_t tms_SelectMangerClientContext(struct tms_context *context)
 void tms_RemoveAnyMangerContext(int fd)
 {
 	hb2_dbg("%s() %d\n", __FUNCTION__, __LINE__);
+	struct tms_context  context;
+
+
 	if (fd == g_manger) {
+		if (0 == tms_SelectContextByFD(g_manger, &context) ) {
+			printf("LINE: %d\n",__LINE__);
+			g_manger = 0;
+			return ;
+		}
+		pthread_mutex_lock(&context.mutex);
 		g_manger = 0;
+		pthread_mutex_unlock(&context.mutex);
+		
 	}
 	else if (fd == g_node_manger) {
+		if (0 == tms_SelectContextByFD(g_node_manger, &context) ) {
+			printf("LINE: %d\n",__LINE__);
+			g_node_manger = 0;
+			return ;
+		}
+		pthread_mutex_lock(&context.mutex);
 		g_node_manger = 0;
+		pthread_mutex_unlock(&context.mutex);
 	}
 	else if (fd == g_201fd) {
+		if (0 == tms_SelectContextByFD(g_201fd, &context) ) {
+			printf("LINE: %d\n",__LINE__);
+			g_201fd = 0;
+			return ;
+		}
+		pthread_mutex_lock(&context.mutex);
 		g_201fd = 0;
+		pthread_mutex_unlock(&context.mutex);
 	}
 	else if (fd == g_manger_client) {
+		if (0 == tms_SelectContextByFD(g_manger_client, &context) ) {
+			printf("LINE: %d\n",__LINE__);
+			g_manger_client = 0;
+			return ;
+		}
+		pthread_mutex_lock(&context.mutex);
 		g_manger_client = 0;
+		pthread_mutex_unlock(&context.mutex);
 	}
 }
 
@@ -3107,7 +3182,7 @@ void tms_RemoveAnyMangerContext(int fd)
 int tms_connect()
 {
 #ifdef DBG_201IP
-	g_201fd = connect_first_card("127.0.0.1", "6000"); //debug
+	g_201fd = connect_first_card("127.0.0.1", "6201"); //debug
 #else
 	char *p;
 	char ip[16];
@@ -3133,7 +3208,7 @@ _FindNetcard:
 	else {
 		strcpy(g_attr._201_ip, "192.168.0.201");
 	}
-	g_201fd = connect_first_card(g_attr._201_ip, "6000");
+	g_201fd = connect_first_card(g_attr._201_ip, "6201");
 #endif
 
 	return g_201fd;

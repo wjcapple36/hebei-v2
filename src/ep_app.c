@@ -31,6 +31,7 @@ extern "C" {
 
 struct tms_callback tcb;
 struct epapp_callback epapp_cb;
+struct ep_t ep201;
 // #define BIPBUFFER_LEN 2048
 #define BIPBUFFER_LEN 30000
 void ep_unuse(int fd)
@@ -431,24 +432,18 @@ int epFUI_OnRemoveClose(struct ep_t *pep, struct ep_con_t *pnode)
 	// pnode->sockfd);
 	printf("----OnRemoveClose----\n");
 	// printf("close addr %8.8x\n",pnode->ptr);
+	tms_RemoveAnyMangerContext(pnode->sockfd);
+	NotifyCU(pnode->sockfd);
+
 	FreeSocketStruct((struct tmsxx_app **)&pnode->ptr);
 
 	PrintConnectRemoveInf(pnode, PINF_FLAG_REMOVE);
 
-	// printf("%8d%16s:%-8d",
-	// 	pnode->sockfd,
-	// 	inet_ntoa(pnode->loc_addr.sin_addr),
-	// 	htons(pnode->loc_addr.sin_port));
-	// printf("%16s:%-8d\n",
-	// 	inet_ntoa(pnode->rem_addr.sin_addr),
-	// 	htons(pnode->rem_addr.sin_port));
-
-	// tms_RemoveDev(pnode->sockfd);
-
+	
 
 	epapp_cb.pf_RemoteClose(pnode->sockfd);
-	NotifyCU(pnode->sockfd);
-	tms_RemoveAnyMangerContext(pnode->sockfd);
+	
+	
 	// tms_DelManage(pnode->sockfd);
 	return 0;
 
@@ -458,9 +453,11 @@ int epFUI_OnClose(struct ep_t *pep, struct ep_con_t *pnode)
 	// tms_DelManage(pnode->sockfd);
 	// tms_DelManage(&(((struct tmsxx_app*)(pnode->ptr))->context),
 	// pnode->sockfd);
-	PrintConnectRemoveInf(pnode, PINF_FLAG_CLOSE);
 	NotifyCU(pnode->sockfd);
 	tms_RemoveAnyMangerContext(pnode->sockfd);
+
+	PrintConnectRemoveInf(pnode, PINF_FLAG_CLOSE);
+	
 	// tms_RemoveDev(pnode->sockfd);
 
 	return 0;
@@ -527,6 +524,7 @@ extern struct cmd_prompt boot_root[];
 #endif
 void *ThreadShell(void *arg)
 {
+#ifndef UPDATE_TOOL
 #if defined(CONFIG_CMD_BOOT)
 	int ret = 1;
 
@@ -565,6 +563,7 @@ void *ThreadShell(void *arg)
 
 
 	exit(0);
+#endif
 #endif
 }
 
@@ -627,6 +626,47 @@ int ThreadRunServerAndShell(struct ep_t *pep)
 	return 0;
 }
 
+int ThreadUpdate(struct ep_t *pep)
+{
+#ifdef CONFIG_APP_HEBEI2
+	tms_Callback(&tcb);
+#endif
+
+	// tms_UseEpollServer(pep);
+	ep_Interface(pep, 2);           // 初始化ep接口
+	ep_Callback(pep);               // 设在epollserver在本工程的回掉函数
+
+#ifdef _MANAGE
+	if(ep_Listen(pep, 5678)) {    // 监听TCP 0.0.0.0:6500端口
+		return 0;
+	}
+#else
+	if(ep_Listen(pep, 5678)) {    // 监听TCP 0.0.0.0:6500端口
+		return 0;
+	}
+#endif
+
+	ep_RunServer(pep);             // 运行epollserver线程
+	return 0;
+}
+
+int Thread201(struct ep_t *pep)
+{
+	tms_Callback(&tcb);
+
+
+	// tms_UseEpollServer(pep);
+	ep_Interface(pep, 2);           // 初始化ep接口
+	ep_Callback(pep);               // 设在epollserver在本工程的回掉函数
+
+	if(ep_Listen(pep, 6201)) {    // 监听TCP 0.0.0.0:6500端口
+		return 0;
+	}
+
+
+	ep_RunServer(pep);             // 运行epollserver线程
+	return 0;
+}
 
 
 

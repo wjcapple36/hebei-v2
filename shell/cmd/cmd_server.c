@@ -18,6 +18,8 @@ static int do_connect(void *ptr, int argc, char **argv);
 static int do_server(void *ptr, int argc, char **argv);
 static int do_close(void *ptr, int argc, char **argv);
 static int do_inf(void *ptr, int argc, char **argv);
+static int do_interface(void *ptr, int argc, char **argv);
+static int do_update(void *ptr, int argc, char **argv);
 static int do_quit_system(void *ptr, int argc, char **argv);
 static int do_ip(void *ptr, int argc, char **argv);
 static int do_port(void *ptr, int argc, char **argv);
@@ -34,7 +36,7 @@ extern struct cmd_prompt boot_inf[];
 extern struct cmd_prompt boot_server[];
 extern struct cmd_prompt boot_close[];
 
-
+static int sg_sockfdid = 0;
 
 struct cmd_prompt boot_epollserver_root[] = {
 	PROMPT_NODE(boot_connect   ,      do_connect,
@@ -52,6 +54,14 @@ struct cmd_prompt boot_epollserver_root[] = {
 	PROMPT_NODE(boot_inf   ,      do_inf,
 	(char *)"inf"  ,
 	(char *)"Config Hostname",
+	(int)  NULL),
+	PROMPT_NODE(NULL   ,      do_interface,
+	(char *)"interface"  ,
+	(char *)"Config Hostname",
+	(int)  NULL),
+	PROMPT_NODE(NULL   ,      do_update,
+	(char *)"update"  ,
+	(char *)"update program",
 	(int)  NULL),
 	PROMPT_NODE(NULL    ,      do_quit_system,
 	(char *)"quit"  ,
@@ -80,6 +90,8 @@ struct cmd_prompt boot_inf[] = {
 	(int)  CMDP_TYPE_PASS),
 	PROMPT_NODE(NULL    ,      NULL, (char *)NULL, (char *)NULL, (int *) NULL),
 };
+
+
 struct cmd_prompt boot_server[] = {
 	PROMPT_NODE(NULL    ,      do_run,
 	(char *)"run"  ,
@@ -202,6 +214,68 @@ static int do_inf(void *ptr, int argc, char **argv)
 	}
 	return 0;
 	return 0;
+}
+
+
+static int do_interface(void *ptr, int argc, char **argv)
+{
+	printf("%s()", __FUNCTION__);
+	if (argc < 2) {
+		return 0;
+	}
+	sg_sockfdid = atoi(argv[1]);
+
+	// sg_sockfdid = oneframe[slot].fd;
+	// sg_frameid = frame;
+	// sg_slotid = slot;
+	char path[36];
+	struct sockaddr_in remoteAddr;
+	socklen_t 		 len;
+	len = sizeof(struct sockaddr_in);
+	getpeername(sg_sockfdid, (struct sockaddr*)&remoteAddr , &len);
+
+	// snprintf(path, 36, "f%d/s%d", sg_frameid, sg_slotid);
+	snprintf(path, 36, "%s:", inet_ntoa(remoteAddr.sin_addr));
+	sh_editpath(path);
+	return 0;
+}
+
+// update filename
+static int do_update(void *ptr, int argc, char **argv)
+{
+	// 读取bin文件
+	printf("%s()", __FUNCTION__);
+	if (argc < 2) {
+		return 0;
+	}
+	char *ppath = argv[1];
+	char *pbuf;					// 文件内容
+	int flen;					// 文件长度
+	FILE *fp;
+	printf("Open file [%s]. ", ppath);
+	fp = fopen((char*)ppath, "rb");
+	if (NULL == fp) {
+		printf("open file %s fail\n",ppath);
+		return -1;
+	}
+	// TODO upp头并偏移
+	fseek(fp, 0, SEEK_END);
+	flen = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+
+	pbuf = (char*)malloc(flen);
+	if (NULL == pbuf) {
+		return -1;
+	}
+	fread(pbuf, 1, flen, fp);
+	fclose(fp);
+
+
+	tms_Update(sg_sockfdid, 	NULL, 
+			ppath,
+			flen, (uint8_t*)pbuf);
+	return 0;
+	free(pbuf);
 }
 
 static int do_quit_system(void *ptr, int argc, char **argv)

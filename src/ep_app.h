@@ -16,6 +16,8 @@ struct epapp_callback
 
 extern void ep_Callback(struct ep_t *pep);
 extern int ThreadRunServerAndShell(struct ep_t *pep);
+extern int ThreadUpdate(struct ep_t *pep);
+extern int Thread201(struct ep_t *pep);
 #ifdef __cplusplus
 }
 #endif

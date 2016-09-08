@@ -21,7 +21,6 @@ int32_t OnGetBasicInfo(struct tms_context *pcontext)
 {
 	trace_dbg("%s():%d\n", __FUNCTION__, __LINE__);
 	ret_host_basic_info(pcontext,NULL);
-	ret_total_curalarm2host();
 	return 0;
 }
 
@@ -43,6 +42,8 @@ int32_t OnGetNodeTime(struct tms_context *pcontext)
 
 	tms_RetNodeTime(pcontext, NULL, buf);
 	printf("%s %d ret host time %s \n", __FUNCTION__, __LINE__, buf);
+	//tms_MergeCurAlarm(g_201fd);
+	ret_total_curalarm2host();
 	return 0;
 }
 int32_t OnRetNodeTime(struct tms_context *pcontext)

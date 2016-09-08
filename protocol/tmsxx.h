@@ -525,7 +525,14 @@ struct tms_dev_md5 {
 	uint8_t md5[32];
 };
 
-
+// 0x10000001
+struct tms_hebei2_update_hdr {
+	char fname[256];
+	int32_t flen;
+};
+struct tms_hebei2_update_md5 {
+	char md5[16];
+};
 
 // // OTDR返回信息C部分
 struct tms_retotdr_event_val {
@@ -668,10 +675,7 @@ int32_t tms_Tick(int fd, struct glink_addr *paddr);
 int32_t tms_Update(
     int fd,
     struct glink_addr *paddr,
-    int32_t frame,
-    int32_t slot,
-    int32_t type,
-    uint8_t (*target)[16],
+    char *fname,
     int32_t flen,
     uint8_t *pdata);
 void tms_Trace(struct glink_addr *paddr, char *strout, int32_t len, int level);

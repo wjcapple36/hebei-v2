@@ -402,6 +402,7 @@ void version()
 			PRJ_SUBLEVEL,
 			BUILD_DATE);
 }
+extern struct ep_t ep201;
 int main(int argc, char const *argv[])
 {	
 	// dns();
@@ -436,6 +437,7 @@ int main(int argc, char const *argv[])
 		version();
 		return 0;
 	}
+	Thread201(&ep201);
 	ThreadRunServerAndShell(&ep);
 	initialize_sys_para();
 	while(1) {

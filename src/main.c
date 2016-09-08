@@ -163,7 +163,10 @@ void sig_int(int sig)
 }
 
 struct ep_t ep;
+struct ep_t epupdate;
+extern struct ep_t ep201;
 extern struct tms_callback tcb;
+
 extern void ep_Callback(struct ep_t *pep);
 
 /*
@@ -438,7 +441,15 @@ int main(int argc, char const *argv[])
 	// signal(SIGSEGV, sig_handle);
 	
 	// return 0;
+#ifdef UPDATE_TOOL
+	ThreadUpdate(&epupdate);
+#else
+	Thread201(&ep201);
 	ThreadRunServerAndShell(&ep);
+
+#endif
+	
+	
 	while(1) {
 		sleep(2);
 	}

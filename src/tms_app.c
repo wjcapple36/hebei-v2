@@ -150,6 +150,8 @@ printf("line %d\n", __LINE__);
 	struct tms_alarmlist_val    alarmlist_val[10];
 	struct tms_alarmline_hdr    alarmline_hdr;
 	struct tms_alarmline_val    alarmline_val[8];
+	// const  int c_alarmcount=7;
+	// const int c_alarm_pipe[] = {2,3,4,5,6,7,8};
 	const  int c_alarmcount=7;
 	const int c_alarm_pipe[] = {2,3,4,5,6,7,8};
 	// const int c_alarm_pipe[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
@@ -367,9 +369,9 @@ printf("line %d\n", __LINE__);
 
 	// pcontext->fd = g_201fd;
 	// tms_CurAlarm_V2(g_201fd, NULL, &alarm);
-	int fd = connect_first_card("127.0.0.1","6000");
-	tms_CurAlarm_V2(pcontext->fd, NULL, &alarm);
+	int fd = connect_first_card("127.0.0.1","6201");
 	// tms_CurAlarm_V2(fd, NULL, &alarm);
+	tms_CurAlarm_V2(g_201fd, NULL, &alarm);
 	sleep(1);
 
 

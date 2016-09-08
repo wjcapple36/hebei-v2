@@ -12,5 +12,7 @@
 		pi3_arg=mlib
 	pi4=script/wjc
 		pi4_arg=elf
+	pi5=script/update
+		pi5_arg=elf
 # default project item
 export DP=pi1

@@ -76,7 +76,7 @@ void *ThreadConnectCU(void *arg)
 	struct tmsxx_app *ptapp = (struct tmsxx_app *)client.ptr;
 	g_slot_last = g_slot;
 	g_subnet_last = g_subnet;
-	initial_spi_dev(&spiDev, "/dev/spidev1.0", 0, 8, 0, 20000000);
+	// initial_spi_dev(&spiDev, "/dev/spidev1.0", 0, 8, 0, 20000000);
 	int32_t t_slot, t_subnet;
 	while(1) {
 #if 0

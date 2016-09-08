@@ -2261,15 +2261,15 @@ usr_exit:
 	fiber_alarm.alarmlist_hdr = &alarmlist_hdr;
 	fiber_alarm.alarmlist_val = alarmlist_val;
 	//曲线发给201，由201综合打包发送到cu
-	//tms_CurAlarm_V2(g_201fd,NULL,&fiber_alarm);
-		
+	tms_CurAlarm_V2(g_201fd,NULL,&fiber_alarm);
+	/*		
 	ret = get_context_by_dst(ADDR_HOST_NODE, &context);
 	
 	if(!ret){
 		addr.dst = context.pgb->src;
 		tms_CurAlarm_V2(context.fd,NULL,&fiber_alarm);
 	}
-	
+	*/
 	/*
 	ret = get_context_by_dst(ADDR_HOST_SERVER, &context);
 	if(!ret){
